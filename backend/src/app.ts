@@ -10,6 +10,11 @@ import authRouter from './modules/auth/auth.router';
 import usersRouter from './modules/users/users.router';
 import departmentsRouter from './modules/departments/departments.router';
 import settingsRouter from './modules/settings/settings.router';
+import coursesRouter from './modules/courses/courses.router';
+import quizzesRouter from './modules/quizzes/quizzes.router';
+import workshopsRouter from './modules/modules/workshops.router';
+import certificatesRouter from './modules/certificates/certificates.router';
+import enrollmentsRouter from './modules/enrollments/enrollments.router';
 
 const app = express();
 
@@ -37,6 +42,11 @@ app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/departments', departmentsRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/courses', coursesRouter);
+app.use('/api/quizzes', quizzesRouter);
+app.use('/api/workshops', workshopsRouter);
+app.use('/api/certificates', certificatesRouter);
+app.use('/api/enrollments', enrollmentsRouter);
 
 // Error Handling Middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

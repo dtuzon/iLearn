@@ -1,0 +1,27 @@
+import { Router } from 'express';
+import { QuizzesController } from './quizzes.controller';
+import { authenticate } from '../../middleware/auth.middleware';
+import { authorize } from '../../middleware/rbac.middleware';
+import { auditLog } from '../../middleware/audit.middleware';
+import { Role } from '@prisma/client';
+
+const router = Router();
+
+router.get('/:moduleId', authenticate, QuizzesController.getQuiz);
+
+router.post(
+  '/:moduleId/questions',
+  authenticate,
+  authorize([Role.LECTURER, Role.ADMINISTRATOR]),
+  auditLog('ADD_QUIZ_QUESTIONS'),
+  QuizzesController.addQuestions
+);
+
+router.post(
+  '/:moduleId/submit',
+  authenticate,
+  auditLog('SUBMIT_QUIZ'),
+  QuizzesController.submitQuiz
+);
+
+export default router;
