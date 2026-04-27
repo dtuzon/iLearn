@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+uploads/videos/*
+uploads/workshops/*
+uploads/certificates/backgrounds/*
+uploads/certificates/signatures/*
+uploads/generated-pdfs/*
+!uploads/videos/.gitkeep
+!uploads/workshops/.gitkeep
+!uploads/certificates/backgrounds/.gitkeep
+!uploads/certificates/signatures/.gitkeep
+!uploads/generated-pdfs/.gitkeep
+*.js.map

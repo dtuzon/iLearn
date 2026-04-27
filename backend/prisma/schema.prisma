@@ -1,0 +1,340 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum Role {
+  ADMINISTRATOR
+  LEARNING_MANAGER
+  DEPARTMENT_HEAD
+  LECTURER
+  EMPLOYEE
+}
+
+enum ModuleType {
+  PRE_QUIZ
+  VIDEO
+  WORKSHOP
+  POST_QUIZ
+  EVALUATION
+}
+
+enum QuestionType {
+  TEXT
+  RATING
+  MULTIPLE_CHOICE
+}
+
+enum EnrollmentStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  PENDING_GRADING
+  COMPLETED
+}
+
+// ─────────────────────────────────────────────
+// CORE MODELS
+// ─────────────────────────────────────────────
+
+model Department {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  headUserId String? @unique
+  head       User?   @relation("DeptHeadRelation", fields: [headUserId], references: [id])
+
+  users User[] @relation("DeptMembers")
+
+  @@map("departments")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String?  @unique
+  passwordHash String
+  firstName    String?
+  lastName     String?
+  role         Role     @default(EMPLOYEE)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  departmentId String?
+  department   Department? @relation("DeptMembers", fields: [departmentId], references: [id])
+
+  // Back-relation for Department Head
+  headOfDepartment Department? @relation("DeptHeadRelation")
+
+  enrollments       Enrollment[]
+  transcripts       Transcript[]
+  auditLogs         AuditLog[]
+  coursesAsLecturer Course[]         @relation("LecturerCourses")
+  evaluationForms   EvaluationForm[] @relation("FormCreator")
+  notifications     Notification[]
+
+  @@map("users")
+}
+
+model SystemSettings {
+  id                String  @id @default(cuid())
+  companyName       String  @default("Standard Insurance Co., Inc.")
+  primaryColorHex   String  @default("#4F46E5")
+  secondaryColorHex String  @default("#10B981")
+  companyLogoUrl    String?
+  passingScore      Int     @default(80)
+
+  @@map("system_settings")
+}
+
+// ─────────────────────────────────────────────
+// IN-APP NOTIFICATIONS
+// ─────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// ─────────────────────────────────────────────
+// EVALUATION FORM BUILDER
+// ─────────────────────────────────────────────
+
+model EvaluationForm {
+  id        String   @id @default(cuid())
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdById String
+  createdBy   User   @relation("FormCreator", fields: [createdById], references: [id])
+
+  questions EvaluationQuestion[]
+  courses   Course[]
+
+  @@map("evaluation_forms")
+}
+
+model EvaluationQuestion {
+  id            String       @id @default(cuid())
+  questionText  String
+  type          QuestionType
+  options       Json?        // ["Option A", "Option B"] for MULTIPLE_CHOICE; null for TEXT/RATING
+  sequenceOrder Int          @default(0)
+
+  formId String
+  form   EvaluationForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@map("evaluation_questions")
+}
+
+// Stores an employee's submitted answers for a course evaluation
+model EvaluationResponse {
+  id        String   @id @default(cuid())
+  answers   Json     // [{ questionId, answer }]
+  createdAt DateTime @default(now())
+
+  enrollmentId String     @unique
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@map("evaluation_responses")
+}
+
+// ─────────────────────────────────────────────
+// COURSES & MODULES
+// ─────────────────────────────────────────────
+
+model Course {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  thumbnailUrl String?
+  isPublished  Boolean  @default(false)
+  passingScore Int      @default(80)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  lecturerId String
+  lecturer   User   @relation("LecturerCourses", fields: [lecturerId], references: [id])
+
+  evaluationFormId String?
+  evaluationForm   EvaluationForm? @relation(fields: [evaluationFormId], references: [id])
+
+  modules             CourseModule[]
+  enrollments         Enrollment[]
+  transcripts         Transcript[]
+  certificateTemplate CertificateTemplate?
+
+  @@map("courses")
+}
+
+model CourseModule {
+  id               String     @id @default(cuid())
+  title            String
+  type             ModuleType
+  sequenceOrder    Int
+  contentUrlOrText String?    // Video file path, workshop instructions HTML, etc.
+  durationSeconds  Int?       // For video modules
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  quizQuestions  QuizQuestion[]
+  moduleProgress ModuleProgress[]
+
+  @@map("course_modules")
+}
+
+// ─────────────────────────────────────────────
+// QUIZ ENGINE
+// ─────────────────────────────────────────────
+
+model QuizQuestion {
+  id            String @id @default(cuid())
+  questionText  String
+  sequenceOrder Int    @default(0)
+
+  moduleId String
+  module   CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  options QuizOption[]
+
+  @@map("quiz_questions")
+}
+
+model QuizOption {
+  id         String  @id @default(cuid())
+  optionText String
+  isCorrect  Boolean @default(false)
+
+  questionId String
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_options")
+}
+
+// ─────────────────────────────────────────────
+// CERTIFICATE BUILDER
+// ─────────────────────────────────────────────
+
+model CertificateTemplate {
+  id                 String  @id @default(cuid())
+  backgroundImageUrl String?
+  signatureImageUrl  String?
+  // JSON structure example:
+  // {
+  //   "placeholders": [
+  //     { "key": "{{StudentName}}", "x": 400, "y": 300, "fontSize": 36, "color": "#000000", "fontFamily": "Georgia", "fontWeight": "bold" },
+  //     { "key": "{{CourseName}}",  "x": 400, "y": 380, "fontSize": 24, "color": "#333333", "fontFamily": "Georgia", "fontWeight": "normal" },
+  //     { "key": "{{Date}}",        "x": 400, "y": 450, "fontSize": 18, "color": "#555555", "fontFamily": "Arial",   "fontWeight": "normal" }
+  //   ],
+  //   "canvasWidth": 1123,
+  //   "canvasHeight": 794
+  // }
+  designConfig Json?
+
+  courseId String @unique
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("certificate_templates")
+}
+
+// ─────────────────────────────────────────────
+// ENROLLMENT & LEARNING LOOP PROGRESS
+// ─────────────────────────────────────────────
+
+model Enrollment {
+  id                 String           @id @default(cuid())
+  status             EnrollmentStatus @default(NOT_STARTED)
+  currentModuleOrder Int              @default(0)
+  enrolledAt         DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id])
+
+  moduleProgress     ModuleProgress[]
+  evaluationResponse EvaluationResponse?
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+model ModuleProgress {
+  id          String    @id @default(cuid())
+  completed   Boolean   @default(false)
+  score       Int?      // Quiz score as a percentage (0–100)
+  attempts    Int       @default(0)
+  fileUrl     String?   // Workshop submission file path
+  gradedBy    String?   // User ID of the Lecturer who graded
+  gradeNote   String?   // Lecturer's feedback
+  submittedAt DateTime?
+  completedAt DateTime?
+
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  moduleId String
+  module   CourseModule @relation(fields: [moduleId], references: [id])
+
+  @@unique([enrollmentId, moduleId])
+  @@map("module_progress")
+}
+
+// ─────────────────────────────────────────────
+// TRANSCRIPTS
+// ─────────────────────────────────────────────
+
+model Transcript {
+  id                String   @id @default(cuid())
+  completionDate    DateTime @default(now())
+  certificatePdfUrl String?
+  finalScore        Int?     // Averaged or post-quiz score recorded at completion
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, courseId])
+  @@map("transcripts")
+}
+
+// ─────────────────────────────────────────────
+// AUDIT LOG
+// ─────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  metadata  Json?    // e.g., { "targetUserId": "...", "changes": {...} }
+  ipAddress String?
+  timestamp DateTime @default(now())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
