@@ -53,11 +53,27 @@ export const AppShell: React.FC = () => {
         <aside className="hidden md:flex w-64 flex-col border-r bg-background p-4 gap-2">
            <nav className="flex flex-col gap-2">
             <Link to="/dashboard">
-              <Button variant="secondary" className="w-full justify-start">Dashboard</Button>
+              <Button variant="ghost" className="w-full justify-start">Dashboard</Button>
             </Link>
+
+            {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
+              <>
+                <div className="pt-4 pb-2 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Administration
+                </div>
+                <Link to="/admin/users">
+                  <Button variant="ghost" className="w-full justify-start">Users</Button>
+                </Link>
+                <Link to="/admin/departments">
+                  <Button variant="ghost" className="w-full justify-start">Departments</Button>
+                </Link>
+                <Link to="/admin/settings">
+                  <Button variant="ghost" className="w-full justify-start">Settings</Button>
+                </Link>
+              </>
+            )}
            </nav>
         </aside>
-
         {/* Content */}
         <main className="flex-1 p-6 sm:p-8">
           <div className="mx-auto max-w-6xl">

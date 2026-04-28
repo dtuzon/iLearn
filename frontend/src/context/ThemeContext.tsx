@@ -12,6 +12,7 @@ export interface SystemSettings {
 interface ThemeContextType {
   settings: SystemSettings | null;
   isLoading: boolean;
+  fetchSettings: () => Promise<void>;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -49,31 +50,31 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const response = await apiClient.get('/settings');
-        const data: SystemSettings = response.data;
-        setSettings(data);
+  const fetchSettings = async () => {
+    try {
+      const response = await apiClient.get('/settings');
+      const data: SystemSettings = response.data;
+      setSettings(data);
 
-        // Update Document Title
-        document.title = data.companyName || 'iLearn LMS';
+      // Update Document Title
+      document.title = data.companyName || 'iLearn LMS';
 
-        // Update CSS Variables on :root
-        const root = document.documentElement;
-        if (data.primaryColorHex) {
-          root.style.setProperty('--primary', hexToHSL(data.primaryColorHex));
-        }
-        if (data.secondaryColorHex) {
-          root.style.setProperty('--secondary', hexToHSL(data.secondaryColorHex));
-        }
-      } catch (error) {
-        console.error('Failed to fetch system settings:', error);
-      } finally {
-        setIsLoading(false);
+      // Update CSS Variables on :root
+      const root = document.documentElement;
+      if (data.primaryColorHex) {
+        root.style.setProperty('--primary', hexToHSL(data.primaryColorHex));
       }
-    };
+      if (data.secondaryColorHex) {
+        root.style.setProperty('--secondary', hexToHSL(data.secondaryColorHex));
+      }
+    } catch (error) {
+      console.error('Failed to fetch system settings:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchSettings();
   }, []);
 
@@ -86,7 +87,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }
 
   return (
-    <ThemeContext.Provider value={{ settings, isLoading }}>
+    <ThemeContext.Provider value={{ settings, isLoading, fetchSettings }}>
       {children}
     </ThemeContext.Provider>
   );

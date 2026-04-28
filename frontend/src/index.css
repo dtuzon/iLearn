@@ -1,7 +1,9 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+@source "../components";
+@source "../pages";
+@source "../context";
+@source "./";
 @layer base {
   :root {
     --background: 0 0% 100%;
