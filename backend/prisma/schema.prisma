@@ -91,6 +91,8 @@ model User {
   subordinates        User[]  @relation("ReportingStructure")
   
   onlineEvaluations   OnlineEvaluationResult[] @relation("UserOnlineEvaluations")
+  supervisorEvaluations BehavioralEvaluation[] @relation("SupervisorEvaluations")
+  employeeEvaluations BehavioralEvaluation[] @relation("EmployeeEvaluations")
 
   @@map("users")
 }
@@ -215,6 +217,7 @@ model Course {
   enrollments         Enrollment[]
   transcripts         Transcript[]
   certificateTemplate CertificateTemplate?
+  behavioralEvaluations BehavioralEvaluation[]
 
   @@map("courses")
 }

@@ -15,5 +15,13 @@ export const evaluationsApi = {
   submitOnlineEvaluation: async (enrollmentId: string, data: OnlineEvaluationSubmission) => {
     const response = await apiClient.post(`/enrollments/${enrollmentId}/online-evaluation`, data);
     return response.data;
+  },
+  getPendingTeam: async () => {
+    const response = await apiClient.get('/evaluations/pending-team');
+    return response.data;
+  },
+  submitBehavioralEvaluation: async (data: any) => {
+    const response = await apiClient.post('/evaluations/behavioral', data);
+    return response.data;
   }
 };

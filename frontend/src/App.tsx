@@ -14,6 +14,7 @@ import { CourseBuilder } from './pages/creator/CourseBuilder';
 import { MyLearning } from './pages/employee/MyLearning';
 import { CoursePlayer } from './pages/employee/CoursePlayer';
 import { MyCertificates } from './pages/employee/MyCertificates';
+import { TeamEvaluations } from './pages/supervisor/TeamEvaluations';
 import { Dashboard } from './pages/Dashboard';
 
 function App() {
@@ -66,12 +67,7 @@ function App() {
                     <Outlet />
                   </RoleGuard>
                 }>
-                  <Route path="team-evaluations" element={
-                    <div className="p-8">
-                      <h2 className="text-2xl font-bold">Team Evaluations</h2>
-                      <p className="text-muted-foreground mt-2 italic">Behvioral Change Scale (180-Day) Interface - Coming Soon</p>
-                    </div>
-                  } />
+                  <Route path="team-evaluations" element={<TeamEvaluations />} />
                 </Route>
 
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
