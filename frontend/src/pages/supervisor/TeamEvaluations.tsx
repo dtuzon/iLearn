@@ -179,8 +179,15 @@ export const TeamEvaluations: React.FC = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                pendingEvaluations.map((evalItem) => (
-                  <TableRow key={evalItem.id} className="hover:bg-muted/30 transition-colors">
+                pendingEvaluations.map((evalItem, index) => (
+                  <TableRow 
+                    key={evalItem.id} 
+                    className={cn(
+                      "hover:bg-primary/5 transition-colors cursor-pointer group",
+                      index % 2 === 0 ? "bg-background" : "bg-muted/10"
+                    )}
+                    onClick={() => openEvaluation(evalItem)}
+                  >
                     <TableCell className="px-6 font-semibold">{evalItem.employeeName}</TableCell>
                     <TableCell className="px-6">
                        <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
@@ -191,8 +198,8 @@ export const TeamEvaluations: React.FC = () => {
                       {new Date(evalItem.completionDate).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="px-6 text-right">
-                      <Button onClick={() => openEvaluation(evalItem)} size="sm" className="shadow-sm">
-                        Evaluate Impact <ArrowRight className="ml-2 h-4 w-4" />
+                      <Button size="sm" className="shadow-sm">
+                        Evaluate Impact <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -204,7 +211,10 @@ export const TeamEvaluations: React.FC = () => {
       </Card>
 
       <Dialog open={isEvalModalOpen} onOpenChange={setIsEvalModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-none shadow-2xl">
+        <DialogContent 
+          className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-none shadow-2xl"
+          onInteractOutside={(e) => { e.preventDefault(); }}
+        >
           <DialogHeader className="p-8 bg-primary text-primary-foreground">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
@@ -249,7 +259,8 @@ export const TeamEvaluations: React.FC = () => {
                             htmlFor={`before-${moduleName}-${num}`}
                             className={cn(
                               "flex flex-col items-center justify-center p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 peer-data-[state=checked]:border-blue-500 peer-data-[state=checked]:bg-blue-50",
-                              "hover:bg-muted/50"
+                              "hover:bg-muted/50",
+                              "peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2"
                             )}
                           >
                             <span className="text-lg font-bold">{num}</span>
@@ -273,7 +284,8 @@ export const TeamEvaluations: React.FC = () => {
                             htmlFor={`after-${moduleName}-${num}`}
                             className={cn(
                               "flex flex-col items-center justify-center p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 peer-data-[state=checked]:border-green-500 peer-data-[state=checked]:bg-green-50",
-                              "hover:bg-muted/50"
+                              "hover:bg-muted/50",
+                              "peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2"
                             )}
                           >
                             <span className="text-lg font-bold">{num}</span>
@@ -312,16 +324,25 @@ export const TeamEvaluations: React.FC = () => {
             </div>
           </div>
 
-          <DialogFooter className="p-8 bg-muted/30 border-t sticky bottom-0">
-            <Button variant="ghost" onClick={() => setIsEvalModalOpen(false)}>Cancel</Button>
-            <Button 
-              onClick={handleSubmit} 
-              disabled={isSubmitting || !isFormValid()}
-              className="px-8 font-bold"
-            >
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Submit Impact Study
-            </Button>
+          <DialogFooter className="p-8 bg-muted/30 border-t sticky bottom-0 flex justify-between items-center sm:justify-between">
+            {!isFormValid() ? (
+              <p className="text-sm text-destructive font-medium animate-pulse text-left mr-4">
+                Please complete all ratings and explanations to submit.
+              </p>
+            ) : (
+              <div /> // Spacer
+            )}
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={() => setIsEvalModalOpen(false)}>Cancel</Button>
+              <Button 
+                onClick={handleSubmit} 
+                disabled={isSubmitting || !isFormValid()}
+                className="px-8 font-bold"
+              >
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Submit Impact Study
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

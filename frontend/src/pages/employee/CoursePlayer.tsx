@@ -332,7 +332,8 @@ export const CoursePlayer: React.FC = () => {
                                 htmlFor={`${facilitator}-${num}`}
                                 className={cn(
                                   "flex flex-col items-center justify-center p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 peer-data-[state=checked]:shadow-md",
-                                  "hover:bg-muted/50"
+                                  "hover:bg-muted/50",
+                                  "peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2"
                                 )}
                               >
                                 <span className="text-lg font-bold">{num}</span>

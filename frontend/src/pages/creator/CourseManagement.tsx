@@ -32,6 +32,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '../../components/ui/dropdown-menu';
+import { cn } from '../../lib/utils';
 
 export const CourseManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -250,8 +251,15 @@ export const CourseManagement: React.FC = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  courses.map((course) => (
-                    <TableRow key={course.id} className="hover:bg-muted/30 transition-colors group">
+                  courses.map((course, index) => (
+                    <TableRow 
+                      key={course.id} 
+                      className={cn(
+                        "hover:bg-primary/5 transition-colors cursor-pointer group",
+                        index % 2 === 0 ? "bg-background" : "bg-muted/10"
+                      )}
+                      onClick={() => navigate(`/creator/courses/${course.id}`)}
+                    >
                       <TableCell>
                         <div className="font-semibold text-base group-hover:text-primary transition-colors">{course.title}</div>
                         <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{course.description || 'No description provided.'}</div>
@@ -276,15 +284,14 @@ export const CourseManagement: React.FC = () => {
                           <Button 
                             variant="default" 
                             size="sm"
-                            className="bg-primary/90 hover:bg-primary shadow-sm"
-                            onClick={() => navigate(`/creator/courses/${course.id}`)}
+                            className="bg-primary/90 hover:bg-primary shadow-sm group-hover:translate-x-1 transition-transform"
                           >
                             <Settings2 className="mr-2 h-4 w-4" />
                             Author
                           </Button>
                           
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
                                 <MoreVertical className="h-4 w-4" />
                               </Button>

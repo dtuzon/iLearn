@@ -139,7 +139,7 @@ export class UsersService {
 
     for (const record of records) {
       try {
-        const { username, password, role, departmentId } = record;
+        const { username, password, role, departmentId, immediateSuperiorId } = record;
         
         await this.create({
           username,
