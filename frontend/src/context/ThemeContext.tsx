@@ -7,6 +7,21 @@ export interface SystemSettings {
   primaryColorHex: string;
   secondaryColorHex: string;
   companyLogoUrl?: string;
+  loginBackgroundUrl?: string;
+  frontPageWelcomeText?: string;
+  footerText?: string;
+  dashboardBulletinMessage?: string;
+  visionTitle?: string;
+  visionText?: string;
+  missionTitle?: string;
+  missionText?: string;
+  smtpServer?: string;
+  smtpPort?: number;
+  smtpUser?: string;
+  smtpPassword?: string;
+  senderEmail?: string;
+  maxUploadSizeMb?: number;
+  allowedFileTypes?: string;
 }
 
 interface ThemeContextType {

@@ -12,6 +12,16 @@ export class CoursesController {
     }
   }
 
+  static async getById(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const course = await CoursesService.getById(id as string);
+      res.json(course);
+    } catch (error: any) {
+      res.status(404).json({ message: error.message });
+    }
+  }
+
   static async create(req: AuthenticatedRequest, res: Response) {
     try {
       const course = await CoursesService.create(req.user!.userId, req.body);
@@ -36,6 +46,36 @@ export class CoursesController {
       const { courseId } = req.params;
       const modules = await CoursesService.getModules(courseId as string);
       res.json(modules);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  static async updateCertificateTemplate(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { nameX, nameY, dateX, dateY } = req.body;
+      const backgroundImageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+
+      const template = await CoursesService.upsertCertificateTemplate(id as string, {
+        backgroundImageUrl,
+        nameX: parseInt(nameX),
+        nameY: parseInt(nameY),
+        dateX: parseInt(dateX),
+        dateY: parseInt(dateY)
+      });
+
+      res.json(template);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  static async partialUpdate(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const course = await CoursesService.partialUpdate(id as string, req.body);
+      res.json(course);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

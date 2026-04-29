@@ -2,7 +2,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  engineType = "library"
 }
 
 datasource db {
@@ -17,7 +16,8 @@ enum Role {
   ADMINISTRATOR
   LEARNING_MANAGER
   DEPARTMENT_HEAD
-  LECTURER
+  COURSE_CREATOR
+  SUPERVISOR
   EMPLOYEE
 }
 
@@ -27,6 +27,7 @@ enum ModuleType {
   WORKSHOP
   POST_QUIZ
   EVALUATION
+  ONLINE_EVALUATION
 }
 
 enum QuestionType {
@@ -83,17 +84,45 @@ model User {
   coursesAsLecturer Course[]         @relation("LecturerCourses")
   evaluationForms   EvaluationForm[] @relation("FormCreator")
   notifications     Notification[]
+  
+  // Direct Reporting Structure
+  immediateSuperiorId String?
+  immediateSuperior   User?   @relation("ReportingStructure", fields: [immediateSuperiorId], references: [id])
+  subordinates        User[]  @relation("ReportingStructure")
+  
+  onlineEvaluations   OnlineEvaluationResult[] @relation("UserOnlineEvaluations")
 
   @@map("users")
 }
 
 model SystemSettings {
-  id                String  @id @default(cuid())
-  companyName       String  @default("Standard Insurance Co., Inc.")
-  primaryColorHex   String  @default("#4F46E5")
-  secondaryColorHex String  @default("#10B981")
-  companyLogoUrl    String?
-  passingScore      Int     @default(80)
+  id                    String  @id @default(cuid())
+  companyName           String  @default("Standard Insurance Co., Inc.")
+  primaryColorHex       String  @default("#4F46E5")
+  secondaryColorHex     String  @default("#10B981")
+  // Portal Content & Branding
+  companyLogoUrl        String?
+  loginBackgroundUrl    String?
+  passingScore          Int     @default(80)
+  frontPageWelcomeText  String? @default("Welcome to the iLearn Portal")
+  footerText            String? @default("© 2024 Standard Insurance Co., Inc. All Rights Reserved.")
+  dashboardBulletinMessage String? @default("No active announcements.")
+  
+  visionTitle           String? @default("OUR VISION")
+  visionText            String? @default("To be the most preferred and trusted insurance company in the country.")
+  missionTitle          String? @default("OUR MISSION")
+  missionText           String? @default("To provide excellent service and innovative products that meet the needs of our clients.")
+
+  // Email Settings
+  smtpServer           String? @default("smtp.example.com")
+  smtpPort             Int?    @default(587)
+  smtpUser             String?
+  smtpPassword         String?
+  senderEmail          String? @default("no-reply@example.com")
+
+  // Storage Settings
+  maxUploadSizeMb     Int?    @default(10)
+  allowedFileTypes    String? @default(".pdf,.zip,.docx,.mp4")
 
   @@map("system_settings")
 }
@@ -172,6 +201,9 @@ model Course {
   passingScore Int      @default(80)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  
+  targetAudience     String   @default("GENERAL") // GENERAL, PHASE_1_NEW_HIRE, PHASE_2_REGULARIZED
+  requires180DayEval Boolean  @default(false)
 
   lecturerId String
   lecturer   User   @relation("LecturerCourses", fields: [lecturerId], references: [id])
@@ -194,12 +226,14 @@ model CourseModule {
   sequenceOrder    Int
   contentUrlOrText String?    // Video file path, workshop instructions HTML, etc.
   durationSeconds  Int?       // For video modules
+  facilitators     String[]   @default([])
 
   courseId String
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   quizQuestions  QuizQuestion[]
   moduleProgress ModuleProgress[]
+  onlineEvaluations OnlineEvaluationResult[]
 
   @@map("course_modules")
 }
@@ -338,4 +372,33 @@ model AuditLog {
   user   User?   @relation(fields: [userId], references: [id])
 
   @@map("audit_logs")
+}
+
+model OnlineEvaluationResult {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation("UserOnlineEvaluations", fields: [userId], references: [id])
+  moduleId          String
+  module            CourseModule @relation(fields: [moduleId], references: [id])
+  comments          String?
+  facilitatorRatings Json     // [{ "name": "...", "rating": 5 }]
+  createdAt         DateTime @default(now())
+
+  @@map("online_evaluation_results")
+}
+
+model BehavioralEvaluation {
+  id              String   @id @default(cuid())
+  evaluatorId     String
+  evaluator       User     @relation("SupervisorEvaluations", fields: [evaluatorId], references: [id])
+  employeeId      String
+  employee        User     @relation("EmployeeEvaluations", fields: [employeeId], references: [id])
+  courseId        String
+  course          Course   @relation(fields: [courseId], references: [id])
+  
+  moduleRatings   Json     // [{ "moduleName": "...", "beforeRating": 5, "afterRating": 5, "explanation": "..." }]
+  overallImpact   String
+  createdAt       DateTime @default(now())
+
+  @@map("behavioral_evaluations")
 }

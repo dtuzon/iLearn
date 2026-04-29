@@ -2,6 +2,20 @@ import { prisma } from '../../lib/prisma';
 import { EnrollmentStatus } from '@prisma/client';
 
 export class EnrollmentsService {
+  static async getMyEnrollments(userId: string) {
+    return prisma.enrollment.findMany({
+      where: { userId },
+      include: {
+        course: {
+          include: {
+            lecturer: { select: { firstName: true, lastName: true } },
+            _count: { select: { modules: true } }
+          }
+        }
+      }
+    });
+  }
+
   static async enroll(userId: string, courseId: string) {
     return prisma.enrollment.upsert({
       where: {
@@ -97,5 +111,20 @@ export class EnrollmentsService {
     }
 
     return { message: 'Module completed' };
+  }
+
+  static async submitOnlineEvaluation(userId: string, enrollmentId: string, data: { moduleId: string, comments?: string, facilitatorRatings: any[] }) {
+    // 1. Save the evaluation result
+    await prisma.onlineEvaluationResult.create({
+      data: {
+        userId,
+        moduleId: data.moduleId,
+        comments: data.comments,
+        facilitatorRatings: data.facilitatorRatings
+      }
+    });
+
+    // 2. Mark the module as complete
+    return this.completeModule(userId, data.moduleId);
   }
 }

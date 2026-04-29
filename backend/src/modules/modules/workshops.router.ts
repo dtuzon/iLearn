@@ -30,7 +30,7 @@ router.post(
 router.post(
   '/:moduleId/grade',
   authenticate,
-  authorize([Role.LECTURER, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
   auditLog('GRADE_WORKSHOP'),
   WorkshopsController.grade
 );

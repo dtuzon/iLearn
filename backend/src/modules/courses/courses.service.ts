@@ -19,8 +19,8 @@ export class CoursesService {
       });
     }
 
-    if (role === Role.LECTURER) {
-      // Lecturers: Show courses they created
+    if (role === Role.COURSE_CREATOR) {
+      // COURSE_CREATORs: Show courses they created
       return prisma.course.findMany({
         where: { lecturerId: userId },
         include: { _count: { select: { modules: true } } }
@@ -32,6 +32,16 @@ export class CoursesService {
       include: {
         lecturer: { select: { firstName: true, lastName: true } },
         _count: { select: { modules: true } }
+      }
+    });
+  }
+
+  static async getById(id: string) {
+    return prisma.course.findUnique({
+      where: { id },
+      include: {
+        modules: true,
+        certificateTemplate: true
       }
     });
   }
@@ -67,6 +77,37 @@ export class CoursesService {
     return prisma.courseModule.findMany({
       where: { courseId },
       orderBy: { sequenceOrder: 'asc' }
+    });
+  }
+
+  static async upsertCertificateTemplate(courseId: string, data: any) {
+    const { backgroundImageUrl, nameX, nameY, dateX, dateY } = data;
+
+    const designConfig = {
+      placeholders: [
+        { key: "{{StudentName}}", x: nameX, y: nameY },
+        { key: "{{Date}}", x: dateX, y: dateY }
+      ]
+    };
+
+    return prisma.certificateTemplate.upsert({
+      where: { courseId },
+      create: {
+        courseId,
+        backgroundImageUrl,
+        designConfig
+      },
+      update: {
+        ...(backgroundImageUrl && { backgroundImageUrl }),
+        designConfig
+      }
+    });
+  }
+
+  static async partialUpdate(id: string, data: any) {
+    return prisma.course.update({
+      where: { id },
+      data
     });
   }
 }

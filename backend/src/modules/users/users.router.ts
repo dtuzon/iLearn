@@ -41,4 +41,12 @@ router.post(
   UsersController.bulkImport
 );
 
+router.patch(
+  '/bulk-update',
+  authenticate,
+  authorize([Role.ADMINISTRATOR]),
+  auditLog('BULK_UPDATE_USERS'),
+  UsersController.bulkUpdate
+);
+
 export default router;

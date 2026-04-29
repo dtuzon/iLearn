@@ -12,7 +12,7 @@ router.get('/:moduleId', authenticate, QuizzesController.getQuiz);
 router.post(
   '/:moduleId/questions',
   authenticate,
-  authorize([Role.LECTURER, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
   auditLog('ADD_QUIZ_QUESTIONS'),
   QuizzesController.addQuestions
 );

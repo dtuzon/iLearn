@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import 'dotenv/config';
+import path from 'path';
 
 // Route Imports
 import authRouter from './modules/auth/auth.router';
@@ -30,7 +31,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Static Files
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
 
 // Health Check
 app.get('/health', (req, res) => {

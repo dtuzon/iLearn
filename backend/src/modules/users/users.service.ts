@@ -4,24 +4,76 @@ import { Role } from '@prisma/client';
 import { parse } from 'csv-parse/sync';
 
 export class UsersService {
-  static async getAll(userId: string, role: string) {
+  static async getAll(userId: string, role: string, filters: { search?: string, role?: Role, departmentId?: string } = {}) {
+    const where: any = {};
+
     if (role === Role.DEPARTMENT_HEAD) {
-      // Dept Head: Only see users in their department
       const dept = await prisma.department.findUnique({
         where: { headUserId: userId }
       });
       if (!dept) return [];
-      
-      return prisma.user.findMany({
-        where: { departmentId: dept.id },
-        include: { department: true }
-      });
+      where.departmentId = dept.id;
     }
 
-    // Admin/HR: See everyone
+    if (filters.search) {
+      where.OR = [
+        { username: { contains: filters.search, mode: 'insensitive' } },
+        { firstName: { contains: filters.search, mode: 'insensitive' } },
+        { lastName: { contains: filters.search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (filters.role) {
+      where.role = filters.role;
+    }
+
+    if (filters.departmentId) {
+      where.departmentId = filters.departmentId === 'none' ? null : filters.departmentId;
+    }
+
     return prisma.user.findMany({
-      include: { department: true }
+      where,
+      include: { 
+        department: true,
+        immediateSuperior: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
     });
+  }
+
+  static async bulkUpdate(userIds: string[], data: { action: string, role?: Role, departmentId?: string }) {
+    switch (data.action) {
+      case 'DEACTIVATE':
+        return prisma.user.updateMany({
+          where: { id: { in: userIds } },
+          data: { isActive: false }
+        });
+      case 'ACTIVATE':
+        return prisma.user.updateMany({
+          where: { id: { in: userIds } },
+          data: { isActive: true }
+        });
+      case 'CHANGE_ROLE':
+        if (!data.role) throw new Error('Role is required');
+        return prisma.user.updateMany({
+          where: { id: { in: userIds } },
+          data: { role: data.role }
+        });
+      case 'CHANGE_DEPARTMENT':
+        const deptId = data.departmentId === 'none' ? null : data.departmentId;
+        return prisma.user.updateMany({
+          where: { id: { in: userIds } },
+          data: { departmentId: deptId }
+        });
+      default:
+        throw new Error('Invalid bulk action');
+    }
   }
 
   static async create(data: {
@@ -32,6 +84,7 @@ export class UsersService {
     firstName?: string;
     lastName?: string;
     email?: string;
+    immediateSuperiorId?: string;
   }) {
     const passwordHash = await hashPassword(data.password || 'password123');
     return prisma.user.create({
@@ -42,7 +95,8 @@ export class UsersService {
         departmentId: data.departmentId,
         firstName: data.firstName,
         lastName: data.lastName,
-        email: data.email
+        email: data.email,
+        immediateSuperiorId: data.immediateSuperiorId
       }
     });
   }
@@ -55,6 +109,7 @@ export class UsersService {
     lastName: string;
     email: string;
     isActive: boolean;
+    immediateSuperiorId: string | null;
   }>) {
     return prisma.user.update({
       where: { id },
@@ -68,6 +123,7 @@ export class UsersService {
       password?: string;
       role?: string;
       departmentId?: string;
+      immediateSuperiorId?: string;
     }
 
     const records = parse(csvBuffer, {
@@ -89,7 +145,8 @@ export class UsersService {
           username,
           password,
           role: (role as Role) || Role.EMPLOYEE,
-          departmentId: departmentId || undefined
+          departmentId: departmentId || undefined,
+          immediateSuperiorId: immediateSuperiorId || undefined
         });
         results.success++;
       } catch (err: any) {

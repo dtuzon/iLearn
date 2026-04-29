@@ -22,7 +22,7 @@ const upload = multer({ storage });
 router.post(
   '/templates',
   authenticate,
-  authorize([Role.LECTURER, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
   upload.single('background'),
   auditLog('CREATE_CERTIFICATE_TEMPLATE'),
   CertificatesController.createTemplate

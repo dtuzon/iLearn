@@ -49,13 +49,13 @@ export class WorkshopsService {
       data: { status: EnrollmentStatus.PENDING_GRADING }
     });
 
-    // Notify Lecturer
+    // Notify COURSE_CREATOR
     const student = await prisma.user.findUnique({ where: { id: userId } });
     await prisma.notification.create({
       data: {
         userId: module.course.lecturerId,
         message: `New workshop submission from ${student?.firstName} ${student?.lastName} for course: ${module.course.title}`,
-        link: `/lecturer/grading/${moduleId}`
+        link: `/creator/grading/${moduleId}`
       }
     });
 

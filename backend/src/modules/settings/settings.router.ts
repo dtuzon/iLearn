@@ -4,6 +4,7 @@ import { authenticate } from '../../middleware/auth.middleware';
 import { authorize } from '../../middleware/rbac.middleware';
 import { auditLog } from '../../middleware/audit.middleware';
 import { Role } from '@prisma/client';
+import { upload } from '../../middleware/upload.middleware';
 
 const router = Router();
 
@@ -14,6 +15,10 @@ router.put(
   '/',
   authenticate,
   authorize([Role.ADMINISTRATOR]),
+  upload.fields([
+    { name: 'logo', maxCount: 1 },
+    { name: 'loginBackground', maxCount: 1 }
+  ]),
   auditLog('UPDATE_SYSTEM_SETTINGS'),
   SettingsController.updateSettings
 );

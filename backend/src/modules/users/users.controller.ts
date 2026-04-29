@@ -5,10 +5,25 @@ import { AuthenticatedRequest } from '../../middleware/auth.middleware';
 export class UsersController {
   static async getAll(req: AuthenticatedRequest, res: Response) {
     try {
-      const users = await UsersService.getAll(req.user!.userId, req.user!.role);
+      const { search, role, departmentId } = req.query;
+      const users = await UsersService.getAll(req.user!.userId, req.user!.role, {
+        search: search as string,
+        role: role as any,
+        departmentId: departmentId as string
+      });
       res.json(users);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  }
+
+  static async bulkUpdate(req: Request, res: Response) {
+    try {
+      const { userIds, ...data } = req.body;
+      const result = await UsersService.bulkUpdate(userIds, data);
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
     }
   }
 
