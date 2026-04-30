@@ -37,6 +37,10 @@ import { QuizBuilder } from '../../components/creator/QuizBuilder';
 import { CertificateBuilder } from '../../components/creator/CertificateBuilder';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader, 
   DialogTitle 
 } from '../../components/ui/dialog';
@@ -47,7 +51,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent
+  type DragEndEvent
 } from '@dnd-kit/core';
 import {
   arrayMove,

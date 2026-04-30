@@ -1,6 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { shuffle } from '../../utils/shuffle';
-import { ModuleType } from '@prisma/client';
+import { ModuleType, CourseModule } from '@prisma/client';
 
 export class QuizzesService {
   static async addQuestions(moduleId: string, questions: any[]) {
@@ -24,8 +24,7 @@ export class QuizzesService {
 
   static async getQuizForEmployee(moduleId: string) {
     const module = await prisma.courseModule.findUnique({
-      where: { id: moduleId },
-      select: { shuffleQuestions: true, shuffleOptions: true }
+      where: { id: moduleId }
     });
 
     const questions = await prisma.quizQuestion.findMany({
@@ -41,13 +40,13 @@ export class QuizzesService {
     });
 
     let finalQuestions = questions;
-    if (module?.shuffleQuestions) {
+    if ((module as CourseModule)?.shuffleQuestions) {
       finalQuestions = shuffle(finalQuestions);
     }
 
     return finalQuestions.map((q) => ({
       ...q,
-      options: module?.shuffleOptions ? shuffle(q.options) : q.options
+      options: (module as CourseModule)?.shuffleOptions ? shuffle(q.options) : q.options
     }));
   }
 
