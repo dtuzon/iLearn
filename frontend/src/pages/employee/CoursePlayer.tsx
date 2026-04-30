@@ -15,6 +15,8 @@ import { Progress } from '../../components/ui/progress';
 import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, FileUp, Video, HelpCircle, BookOpen, ClipboardCheck, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
+import { LocalVideoPlayer } from '../../components/learner/LocalVideoPlayer';
+
 
 export const CoursePlayer: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
@@ -229,11 +231,13 @@ export const CoursePlayer: React.FC = () => {
               <div className="space-y-6">
                 <div className="aspect-video bg-black rounded-lg flex items-center justify-center overflow-hidden border">
                   {currentModule.contentUrlOrText ? (
-                    <video controls className="w-full h-full">
-                        <source src={currentModule.contentUrlOrText} type="video/mp4" />
-                        Your browser does not support the video tag.
-                    </video>
+                    <LocalVideoPlayer 
+                      url={currentModule.contentUrlOrText} 
+                      onComplete={handleCompleteModule}
+                      className="w-full h-full"
+                    />
                   ) : (
+
                     <div className="text-white text-center p-8">
                       <Video className="h-12 w-12 mx-auto mb-4 opacity-50" />
                       <p>Video content placeholder. [Backend: {currentModule.contentUrlOrText || 'No URL'}]</p>
@@ -376,12 +380,8 @@ export const CoursePlayer: React.FC = () => {
               Strict Learning Loop active: Skipping modules is disabled.
             </div>
             
-            {currentModule.type === 'VIDEO' && (
-              <Button onClick={handleCompleteModule} disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Mark as Complete & Continue
-              </Button>
-            )}
+            {/* Button removed for Video - completion handled by player */}
+
 
             {currentModule.type === 'ONLINE_EVALUATION' && (
               <Button 

@@ -128,5 +128,18 @@ export class CoursesController {
       res.status(400).json({ message: error.message });
     }
   }
+  static async uploadVideo(req: Request, res: Response) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No video file uploaded' });
+      }
+      
+      const videoUrl = `/uploads/videos/${req.file.filename}`;
+      res.json({ url: videoUrl });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
+
 

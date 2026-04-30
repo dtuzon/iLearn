@@ -65,24 +65,31 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { MultiSelect } from '../../components/ui/multi-select';
+import { VideoUploadModal } from '../../components/creator/VideoUploadModal';
+import { Video as VideoIcon } from 'lucide-react';
+
 
 interface SortableModuleItemProps {
   module: any;
   index: number;
   getModuleIcon: (type: string) => React.ReactNode;
   setQuizBuilderState: (state: any) => void;
+  setVideoModalState: (state: { isOpen: boolean, moduleId: string }) => void;
   setEditingModule: (module: any) => void;
   handleDeleteModule: (moduleId: string) => void;
 }
+
 
 const SortableModuleItem: React.FC<SortableModuleItemProps> = ({ 
   module, 
   index, 
   getModuleIcon, 
   setQuizBuilderState, 
+  setVideoModalState,
   setEditingModule, 
   handleDeleteModule 
 }) => {
+
   const {
     attributes,
     listeners,
@@ -138,6 +145,21 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
                   <Settings className="mr-2 h-3.5 w-3.5" /> Manage Quiz
                 </Button>
               )}
+              
+              {module.type === 'VIDEO' && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="font-bold border-secondary/20 hover:border-secondary/50 hover:bg-secondary/5"
+                  onClick={() => setVideoModalState({
+                    isOpen: true,
+                    moduleId: module.id
+                  })}
+                >
+                  <VideoIcon className="mr-2 h-3.5 w-3.5" /> Manage Video
+                </Button>
+              )}
+
               
               <Button 
                 variant="ghost" 
@@ -198,6 +220,14 @@ export const CourseBuilder: React.FC = () => {
     moduleId: '',
     moduleTitle: ''
   });
+
+
+  // Video Management State
+  const [videoModalState, setVideoModalState] = useState<{ isOpen: boolean, moduleId: string }>({
+    isOpen: false,
+    moduleId: ''
+  });
+
 
   // Module Management State
   const [editingModule, setEditingModule] = useState<any>(null);
@@ -362,6 +392,19 @@ export const CourseBuilder: React.FC = () => {
     }
   };
 
+  const handleVideoUploadSuccess = async (videoUrl: string) => {
+    if (!courseId || !videoModalState.moduleId) return;
+    try {
+      await coursesApi.updateModule(courseId, videoModalState.moduleId, {
+        contentUrlOrText: videoUrl
+      });
+      fetchCourse();
+    } catch (error) {
+      toast.error('Failed to save video reference');
+    }
+  };
+
+
   const getModuleIcon = (type: string) => {
     switch (type) {
       case 'PRE_QUIZ': return <div className="p-2 rounded-lg bg-primary/10 text-primary"><HelpCircle className="h-5 w-5" /></div>;
@@ -501,9 +544,11 @@ export const CourseBuilder: React.FC = () => {
                           index={index}
                           getModuleIcon={getModuleIcon}
                           setQuizBuilderState={setQuizBuilderState}
+                          setVideoModalState={setVideoModalState}
                           setEditingModule={setEditingModule}
                           handleDeleteModule={handleDeleteModule}
                         />
+
                       ))}
                     </SortableContext>
                   </DndContext>
@@ -786,7 +831,14 @@ export const CourseBuilder: React.FC = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      <VideoUploadModal 
+        isOpen={videoModalState.isOpen}
+        onClose={() => setVideoModalState({ ...videoModalState, isOpen: false })}
+        onUploadSuccess={handleVideoUploadSuccess}
+      />
     </div>
+
   );
 };
 

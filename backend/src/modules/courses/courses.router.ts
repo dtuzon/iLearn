@@ -4,6 +4,8 @@ import { authenticate } from '../../middleware/auth.middleware';
 import { authorize } from '../../middleware/rbac.middleware';
 import { auditLog } from '../../middleware/audit.middleware';
 import { upload } from '../../middleware/upload.middleware';
+import { videoUpload } from '../../middleware/video-upload.middleware';
+
 import { Role } from '@prisma/client';
 
 const router = Router();
@@ -75,6 +77,15 @@ router.patch(
   auditLog('UPDATE_COURSE_STATUS'),
   CoursesController.updateStatus
 );
+
+router.post(
+  '/modules/video/upload',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  videoUpload.single('video'),
+  CoursesController.uploadVideo
+);
+
 
 export default router;
 
