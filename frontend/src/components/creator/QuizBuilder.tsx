@@ -7,7 +7,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Loader2, Plus, Download, FileSpreadsheet, Pencil, Trash2, Settings as SettingsIcon, Trash, AlertCircle } from 'lucide-react';
+import { Loader2, Plus, Download, FileSpreadsheet, Pencil, Trash2, Settings as SettingsIcon, Trash, AlertCircle, Check, X, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import Papa from 'papaparse';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
@@ -24,7 +24,7 @@ interface QuizBuilderProps {
 }
 
 export const QuizBuilder: React.FC<QuizBuilderProps> = ({ courseId, moduleId, moduleTitle, isOpen, onClose }) => {
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [questions, setQuestions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('manual');
@@ -35,10 +35,11 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ courseId, moduleId, mo
     shuffleOptions: false
   });
 
-  // Edit state
-  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  // Inline Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<any>(null);
 
-  // New/Editing Question State
+  // New Question State (for the top form)
   const [newQuestion, setNewQuestion] = useState({
     questionText: '',
     options: [
@@ -85,128 +86,94 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ courseId, moduleId, mo
     }
   }, [isOpen, moduleId]);
 
-  const handleAddOrUpdateQuestion = async (e: React.FormEvent) => {
+  // LOCAL ACTIONS
+  const handleAddLocalQuestion = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!newQuestion.questionText) {
-      toast.error('Question text is required');
-      return;
-    }
-    if (newQuestion.options.some(opt => !opt.optionText)) {
-      toast.error('All 4 options must have text');
-      return;
-    }
+    if (!newQuestion.questionText) return toast.error('Question text is required');
+    if (newQuestion.options.some(opt => !opt.optionText)) return toast.error('All 4 options must have text');
 
+    const tempId = `temp-${Date.now()}`;
+    setQuestions([...questions, { ...newQuestion, id: tempId }]);
+    setNewQuestion({
+      questionText: '',
+      options: [
+        { optionText: '', isCorrect: true },
+        { optionText: '', isCorrect: false },
+        { optionText: '', isCorrect: false },
+        { optionText: '', isCorrect: false },
+      ]
+    });
+    toast.success('Question added to list');
+  };
+
+  const handleStartEdit = (q: any) => {
+    setEditingId(q.id);
+    setEditDraft({
+      questionText: q.questionText,
+      options: q.options.map((o: any) => ({ optionText: o.optionText, isCorrect: o.isCorrect }))
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditDraft(null);
+  };
+
+  const handleConfirmEdit = () => {
+    if (!editDraft.questionText) return toast.error('Question text is required');
+    if (editDraft.options.some((o: any) => !o.optionText)) return toast.error('All options must have text');
+
+    setQuestions(questions.map(q => q.id === editingId ? { ...q, ...editDraft } : q));
+    setEditingId(null);
+    setEditDraft(null);
+    toast.success('Question updated locally');
+  };
+
+  const handleDeleteLocal = (id: string) => {
+    setQuestions(questions.filter(q => q.id !== id));
+    toast.info('Question removed');
+  };
+
+  const handleClearAllLocal = () => {
+    if (!window.confirm('Wipe all questions from this session?')) return;
+    setQuestions([]);
+    toast.info('All questions removed');
+  };
+
+  // MASTER SAVE
+  const handleSaveQuiz = async () => {
     setIsSaving(true);
     try {
-      if (editingQuestionId) {
-        await quizzesApi.updateQuestion(editingQuestionId, newQuestion);
-        toast.success('Question updated');
-        setEditingQuestionId(null);
-      } else {
-        await quizzesApi.addQuestion(moduleId, newQuestion);
-        toast.success('Question added');
-      }
-      
-      setNewQuestion({
-        questionText: '',
-        options: [
-          { optionText: '', isCorrect: true },
-          { optionText: '', isCorrect: false },
-          { optionText: '', isCorrect: false },
-          { optionText: '', isCorrect: false },
-        ]
-      });
-      fetchQuestions();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to save question');
+      // Prepare questions (remove temp IDs if any)
+      const sanitizedQuestions = questions.map(q => ({
+        questionText: q.questionText,
+        options: q.options.map((o: any) => ({
+          optionText: o.optionText,
+          isCorrect: o.isCorrect
+        }))
+      }));
+
+      await quizzesApi.syncQuiz(moduleId, sanitizedQuestions);
+      toast.success('Quiz persisted to database!');
+      onClose();
+    } catch (err) {
+      toast.error('Failed to save quiz');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleEdit = (q: QuizQuestion) => {
-    setEditingQuestionId(q.id);
-    setNewQuestion({
-      questionText: q.questionText,
-      options: q.options.map(o => ({ optionText: o.optionText, isCorrect: o.isCorrect }))
-    });
-    setActiveTab('manual');
-  };
-
-  const handleDelete = async (questionId: string) => {
-    if (!window.confirm('Delete this question?')) return;
-    try {
-      await quizzesApi.deleteQuestion(questionId);
-      toast.success('Question deleted');
-      fetchQuestions();
-    } catch (err) {
-      toast.error('Failed to delete question');
-    }
-  };
-
-  const handleClearAll = async () => {
-    if (!window.confirm('CRITICAL: This will wipe ALL questions in this quiz. Proceed?')) return;
-    try {
-      await quizzesApi.clearQuestions(moduleId);
-      toast.success('Quiz cleared');
-      fetchQuestions();
-    } catch (err) {
-      toast.error('Failed to clear quiz');
-    }
-  };
-
-  const updateSetting = async (field: string, value: boolean) => {
-    setSettings(prev => ({ ...prev, [field]: value }));
-    try {
-      await coursesApi.updateModule(courseId, moduleId, { [field]: value });
-      toast.success('Setting updated');
-    } catch (err) {
-      toast.error('Failed to update setting');
-    }
-  };
-
-  const updateOption = (index: number, text: string) => {
-    const updatedOptions = [...newQuestion.options];
-    updatedOptions[index].optionText = text;
-    setNewQuestion({ ...newQuestion, options: updatedOptions });
-  };
-
-  const setCorrectOption = (index: number) => {
-    const updatedOptions = newQuestion.options.map((opt, i) => ({
-      ...opt,
-      isCorrect: i === index
-    }));
-    setNewQuestion({ ...newQuestion, options: updatedOptions });
-  };
-
-  const handleDownloadTemplate = () => {
-    const headers = "Question,Option 1,Option 2,Option 3,Option 4,Correct Answer (1-4)\n";
-    const sampleRow1 = '"What is the core value of Standard Insurance?","Integrity","Laziness","Apathy","Greed","1"\n';
-    const sampleRow2 = '"Which department handles claims?","HR","IT","Claims","Sales","3"';
-    const csvContent = headers + sampleRow1 + sampleRow2;
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'quiz_template.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
+  // CSV UPLOAD (LOCAL)
   const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setIsSaving(true);
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: async (results) => {
+      complete: (results) => {
         const rows = results.data as any[];
-        const questionsToImport: any[] = [];
+        const newBatch: any[] = [];
         let skipCount = 0;
 
         for (const row of rows) {
@@ -222,7 +189,8 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ courseId, moduleId, mo
             continue;
           }
 
-          questionsToImport.push({
+          newBatch.push({
+            id: `csv-${Date.now()}-${Math.random()}`,
             questionText,
             options: [
               { optionText: opt1, isCorrect: correctIndex === 0 },
@@ -233,166 +201,175 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ courseId, moduleId, mo
           });
         }
 
-        if (questionsToImport.length > 0) {
-          try {
-            await quizzesApi.addQuestions(moduleId, questionsToImport);
-            toast.success(`Successfully imported ${questionsToImport.length} questions!${skipCount > 0 ? ` (${skipCount} skipped)` : ''}`);
-            fetchQuestions();
-          } catch (err) {
-            toast.error("Failed to import questions. Please check your CSV format.");
-          }
-        } else if (skipCount > 0) {
-          toast.warning("No valid questions found in CSV.");
-        }
-
-        setIsSaving(false);
+        setQuestions([...questions, ...newBatch]);
+        toast.success(`Imported ${newBatch.length} questions locally!${skipCount > 0 ? ` (${skipCount} skipped)` : ''}`);
         e.target.value = '';
-      },
-      error: (error) => {
-        toast.error(`Error parsing CSV: ${error.message}`);
-        setIsSaving(false);
       }
     });
   };
 
+  const updateSetting = async (field: string, value: boolean) => {
+    setSettings(prev => ({ ...prev, [field]: value }));
+    try {
+      await coursesApi.updateModule(courseId, moduleId, { [field]: value });
+      toast.success('Setting updated');
+    } catch (err) {
+      toast.error('Failed to update setting');
+    }
+  };
+
+  const updateNewOption = (index: number, text: string) => {
+    const updatedOptions = [...newQuestion.options];
+    updatedOptions[index].optionText = text;
+    setNewQuestion({ ...newQuestion, options: updatedOptions });
+  };
+
+  const setNewCorrectOption = (index: number) => {
+    const updatedOptions = newQuestion.options.map((opt, i) => ({
+      ...opt,
+      isCorrect: i === index
+    }));
+    setNewQuestion({ ...newQuestion, options: updatedOptions });
+  };
+
+  // Inline edit helpers
+  const updateDraftOption = (index: number, text: string) => {
+    const updatedOptions = [...editDraft.options];
+    updatedOptions[index].optionText = text;
+    setEditDraft({ ...editDraft, options: updatedOptions });
+  };
+
+  const setDraftCorrectOption = (index: number) => {
+    const updatedOptions = editDraft.options.map((opt: any, i: number) => ({
+      ...opt,
+      isCorrect: i === index
+    }));
+    setEditDraft({ ...editDraft, options: updatedOptions });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+        <DialogHeader className="p-6 pb-2">
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle>Quiz Builder: {moduleTitle}</DialogTitle>
-              <DialogDescription>Add and manage multiple choice questions for this quiz module.</DialogDescription>
+              <DialogDescription>All changes are local until you hit "Save Quiz".</DialogDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                {questions.length} Questions
+              </Badge>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="space-y-8 py-4">
+        <div className="flex-1 overflow-y-auto px-6 py-2 space-y-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-4">
-              <TabsTrigger value="manual">Manual Entry</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsTrigger value="manual">Add Question</TabsTrigger>
               <TabsTrigger value="bulk">Bulk Import</TabsTrigger>
-              <TabsTrigger value="settings" className="flex items-center gap-2">
-                <SettingsIcon className="h-3 w-3" /> Settings
-              </TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="manual" className="space-y-4 animate-in fade-in duration-300">
-              <form onSubmit={handleAddOrUpdateQuestion} className="space-y-4 p-4 border rounded-lg bg-muted/30 relative">
-                {editingQuestionId && (
-                  <Badge className="absolute -top-2 -right-2 px-3 py-1 shadow-md" variant="default">
-                    EDITING MODE
-                  </Badge>
-                )}
-                <h3 className="font-semibold text-sm">{editingQuestionId ? 'Update Question' : 'Add New Question'}</h3>
+            <TabsContent value="manual" className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-300">
+              <form onSubmit={handleAddLocalQuestion} className="space-y-4 p-5 border rounded-2xl bg-muted/20 border-primary/10">
+                <h3 className="font-bold text-xs uppercase tracking-widest text-primary">New Question</h3>
                 <div className="space-y-2">
-                  <Label htmlFor="q-text">Question Text</Label>
+                  <Label htmlFor="q-text" className="text-xs">Question Text</Label>
                   <Input 
                     id="q-text" 
                     placeholder="Enter question here..." 
                     value={newQuestion.questionText}
                     onChange={(e) => setNewQuestion({...newQuestion, questionText: e.target.value})}
+                    className="bg-background border-primary/10 focus-visible:ring-primary"
                   />
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Options (Select the correct one)</Label>
+                  <Label className="text-xs">Options (Select the correct one)</Label>
                   <RadioGroup 
                     value={newQuestion.options.findIndex(o => o.isCorrect).toString()}
-                    onValueChange={(val) => setCorrectOption(parseInt(val))}
+                    onValueChange={(val) => setNewCorrectOption(parseInt(val))}
+                    className="grid grid-cols-1 md:grid-cols-2 gap-3"
                   >
                     {newQuestion.options.map((opt, i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <RadioGroupItem value={i.toString()} id={`opt-${i}`} />
+                      <div key={i} className="flex items-center gap-3 bg-background p-2 rounded-xl border border-primary/5">
+                        <RadioGroupItem value={i.toString()} id={`new-opt-${i}`} />
                         <Input 
                           placeholder={`Option ${i + 1}`} 
                           value={opt.optionText}
-                          onChange={(e) => updateOption(i, e.target.value)}
+                          onChange={(e) => updateNewOption(i, e.target.value)}
+                          className="h-8 text-sm border-none focus-visible:ring-0 p-0"
                         />
                       </div>
                     ))}
                   </RadioGroup>
                 </div>
 
-                <div className="flex gap-2">
-                  {editingQuestionId && (
-                    <Button type="button" variant="outline" className="flex-1" onClick={() => {
-                      setEditingQuestionId(null);
-                      setNewQuestion({
-                        questionText: '',
-                        options: Array(4).fill(0).map((_, i) => ({ optionText: '', isCorrect: i === 0 }))
-                      });
-                    }}>
-                      Cancel Edit
-                    </Button>
-                  )}
-                  <Button type="submit" className={editingQuestionId ? 'flex-[2]' : 'w-full'} disabled={isSaving}>
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                    {editingQuestionId ? 'Update Question' : 'Add to Quiz'}
-                  </Button>
-                </div>
+                <Button type="submit" className="w-full h-11 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
+                  <Plus className="mr-2 h-4 w-4" /> Add to List
+                </Button>
               </form>
             </TabsContent>
 
-            <TabsContent value="bulk" className="space-y-4 animate-in fade-in duration-300">
-              <Card className="border-dashed border-2 bg-muted/5">
-                <CardContent className="pt-6 space-y-6">
+            <TabsContent value="bulk" className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-300">
+              <Card className="border-dashed border-2 bg-muted/5 rounded-2xl">
+                <CardContent className="pt-8 pb-8 space-y-6">
                   <div className="flex flex-col items-center text-center space-y-2">
-                    <div className="p-3 rounded-full bg-primary/10 text-primary">
-                      <FileSpreadsheet className="h-6 w-6" />
+                    <div className="p-4 rounded-2xl bg-primary/10 text-primary mb-2">
+                      <FileSpreadsheet className="h-8 w-8" />
                     </div>
-                    <h3 className="font-bold text-lg">Bulk Import Questions</h3>
+                    <h3 className="font-bold text-xl">CSV Batch Import</h3>
                     <p className="text-sm text-muted-foreground max-w-sm">
-                      Upload a CSV file to populate this quiz instantly.
+                      Upload your spreadsheet to instantly populate the question list below.
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4">
-                    <Button variant="outline" onClick={handleDownloadTemplate} className="w-full h-11 border-primary/20">
-                      <Download className="mr-2 h-4 w-4" /> Download CSV Template
+                  <div className="flex flex-col gap-3">
+                    <Button variant="outline" onClick={() => {
+                        const headers = "Question,Option 1,Option 2,Option 3,Option 4,Correct Answer (1-4)\n";
+                        const blob = new Blob([headers], { type: 'text/csv' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'quiz_template.csv';
+                        a.click();
+                      }} 
+                      className="h-12 border-primary/20 hover:bg-primary/5"
+                    >
+                      <Download className="mr-2 h-4 w-4" /> Download Template
                     </Button>
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="csv-upload" className="text-xs font-bold uppercase text-muted-foreground">Upload Filled Template</Label>
-                      <div className="relative">
-                        <Input 
-                          id="csv-upload" 
-                          type="file" 
-                          accept=".csv"
-                          onChange={handleCSVUpload}
-                          disabled={isSaving}
-                          className="h-12 pt-2.5 cursor-pointer file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                        />
-                        {isSaving && (
-                          <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-md">
-                            <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
-                            <span className="text-sm font-medium">Processing Batch...</span>
-                          </div>
-                        )}
-                      </div>
+                    <div className="relative">
+                      <Input 
+                        type="file" 
+                        accept=".csv"
+                        onChange={handleCSVUpload}
+                        className="h-12 pt-2.5 cursor-pointer file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                      />
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="settings" className="space-y-6 animate-in fade-in duration-300">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-xl bg-muted/20">
+            <TabsContent value="settings" className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-300">
+              <div className="grid gap-4">
+                <div className="flex items-center justify-between p-5 border rounded-2xl bg-muted/10 hover:bg-muted/20 transition-colors">
                   <div className="space-y-1">
-                    <Label className="text-base font-bold">Shuffle Questions Order</Label>
-                    <p className="text-sm text-muted-foreground">Randomizes the sequence of questions for every learner.</p>
+                    <Label className="text-base font-bold">Shuffle Questions</Label>
+                    <p className="text-sm text-muted-foreground">Random order for every user.</p>
                   </div>
                   <Switch 
                     checked={settings.shuffleQuestions} 
                     onCheckedChange={(val) => updateSetting('shuffleQuestions', val)}
                   />
                 </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-xl bg-muted/20">
+                <div className="flex items-center justify-between p-5 border rounded-2xl bg-muted/10 hover:bg-muted/20 transition-colors">
                   <div className="space-y-1">
-                    <Label className="text-base font-bold">Shuffle Options Order</Label>
-                    <p className="text-sm text-muted-foreground">Randomizes the A/B/C/D order within each question.</p>
+                    <Label className="text-base font-bold">Shuffle Options</Label>
+                    <p className="text-sm text-muted-foreground">Random A/B/C/D order.</p>
                   </div>
                   <Switch 
                     checked={settings.shuffleOptions} 
@@ -404,67 +381,115 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ courseId, moduleId, mo
           </Tabs>
 
           {/* Existing Questions List */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between border-b pb-2">
-              <h3 className="font-bold flex items-center gap-2">
-                Existing Questions 
-                <Badge variant="secondary" className="rounded-full px-2">{questions.length}</Badge>
-              </h3>
+          <div className="space-y-6 pt-4 border-t">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-black tracking-tight">Question Pool</h3>
+                <Badge variant="secondary" className="rounded-full bg-primary/10 text-primary border-none">
+                  {questions.length} items
+                </Badge>
+              </div>
               {questions.length > 0 && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
-                  onClick={handleClearAll}
-                >
-                  <Trash className="h-3.5 w-3.5" /> Clear All
+                <Button variant="ghost" size="sm" onClick={handleClearAllLocal} className="text-destructive hover:bg-destructive/10">
+                  <Trash className="h-3.5 w-3.5 mr-2" /> Clear Pool
                 </Button>
               )}
             </div>
 
             {isLoading ? (
-              <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground opacity-20" /></div>
+              <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <Loader2 className="h-10 w-10 animate-spin text-primary opacity-40" />
+                <p className="text-sm font-medium text-muted-foreground">Syncing pool...</p>
+              </div>
             ) : questions.length === 0 ? (
-              <div className="text-center py-12 border-2 border-dashed rounded-2xl bg-muted/5">
-                <AlertCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground opacity-20" />
-                <p className="text-muted-foreground text-sm font-medium">No questions in this quiz yet.</p>
+              <div className="text-center py-20 border-2 border-dashed rounded-3xl bg-muted/5 border-muted-foreground/10">
+                <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
+                <h4 className="text-xl font-bold text-muted-foreground/60">Your quiz is empty</h4>
+                <p className="text-sm text-muted-foreground/50 max-w-[240px] mx-auto mt-2">
+                  Use the tabs above to populate your quiz pool.
+                </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 pb-20">
                 {questions.map((q, idx) => (
-                  <div key={q.id} className="p-4 border rounded-xl space-y-3 bg-background shadow-sm hover:shadow-md transition-shadow group">
-                    <div className="flex justify-between items-start gap-4">
-                      <span className="font-bold text-sm leading-tight">
-                        <span className="text-primary mr-2 font-mono">{idx + 1}.</span>
-                        {q.questionText}
-                      </span>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => handleEdit(q)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(q.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                      {q.options.map((opt, oIdx) => (
-                        <div 
-                          key={opt.id} 
-                          className={`text-xs p-3 rounded-lg border flex items-center justify-between ${
-                            opt.isCorrect 
-                              ? 'bg-primary/5 border-primary/20 text-primary font-bold shadow-sm' 
-                              : 'bg-muted/30 border-transparent text-muted-foreground'
-                          }`}
-                        >
+                  <div key={q.id} className={`group p-6 rounded-2xl border transition-all duration-300 ${
+                    editingId === q.id 
+                      ? 'border-primary ring-2 ring-primary/20 bg-background shadow-2xl scale-[1.02] z-10' 
+                      : 'border-muted-foreground/10 bg-muted/5 hover:border-primary/30 hover:bg-background'
+                  }`}>
+                    {editingId === q.id ? (
+                      // EDIT MODE
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Badge className="bg-primary/10 text-primary border-none font-bold">INLINE EDITING</Badge>
                           <div className="flex items-center gap-2">
-                            <span className="opacity-40 font-mono">{String.fromCharCode(65 + oIdx)}.</span>
-                            {opt.optionText}
+                            <Button size="icon" variant="ghost" onClick={handleCancelEdit} className="h-8 w-8 text-muted-foreground hover:bg-muted">
+                              <X className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="default" onClick={handleConfirmEdit} className="h-8 w-8 bg-primary text-white shadow-lg shadow-primary/20">
+                              <Check className="h-4 w-4" />
+                            </Button>
                           </div>
-                          {opt.isCorrect && <Badge variant="default" className="h-4 px-1 text-[8px] bg-primary">CORRECT</Badge>}
                         </div>
-                      ))}
-                    </div>
+                        <Input 
+                          value={editDraft.questionText}
+                          onChange={(e) => setEditDraft({...editDraft, questionText: e.target.value})}
+                          className="text-lg font-bold h-12 focus-visible:ring-primary"
+                        />
+                        <RadioGroup 
+                          value={editDraft.options.findIndex((o: any) => o.isCorrect).toString()}
+                          onValueChange={(val) => setDraftCorrectOption(parseInt(val))}
+                          className="grid grid-cols-1 md:grid-cols-2 gap-3"
+                        >
+                          {editDraft.options.map((opt: any, i: number) => (
+                            <div key={i} className="flex items-center gap-3 p-3 border rounded-xl focus-within:border-primary transition-colors">
+                              <RadioGroupItem value={i.toString()} id={`edit-opt-${i}`} />
+                              <Input 
+                                value={opt.optionText}
+                                onChange={(e) => updateDraftOption(i, e.target.value)}
+                                className="h-8 text-sm border-none focus-visible:ring-0 p-0"
+                              />
+                            </div>
+                          ))}
+                        </RadioGroup>
+                      </div>
+                    ) : (
+                      // READ MODE
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-start gap-4">
+                          <span className="font-bold text-lg tracking-tight leading-tight">
+                            <span className="text-primary/40 mr-2 font-mono">#{idx + 1}</span>
+                            {q.questionText}
+                          </span>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:bg-primary/10 hover:text-primary rounded-xl" onClick={() => handleStartEdit(q)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive/40 hover:text-destructive hover:bg-destructive/10 rounded-xl" onClick={() => handleDeleteLocal(q.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {q.options.map((opt: any, oIdx: number) => (
+                            <div 
+                              key={oIdx} 
+                              className={`text-xs p-4 rounded-xl border flex items-center justify-between transition-all ${
+                                opt.isCorrect 
+                                  ? 'bg-primary/5 border-primary/30 text-primary font-black ring-1 ring-primary/20' 
+                                  : 'bg-muted/10 border-transparent text-muted-foreground'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="opacity-30 font-mono text-[10px]">{String.fromCharCode(65 + oIdx)}</span>
+                                {opt.optionText}
+                              </div>
+                              {opt.isCorrect && <Check className="h-3 w-3" />}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -472,8 +497,25 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ courseId, moduleId, mo
           </div>
         </div>
         
-        <DialogFooter className="bg-muted/20 -mx-6 -mb-6 p-4 mt-4">
-          <Button variant="outline" onClick={onClose} className="w-full md:w-auto">Finish & Close Builder</Button>
+        <DialogFooter className="p-6 bg-muted/10 border-t flex flex-row items-center justify-between">
+          <Button variant="ghost" onClick={onClose} disabled={isSaving}>Discard Changes</Button>
+          <div className="flex items-center gap-3">
+            <Button 
+              className="h-11 px-8 bg-primary hover:bg-primary/90 text-white font-bold shadow-xl shadow-primary/20"
+              onClick={handleSaveQuiz}
+              disabled={isSaving || isLoading || questions.length === 0}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Persisting...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" /> Save Quiz
+                </>
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

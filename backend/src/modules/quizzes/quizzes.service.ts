@@ -161,4 +161,24 @@ export class QuizzesService {
       where: { moduleId }
     });
   }
+
+  static async syncQuestions(moduleId: string, questions: any[]) {
+    return prisma.$transaction(async (tx) => {
+      await tx.quizQuestion.deleteMany({ where: { moduleId } });
+      for (const q of questions) {
+        await tx.quizQuestion.create({
+          data: {
+            questionText: q.questionText,
+            moduleId,
+            options: {
+              create: q.options.map((opt: any) => ({
+                optionText: opt.optionText,
+                isCorrect: opt.isCorrect
+              }))
+            }
+          }
+        });
+      }
+    });
+  }
 }

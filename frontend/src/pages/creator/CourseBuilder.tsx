@@ -37,13 +37,125 @@ import { QuizBuilder } from '../../components/creator/QuizBuilder';
 import { CertificateBuilder } from '../../components/creator/CertificateBuilder';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
   DialogHeader, 
   DialogTitle 
 } from '../../components/ui/dialog';
+import {
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { MultiSelect } from '../../components/ui/multi-select';
+
+interface SortableModuleItemProps {
+  module: any;
+  index: number;
+  getModuleIcon: (type: string) => React.ReactNode;
+  setQuizBuilderState: (state: any) => void;
+  setEditingModule: (module: any) => void;
+  handleDeleteModule: (moduleId: string) => void;
+}
+
+const SortableModuleItem: React.FC<SortableModuleItemProps> = ({ 
+  module, 
+  index, 
+  getModuleIcon, 
+  setQuizBuilderState, 
+  setEditingModule, 
+  handleDeleteModule 
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: module.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 100 : 'auto',
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="relative group">
+      {/* Timeline Dot */}
+      <div className="absolute -left-[33px] top-5 h-4 w-4 rounded-full border-2 border-primary bg-background shadow-sm z-10 group-hover:scale-125 transition-transform" />
+      
+      <Card className={`ml-4 border-none shadow-sm hover:shadow-md transition-all duration-300 ${isDragging ? 'shadow-xl' : 'group-hover:translate-x-1'}`}>
+        <CardContent className="p-0">
+          <div className="flex flex-col md:flex-row md:items-center justify-between p-5 gap-4">
+            <div className="flex items-center gap-4">
+              <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-2 hover:bg-muted rounded-md">
+                <GripVertical className="h-5 w-5 text-muted-foreground/30" />
+              </div>
+              <div className="text-xs font-black text-muted-foreground/30 font-mono min-w-[50px]">STEP {index + 1}</div>
+              {getModuleIcon(module.type)}
+              <div>
+                <div className="font-bold text-lg">{module.title}</div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs font-bold tracking-tighter uppercase">
+                    {module.type.replace('_', ' ')}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {(module.type === 'PRE_QUIZ' || module.type === 'POST_QUIZ') && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="font-bold border-primary/20 hover:border-primary/50 hover:bg-primary/5"
+                  onClick={() => setQuizBuilderState({
+                    isOpen: true,
+                    moduleId: module.id,
+                    moduleTitle: module.title
+                  })}
+                >
+                  <Settings className="mr-2 h-3.5 w-3.5" /> Manage Quiz
+                </Button>
+              )}
+              
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-muted-foreground hover:text-primary"
+                onClick={() => setEditingModule(module)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-muted-foreground hover:text-destructive"
+                onClick={() => handleDeleteModule(module.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 
 export const CourseBuilder: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
@@ -80,6 +192,13 @@ export const CourseBuilder: React.FC = () => {
     passingGrade: 80
   });
   const [isSavingIdentity, setIsSavingIdentity] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const fetchCourse = async () => {
     if (!courseId) return;
@@ -157,11 +276,39 @@ export const CourseBuilder: React.FC = () => {
     try {
       await coursesApi.partialUpdate(courseId, identityForm);
       setCourse(prev => prev ? { ...prev, ...identityForm } : null);
-      toast.success('Course identity updated');
+      toast.success('Course configuration updated');
     } catch (error) {
-      toast.error('Failed to update course identity');
+      toast.error('Failed to update course configuration');
     } finally {
       setIsSavingIdentity(false);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!course || !course.modules || !over || active.id === over.id) return;
+
+    const oldIndex = course.modules.findIndex((m) => m.id === active.id);
+    const newIndex = course.modules.findIndex((m) => m.id === over.id);
+
+    const newModules = arrayMove(course.modules, oldIndex, newIndex);
+    
+    // Optimistic update
+    setCourse({ ...course, modules: newModules });
+
+    try {
+      // Update all modules in the new order (or just the ones that changed)
+      // For simplicity, let's update them one by one or create a bulk reorder API
+      // I'll update sequenceOrder for all affected modules
+      await Promise.all(
+        newModules.map((m, idx) => 
+          coursesApi.updateModule(courseId!, m.id, { sequenceOrder: idx + 1 })
+        )
+      );
+      toast.success('Sequence updated');
+    } catch (err) {
+      toast.error('Failed to update sequence');
+      fetchCourse(); // Revert on failure
     }
   };
 
@@ -261,7 +408,7 @@ export const CourseBuilder: React.FC = () => {
             <Award className="mr-2 h-4 w-4" /> Certificate Builder
           </TabsTrigger>
           <TabsTrigger value="settings" className="h-10 px-8 font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Settings className="mr-2 h-4 w-4" /> Studio Settings
+            <Settings className="mr-2 h-4 w-4" /> Course Config
           </TabsTrigger>
         </TabsList>
 
@@ -275,69 +422,29 @@ export const CourseBuilder: React.FC = () => {
                     <Layers className="h-12 w-12 mb-4 opacity-20" />
                     <p className="text-lg font-medium italic">No modules in the loop yet.</p>
                     <p className="text-sm opacity-60">Begin by adding your first module from the right panel.</p>
-                  </div>
-                ) : (
-                  course.modules?.map((module, index) => (
-                    <div key={module.id} className="relative group">
-                      {/* Timeline Dot */}
-                      <div className="absolute -left-[33px] top-5 h-4 w-4 rounded-full border-2 border-primary bg-background shadow-sm z-10 group-hover:scale-125 transition-transform" />
-                      
-                      <Card className="ml-4 border-none shadow-sm hover:shadow-md transition-all duration-300 group-hover:translate-x-1">
-                        <CardContent className="p-0">
-                          <div className="flex flex-col md:flex-row md:items-center justify-between p-5 gap-4">
-                            <div className="flex items-center gap-4">
-                              <GripVertical className="h-5 w-5 text-muted-foreground/20 cursor-grab active:cursor-grabbing" />
-                              <div className="text-xs font-black text-muted-foreground/30 font-mono">STEP {index + 1}</div>
-                              {getModuleIcon(module.type)}
-                              <div>
-                                <div className="font-bold text-lg">{module.title}</div>
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="secondary" className="text-xs font-bold tracking-tighter uppercase">
-                                    {module.type.replace('_', ' ')}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-3">
-                              {(module.type === 'PRE_QUIZ' || module.type === 'POST_QUIZ') && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  className="font-bold border-primary/20 hover:border-primary/50 hover:bg-primary/5"
-                                  onClick={() => setQuizBuilderState({
-                                    isOpen: true,
-                                    moduleId: module.id,
-                                    moduleTitle: module.title
-                                  })}
-                                >
-                                  <Settings className="mr-2 h-3.5 w-3.5" /> Manage Quiz
-                                </Button>
-                              )}
-                              
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="text-muted-foreground hover:text-primary"
-                                onClick={() => setEditingModule(module)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="text-muted-foreground hover:text-destructive"
-                                onClick={() => handleDeleteModule(module.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  ))
+                  </div>                ) : (
+                  <DndContext 
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext 
+                      items={course.modules.map(m => m.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {course.modules.map((module, index) => (
+                        <SortableModuleItem 
+                          key={module.id}
+                          module={module}
+                          index={index}
+                          getModuleIcon={getModuleIcon}
+                          setQuizBuilderState={setQuizBuilderState}
+                          setEditingModule={setEditingModule}
+                          handleDeleteModule={handleDeleteModule}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
                 )}
                 
                 {/* Visual End Indicator */}
@@ -459,11 +566,11 @@ export const CourseBuilder: React.FC = () => {
           }}
         />
       </TabsContent>
-      <TabsContent value="settings">
+        <TabsContent value="settings">
           <div className="space-y-8">
             <Card className="border-none shadow-lg">
               <CardHeader>
-                <CardTitle>Course Identity</CardTitle>
+                <CardTitle>Course Configuration</CardTitle>
                 <CardDescription>Update the primary metadata for this learning experience.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -496,65 +603,13 @@ export const CourseBuilder: React.FC = () => {
 
                 <div className="space-y-3">
                   <Label className="text-sm font-bold">Target Departments</Label>
-                  <p className="text-xs text-muted-foreground mb-2">Limit this course visibility to specific departments. If none selected, it remains visible to all.</p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-xl bg-muted/10">
-                    {departments.map((dept) => (
-                      <div key={dept.id} className="flex items-center space-x-2">
-                        <Checkbox 
-                          id={`dept-${dept.id}`}
-                          checked={identityForm.targetDepartments.includes(dept.name)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setIdentityForm({
-                                ...identityForm,
-                                targetDepartments: [...identityForm.targetDepartments, dept.name]
-                              });
-                            } else {
-                              setIdentityForm({
-                                ...identityForm,
-                                targetDepartments: identityForm.targetDepartments.filter(d => d !== dept.name)
-                              });
-                            }
-                          }}
-                        />
-                        <Label 
-                          htmlFor={`dept-${dept.id}`}
-                          className="text-sm font-medium leading-none cursor-pointer"
-                        >
-                          {dept.name}
-                        </Label>
-                      </div>
-                    ))}
-                    {departments.length === 0 && (
-                      ["Claims", "Underwriting", "HR", "Finance", "IT", "Sales"].map((dept) => (
-                        <div key={dept} className="flex items-center space-x-2">
-                          <Checkbox 
-                            id={`dept-mock-${dept}`}
-                            checked={identityForm.targetDepartments.includes(dept)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setIdentityForm({
-                                  ...identityForm,
-                                  targetDepartments: [...identityForm.targetDepartments, dept]
-                                });
-                              } else {
-                                setIdentityForm({
-                                  ...identityForm,
-                                  targetDepartments: identityForm.targetDepartments.filter(d => d !== dept)
-                                });
-                              }
-                            }}
-                          />
-                          <Label 
-                            htmlFor={`dept-mock-${dept}`}
-                            className="text-sm font-medium leading-none cursor-pointer"
-                          >
-                            {dept}
-                          </Label>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">Limit course visibility to specific departments. Select none to keep visible to all.</p>
+                  <MultiSelect 
+                    placeholder="Search and select departments..."
+                    options={departments.map(d => ({ label: d.name, value: d.name }))}
+                    selected={identityForm.targetDepartments}
+                    onChange={(selected) => setIdentityForm({ ...identityForm, targetDepartments: selected })}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -566,9 +621,9 @@ export const CourseBuilder: React.FC = () => {
                     className="min-h-[100px]"
                   />
                 </div>
-                <Button onClick={handleUpdateIdentity} disabled={isSavingIdentity}>
+                <Button onClick={handleUpdateIdentity} disabled={isSavingIdentity} className="h-11 shadow-lg shadow-primary/10 font-bold">
                   {isSavingIdentity ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                  Save Course Identity
+                  Save Configuration
                 </Button>
               </CardContent>
             </Card>

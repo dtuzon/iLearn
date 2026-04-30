@@ -64,4 +64,15 @@ export class QuizzesController {
       res.status(400).json({ message: error.message });
     }
   }
+
+  static async syncQuestions(req: Request, res: Response) {
+    try {
+      const { moduleId } = req.params;
+      const { questions } = req.body;
+      await QuizzesService.syncQuestions(moduleId as string, questions);
+      res.json({ message: 'Quiz synced successfully' });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }

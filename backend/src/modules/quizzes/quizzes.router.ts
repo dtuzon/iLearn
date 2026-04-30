@@ -45,4 +45,12 @@ router.delete(
   QuizzesController.clearQuestions
 );
 
+router.put(
+  '/:moduleId/sync',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  auditLog('SYNC_QUIZ_QUESTIONS'),
+  QuizzesController.syncQuestions
+);
+
 export default router;

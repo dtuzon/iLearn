@@ -41,5 +41,9 @@ export const quizzesApi = {
   },
   clearQuestions: async (moduleId: string) => {
     await apiClient.delete(`/quizzes/${moduleId}/questions`);
+  },
+  syncQuiz: async (moduleId: string, questions: { questionText: string; options: { optionText: string; isCorrect: boolean }[] }[]) => {
+    const response = await apiClient.put(`/quizzes/${moduleId}/sync`, { questions });
+    return response.data;
   }
 };
