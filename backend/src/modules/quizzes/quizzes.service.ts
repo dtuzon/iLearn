@@ -64,7 +64,7 @@ export class QuizzesService {
     for (const q of questions) {
       const correctOptionId = q.options[0]?.id;
       const userSubmission = submissions.find((s) => s.questionId === q.id);
-      
+
       if (userSubmission && userSubmission.optionId === correctOptionId) {
         correctCount++;
       }
@@ -94,7 +94,7 @@ export class QuizzesService {
     // Check passing score for Post-Quiz
     let completed = true;
     if (module.type === ModuleType.POST_QUIZ) {
-      const passingScore = module.course.passingScore || 80;
+      const passingScore = module.course.passingGrade || 80;
       completed = score >= passingScore;
     }
 

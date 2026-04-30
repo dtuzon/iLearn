@@ -193,7 +193,7 @@ export const CoursePlayer: React.FC = () => {
     : 0;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-12">
+    <div className="max-w-4xl mx-auto space-y-8 pb-12">
       <div className="flex items-center justify-between">
         <Button variant="ghost" onClick={() => navigate('/learning/my-courses')}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back
@@ -213,10 +213,10 @@ export const CoursePlayer: React.FC = () => {
         <Card className="shadow-lg border-primary/10">
           <CardHeader className="border-b bg-muted/30">
             <div className="flex items-center gap-3">
-              {currentModule.type === 'VIDEO' && <Video className="h-6 w-6 text-red-500" />}
-              {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ') && <HelpCircle className="h-6 w-6 text-blue-500" />}
-              {currentModule.type === 'WORKSHOP' && <BookOpen className="h-6 w-6 text-green-500" />}
-              {currentModule.type === 'EVALUATION' && <ClipboardCheck className="h-6 w-6 text-orange-500" />}
+              {currentModule.type === 'VIDEO' && <Video className="h-6 w-6 text-destructive" />}
+              {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ') && <HelpCircle className="h-6 w-6 text-primary" />}
+              {currentModule.type === 'WORKSHOP' && <BookOpen className="h-6 w-6 text-green-600" />}
+              {currentModule.type === 'EVALUATION' && <ClipboardCheck className="h-6 w-6 text-secondary-foreground" />}
               <CardTitle>{currentModule.title}</CardTitle>
             </div>
             <CardDescription className="capitalize">{currentModule.type.replace('_', ' ')} Module</CardDescription>
@@ -311,7 +311,7 @@ export const CoursePlayer: React.FC = () => {
                 <div className="space-y-6">
                   {currentModule.facilitators && currentModule.facilitators.length > 0 ? (
                     currentModule.facilitators.map((facilitator) => (
-                      <div key={facilitator} className="p-6 border rounded-2xl bg-muted/20 space-y-4 shadow-sm">
+                      <div key={facilitator} className="p-6 border rounded-xl bg-muted/20 space-y-4 shadow-sm">
                         <div className="flex items-center justify-between">
                           <Label className="text-lg font-bold flex items-center gap-2">
                             <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
@@ -337,7 +337,7 @@ export const CoursePlayer: React.FC = () => {
                                 )}
                               >
                                 <span className="text-lg font-bold">{num}</span>
-                                <span className="text-[10px] uppercase font-bold tracking-tighter text-muted-foreground">
+                                <span className="text-xs uppercase font-bold tracking-tighter text-muted-foreground">
                                   {num === 1 ? 'Poor' : num === 5 ? 'Excellent' : ''}
                                 </span>
                               </Label>

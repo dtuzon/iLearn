@@ -28,16 +28,16 @@ export const Dashboard: React.FC = () => {
       value: "1,284",
       change: "+12% from last month",
       icon: Users,
-      color: "text-blue-600",
-      bg: "bg-blue-100"
+      color: "text-primary",
+      bg: "bg-primary/10"
     },
     {
       title: "Active Courses",
       value: "42",
       change: "5 new this week",
       icon: BookOpen,
-      color: "text-purple-600",
-      bg: "bg-purple-100"
+      color: "text-secondary-foreground",
+      bg: "bg-secondary/10"
     },
     {
       title: "Completion Rate",
@@ -45,7 +45,7 @@ export const Dashboard: React.FC = () => {
       change: "+4.3% improvement",
       icon: CheckCircle2,
       color: "text-green-600",
-      bg: "bg-green-100"
+      bg: "bg-green-500/10"
     }
   ];
 
@@ -54,7 +54,7 @@ export const Dashboard: React.FC = () => {
       {/* Welcome Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-3xl font-extrabold tracking-tight text-primary">
             Welcome back, {user?.firstName || user?.username}! 👋
           </h1>
           <p className="text-muted-foreground mt-1 text-lg">
@@ -106,7 +106,7 @@ export const Dashboard: React.FC = () => {
                       <p className="text-sm font-medium">New Course Published</p>
                       <p className="text-xs text-muted-foreground">"Advanced Cybersecurity Protocols" by Dept. Head</p>
                     </div>
-                    <div className="text-[10px] text-muted-foreground font-medium uppercase">
+                    <div className="text-xs text-muted-foreground font-medium uppercase">
                       2h ago
                     </div>
                   </div>
@@ -145,7 +145,7 @@ export const Dashboard: React.FC = () => {
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center flex-col">
                   <span className="text-2xl font-bold">98%</span>
-                  <span className="text-[8px] uppercase font-bold text-muted-foreground">Uptime</span>
+                  <span className="text-xs uppercase font-bold text-muted-foreground">Uptime</span>
                 </div>
              </div>
              <div className="text-center">

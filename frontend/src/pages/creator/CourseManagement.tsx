@@ -33,6 +33,9 @@ import {
   DropdownMenuTrigger 
 } from '../../components/ui/dropdown-menu';
 import { cn } from '../../lib/utils';
+import { departmentsApi } from '../../api/departments.api';
+import type { Department } from '../../api/departments.api';
+import { Checkbox } from '../../components/ui/checkbox';
 
 export const CourseManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -42,12 +45,23 @@ export const CourseManagement: React.FC = () => {
   // Create Dialog State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [newCourse, setNewCourse] = useState({
     title: '',
     description: '',
-    passingScore: 80,
-    targetAudience: 'GENERAL'
+    passingGrade: 80,
+    targetAudience: 'GENERAL',
+    targetDepartments: [] as string[]
   });
+
+  const fetchDepartments = async () => {
+    try {
+      const data = await departmentsApi.getAll();
+      setDepartments(data);
+    } catch (error) {
+      console.error('Failed to load departments');
+    }
+  };
 
   const fetchCourses = async () => {
     setIsLoading(true);
@@ -63,17 +77,24 @@ export const CourseManagement: React.FC = () => {
 
   useEffect(() => {
     fetchCourses();
+    fetchDepartments();
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsCreating(true);
     try {
-      await coursesApi.create(newCourse);
+      const created = await coursesApi.create(newCourse);
       toast.success('Course created successfully');
       setIsCreateOpen(false);
-      setNewCourse({ title: '', description: '', passingScore: 80, targetAudience: 'GENERAL' });
-      fetchCourses();
+      setNewCourse({ 
+        title: '', 
+        description: '', 
+        passingGrade: 80, 
+        targetAudience: 'GENERAL',
+        targetDepartments: []
+      });
+      navigate(`/creator/courses/${created.id}`);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to create course');
     } finally {
@@ -100,20 +121,20 @@ export const CourseManagement: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Course Studio</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-primary">Course Studio</h1>
           <p className="text-muted-foreground text-lg italic">Design, build, and deploy premium corporate learning experiences.</p>
         </div>
         
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button size="lg" className="shadow-lg hover:shadow-xl transition-all duration-300">
-              <Plus className="mr-2 h-5 w-5" /> Create Masterpiece
+              <Plus className="mr-2 h-5 w-5" /> Create Course
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <form onSubmit={handleCreate}>
               <DialogHeader>
-                <DialogTitle>New Course Blueprint</DialogTitle>
+                <DialogTitle>New Course Configuration</DialogTitle>
                 <DialogDescription>Set the foundation for your new educational content.</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -142,15 +163,15 @@ export const CourseManagement: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="passingScore">Threshold (%) *</Label>
+                    <Label htmlFor="passingGrade">Passing Grade (%) *</Label>
                     <Input 
-                      id="passingScore" 
+                      id="passingGrade" 
                       type="number"
                       min="0"
                       max="100"
                       required
-                      value={newCourse.passingScore}
-                      onChange={(e) => setNewCourse({...newCourse, passingScore: parseInt(e.target.value) || 0})}
+                      value={newCourse.passingGrade}
+                      onChange={(e) => setNewCourse({...newCourse, passingGrade: parseInt(e.target.value) || 0})}
                       className="h-11"
                     />
                   </div>
@@ -171,12 +192,45 @@ export const CourseManagement: React.FC = () => {
                     </Select>
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold">Target Departments</Label>
+                  <div className="grid grid-cols-2 gap-2 p-3 border rounded-lg bg-muted/5 max-h-[120px] overflow-y-auto">
+                    {(departments.length > 0 ? departments : [{id:'1', name:'Claims'}, {id:'2', name:'Underwriting'}, {id:'3', name:'HR'}, {id:'4', name:'Finance'}, {id:'5', name:'IT'}, {id:'6', name:'Sales'}]).map((dept) => (
+                      <div key={dept.id} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`new-dept-${dept.id}`}
+                          checked={newCourse.targetDepartments.includes(dept.name)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setNewCourse({
+                                ...newCourse,
+                                targetDepartments: [...newCourse.targetDepartments, dept.name]
+                              });
+                            } else {
+                              setNewCourse({
+                                ...newCourse,
+                                targetDepartments: newCourse.targetDepartments.filter(d => d !== dept.name)
+                              });
+                            }
+                          }}
+                        />
+                        <Label 
+                          htmlFor={`new-dept-${dept.id}`}
+                          className="text-xs font-medium leading-none cursor-pointer"
+                        >
+                          {dept.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Discard</Button>
+                <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
                 <Button type="submit" disabled={isCreating}>
                   {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Initialize Studio
+                  Create Course
                 </Button>
               </DialogFooter>
             </form>
@@ -273,11 +327,11 @@ export const CourseManagement: React.FC = () => {
                         {course.isPublished ? (
                           <Badge variant="success" className="px-3 py-1">LIVE</Badge>
                         ) : (
-                          <Badge variant="warning" className="px-3 py-1 text-[10px]">DRAFTING</Badge>
+                          <Badge variant="warning" className="px-3 py-1 text-xs">DRAFTING</Badge>
                         )}
                       </TableCell>
                       <TableCell>
-                        <span className="font-mono font-bold text-primary">{course.passingScore}%</span>
+                        <span className="font-mono font-bold text-primary">{course.passingGrade}%</span>
                       </TableCell>
                       <TableCell className="text-right px-6">
                         <div className="flex items-center justify-end gap-2">

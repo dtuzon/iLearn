@@ -3,7 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Loader2, Save, Upload, Image as ImageIcon, MapPin } from 'lucide-react';
+import { Loader2, Save, Upload, Image as ImageIcon, MapPin, Type, Calendar, User, Percent } from 'lucide-react';
+import { Badge } from '../ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Switch } from '../ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { toast } from 'sonner';
 import { coursesApi } from '../../api/courses.api';
 
@@ -11,11 +15,22 @@ interface CertificateBuilderProps {
   courseId: string;
   initialData?: {
     backgroundUrl?: string;
-    nameX?: number;
-    nameY?: number;
-    dateX?: number;
-    dateY?: number;
+    designConfig?: {
+      employeeName: ElementConfig;
+      completionDate: ElementConfig;
+      lecturerName: ElementConfig;
+      quizScore: ElementConfig;
+    };
   };
+}
+
+interface ElementConfig {
+  enabled: boolean;
+  x: number;
+  y: number;
+  fontSize: number;
+  fontFamily: string;
+  color: string;
 }
 
 export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({ courseId, initialData }) => {
@@ -23,11 +38,20 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({ courseId
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(initialData?.backgroundUrl || null);
   
-  const [coords, setCoords] = useState({
-    nameX: initialData?.nameX || 300,
-    nameY: initialData?.nameY || 400,
-    dateX: initialData?.dateX || 300,
-    dateY: initialData?.dateY || 500,
+  const defaultConfig: ElementConfig = {
+    enabled: true,
+    x: 500,
+    y: 500,
+    fontSize: 24,
+    fontFamily: 'Arial',
+    color: '#000000'
+  };
+
+  const [config, setConfig] = useState({
+    employeeName: initialData?.designConfig?.employeeName || { ...defaultConfig, y: 400 },
+    completionDate: initialData?.designConfig?.completionDate || { ...defaultConfig, y: 600, fontSize: 18 },
+    lecturerName: initialData?.designConfig?.lecturerName || { ...defaultConfig, enabled: false, y: 700, fontSize: 16 },
+    quizScore: initialData?.designConfig?.quizScore || { ...defaultConfig, enabled: false, y: 800, fontSize: 16 },
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,10 +69,7 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({ courseId
       if (selectedFile) {
         formData.append('certificateBackground', selectedFile);
       }
-      formData.append('nameX', coords.nameX.toString());
-      formData.append('nameY', coords.nameY.toString());
-      formData.append('dateX', coords.dateX.toString());
-      formData.append('dateY', coords.dateY.toString());
+      formData.append('designConfig', JSON.stringify(config));
 
       await coursesApi.updateCertificateTemplate(courseId, formData);
       toast.success('Certificate template updated successfully');
@@ -102,49 +123,108 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({ courseId
         <Card className="border-none shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-primary" />
-              Dynamic Placement
+              <Type className="h-5 w-5 text-primary" />
+              Dynamic Elements
             </CardTitle>
-            <CardDescription>Define the exact pixel coordinates for variable text.</CardDescription>
+            <CardDescription>Configure typography and placement for each variable.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Employee Name X</Label>
-                <Input 
-                  type="number" 
-                  value={coords.nameX} 
-                  onChange={(e) => setCoords({...coords, nameX: parseInt(e.target.value) || 0})} 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Employee Name Y</Label>
-                <Input 
-                  type="number" 
-                  value={coords.nameY} 
-                  onChange={(e) => setCoords({...coords, nameY: parseInt(e.target.value) || 0})} 
-                />
-              </div>
-            </div>
+            <Tabs defaultValue="employeeName" className="w-full">
+              <TabsList className="grid grid-cols-4 w-full mb-4">
+                <TabsTrigger value="employeeName" className="text-xs gap-2"><User className="h-3 w-3" /> Name</TabsTrigger>
+                <TabsTrigger value="completionDate" className="text-xs gap-2"><Calendar className="h-3 w-3" /> Date</TabsTrigger>
+                <TabsTrigger value="lecturerName" className="text-xs gap-2"><Type className="h-3 w-3" /> Lecturer</TabsTrigger>
+                <TabsTrigger value="quizScore" className="text-xs gap-2"><Percent className="h-3 w-3" /> Score</TabsTrigger>
+              </TabsList>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Completion Date X</Label>
-                <Input 
-                  type="number" 
-                  value={coords.dateX} 
-                  onChange={(e) => setCoords({...coords, dateX: parseInt(e.target.value) || 0})} 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Completion Date Y</Label>
-                <Input 
-                  type="number" 
-                  value={coords.dateY} 
-                  onChange={(e) => setCoords({...coords, dateY: parseInt(e.target.value) || 0})} 
-                />
-              </div>
-            </div>
+              {(Object.keys(config) as Array<keyof typeof config>).map((key) => (
+                <TabsContent key={key} value={key} className="space-y-4 animate-in fade-in duration-300">
+                  <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/20">
+                    <div className="flex items-center gap-2">
+                      <div className="capitalize font-bold text-sm">{key.replace(/([A-Z])/g, ' $1')}</div>
+                      {key !== 'employeeName' && key !== 'completionDate' && (
+                        <Switch 
+                          checked={config[key].enabled}
+                          onCheckedChange={(val) => setConfig({...config, [key]: { ...config[key], enabled: val }})}
+                        />
+                      )}
+                    </div>
+                    {!config[key].enabled && <Badge variant="secondary" className="text-[10px]">DISABLED</Badge>}
+                  </div>
+
+                  {config[key].enabled && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-xs">X-Position (0-1000)</Label>
+                          <Input 
+                            type="number" 
+                            value={config[key].x} 
+                            onChange={(e) => setConfig({...config, [key]: { ...config[key], x: parseInt(e.target.value) || 0 }})} 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">Y-Position (0-1000)</Label>
+                          <Input 
+                            type="number" 
+                            value={config[key].y} 
+                            onChange={(e) => setConfig({...config, [key]: { ...config[key], y: parseInt(e.target.value) || 0 }})} 
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-xs">Font Size (px)</Label>
+                          <Input 
+                            type="number" 
+                            value={config[key].fontSize} 
+                            onChange={(e) => setConfig({...config, [key]: { ...config[key], fontSize: parseInt(e.target.value) || 0 }})} 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">Font Family</Label>
+                          <Select 
+                            value={config[key].fontFamily}
+                            onValueChange={(val) => setConfig({...config, [key]: { ...config[key], fontFamily: val }})}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Arial">Arial</SelectItem>
+                              <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                              <SelectItem value="Courier New">Courier New</SelectItem>
+                              <SelectItem value="Georgia">Georgia</SelectItem>
+                              <SelectItem value="Verdana">Verdana</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs">Font Color</Label>
+                        <div className="flex gap-2">
+                          <Input 
+                            type="color" 
+                            value={config[key].color} 
+                            onChange={(e) => setConfig({...config, [key]: { ...config[key], color: e.target.value }})}
+                            className="w-12 h-10 p-1 cursor-pointer"
+                          />
+                          <Input 
+                            type="text" 
+                            value={config[key].color} 
+                            onChange={(e) => setConfig({...config, [key]: { ...config[key], color: e.target.value }})}
+                            placeholder="#000000"
+                            className="flex-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+              ))}
+            </Tabs>
 
             <Button className="w-full h-11" onClick={handleSave} disabled={isSaving}>
               {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -165,26 +245,71 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({ courseId
               <div className="relative border shadow-2xl">
                 <img src={previewUrl} alt="Certificate Background" className="max-w-full h-auto block" />
                 
-                {/* Visual Indicators */}
-                <div 
-                  className="absolute pointer-events-none flex flex-col items-center"
-                  style={{ left: `${(coords.nameX / 1000) * 100}%`, top: `${(coords.nameY / 1000) * 100}%` }}
-                >
-                  <div className="bg-primary text-primary-foreground px-2 py-1 rounded text-[10px] font-bold whitespace-nowrap shadow-md">
-                    EMPLOYEE NAME
+                {/* Variable Text Overlays */}
+                {config.employeeName.enabled && (
+                  <div 
+                    className="absolute pointer-events-none whitespace-nowrap"
+                    style={{ 
+                      left: `${(config.employeeName.x / 1000) * 100}%`, 
+                      top: `${(config.employeeName.y / 1000) * 100}%`,
+                      fontSize: `${(config.employeeName.fontSize / 1000) * 100}cqw`,
+                      color: config.employeeName.color,
+                      fontFamily: config.employeeName.fontFamily,
+                      transform: 'translate(-50%, -50%)',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    Employee Name
                   </div>
-                  <div className="h-4 w-0.5 bg-primary mt-1" />
-                </div>
+                )}
 
-                <div 
-                  className="absolute pointer-events-none flex flex-col items-center"
-                  style={{ left: `${(coords.dateX / 1000) * 100}%`, top: `${(coords.dateY / 1000) * 100}%` }}
-                >
-                  <div className="bg-purple-600 text-white px-2 py-1 rounded text-[10px] font-bold whitespace-nowrap shadow-md">
-                    COMPLETION DATE
+                {config.completionDate.enabled && (
+                  <div 
+                    className="absolute pointer-events-none whitespace-nowrap"
+                    style={{ 
+                      left: `${(config.completionDate.x / 1000) * 100}%`, 
+                      top: `${(config.completionDate.y / 1000) * 100}%`,
+                      fontSize: `${(config.completionDate.fontSize / 1000) * 100}cqw`,
+                      color: config.completionDate.color,
+                      fontFamily: config.completionDate.fontFamily,
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                  >
+                    DD/MM/YYYY
                   </div>
-                  <div className="h-4 w-0.5 bg-purple-600 mt-1" />
-                </div>
+                )}
+
+                {config.lecturerName.enabled && (
+                  <div 
+                    className="absolute pointer-events-none whitespace-nowrap"
+                    style={{ 
+                      left: `${(config.lecturerName.x / 1000) * 100}%`, 
+                      top: `${(config.lecturerName.y / 1000) * 100}%`,
+                      fontSize: `${(config.lecturerName.fontSize / 1000) * 100}cqw`,
+                      color: config.lecturerName.color,
+                      fontFamily: config.lecturerName.fontFamily,
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                  >
+                    John Doe, Instructor
+                  </div>
+                )}
+
+                {config.quizScore.enabled && (
+                  <div 
+                    className="absolute pointer-events-none whitespace-nowrap"
+                    style={{ 
+                      left: `${(config.quizScore.x / 1000) * 100}%`, 
+                      top: `${(config.quizScore.y / 1000) * 100}%`,
+                      fontSize: `${(config.quizScore.fontSize / 1000) * 100}cqw`,
+                      color: config.quizScore.color,
+                      fontFamily: config.quizScore.fontFamily,
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                  >
+                    Score: 95%
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2 text-muted-foreground opacity-40">

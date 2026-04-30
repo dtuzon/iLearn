@@ -81,25 +81,18 @@ export class CoursesService {
   }
 
   static async upsertCertificateTemplate(courseId: string, data: any) {
-    const { backgroundImageUrl, nameX, nameY, dateX, dateY } = data;
-
-    const designConfig = {
-      placeholders: [
-        { key: "{{StudentName}}", x: nameX, y: nameY },
-        { key: "{{Date}}", x: dateX, y: dateY }
-      ]
-    };
+    const { backgroundImageUrl, designConfig } = data;
 
     return prisma.certificateTemplate.upsert({
       where: { courseId },
       create: {
         courseId,
-        backgroundImageUrl,
-        designConfig
+        backgroundImageUrl: backgroundImageUrl || '',
+        designConfig: designConfig as any
       },
       update: {
         ...(backgroundImageUrl && { backgroundImageUrl }),
-        designConfig
+        designConfig: designConfig as any
       }
     });
   }
@@ -108,6 +101,19 @@ export class CoursesService {
     return prisma.course.update({
       where: { id },
       data
+    });
+  }
+
+  static async updateModule(id: string, data: any) {
+    return prisma.courseModule.update({
+      where: { id },
+      data
+    });
+  }
+
+  static async deleteModule(id: string) {
+    return prisma.courseModule.delete({
+      where: { id }
     });
   }
 }

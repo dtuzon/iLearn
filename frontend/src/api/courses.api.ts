@@ -6,8 +6,9 @@ export interface Course {
   description: string | null;
   thumbnailUrl: string | null;
   isPublished: boolean;
-  passingScore: number;
+  passingGrade: number;
   targetAudience: string;
+  targetDepartments: string[];
   requires180DayEval: boolean;
   lecturerId: string;
   createdAt: string;
@@ -36,13 +37,20 @@ export const coursesApi = {
     const response = await apiClient.get(`/courses/${id}`);
     return response.data as Course;
   },
-  create: async (data: { title: string; description?: string; passingScore: number; targetAudience: string }) => {
+  create: async (data: { title: string; description?: string; passingGrade: number; targetAudience: string }) => {
     const response = await apiClient.post('/courses', data);
     return response.data as Course;
   },
   addModule: async (courseId: string, data: { title: string; type: string; sequenceOrder: number; facilitators?: string[] }) => {
     const response = await apiClient.post(`/courses/${courseId}/modules`, data);
     return response.data as CourseModule;
+  },
+  updateModule: async (courseId: string, moduleId: string, data: Partial<CourseModule>) => {
+    const response = await apiClient.patch(`/courses/${courseId}/modules/${moduleId}`, data);
+    return response.data as CourseModule;
+  },
+  deleteModule: async (courseId: string, moduleId: string) => {
+    await apiClient.delete(`/courses/${courseId}/modules/${moduleId}`);
   },
   updateCertificateTemplate: async (courseId: string, formData: FormData) => {
     const response = await apiClient.put(`/courses/${courseId}/certificate-template`, formData, {

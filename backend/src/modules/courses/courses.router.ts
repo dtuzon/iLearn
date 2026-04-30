@@ -46,4 +46,20 @@ router.patch(
   CoursesController.partialUpdate
 );
 
+router.patch(
+  '/:courseId/modules/:moduleId',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  auditLog('UPDATE_MODULE'),
+  CoursesController.updateModule
+);
+
+router.delete(
+  '/:courseId/modules/:moduleId',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  auditLog('DELETE_MODULE'),
+  CoursesController.deleteModule
+);
+
 export default router;

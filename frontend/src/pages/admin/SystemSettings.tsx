@@ -7,6 +7,7 @@ import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Checkbox } from '../../components/ui/checkbox';
 import { 
   Loader2, 
   Palette, 
@@ -350,10 +351,10 @@ export const SystemSettings: React.FC = () => {
                 <Input defaultValue="60" disabled />
               </div>
               <div className="flex items-center gap-2">
-                 <input type="checkbox" disabled checked />
+                 <Checkbox disabled checked />
                  <Label>Enforce 2FA for Administrators</Label>
               </div>
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded text-yellow-800 text-sm">
+              <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-yellow-600 text-sm">
                 Advanced security modules will be available in Enterprise Edition.
               </div>
             </CardContent>
@@ -377,18 +378,25 @@ export const SystemSettings: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-10">
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-extrabold tracking-tight text-primary">System Settings</h1>
+        <p className="text-muted-foreground text-lg">Global platform configuration and administrative controls.</p>
+      </div>
+
+      <div className="flex flex-col md:flex-row gap-10">
       {/* Sidebar Navigation */}
       <aside className="w-full md:w-64 shrink-0">
         <nav className="flex flex-col gap-1 sticky top-24">
           {navItems.map((item) => (
-            <button
+            <Button
+              variant="ghost"
               key={item.id}
-              onClick={() => setActiveSection(item.id as SettingsSection)}
+              onClick={(e) => { e.preventDefault(); setActiveSection(item.id as SettingsSection); }}
               className={cn(
-                "flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all group",
+                "flex items-center justify-between px-4 py-6 rounded-xl text-sm font-medium transition-all group w-full",
                 activeSection === item.id 
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                  ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20" 
                   : "hover:bg-accent text-muted-foreground"
               )}
             >
@@ -397,7 +405,7 @@ export const SystemSettings: React.FC = () => {
                 {item.label}
               </div>
               {activeSection === item.id && <ChevronRight className="h-4 w-4" />}
-            </button>
+            </Button>
           ))}
         </nav>
       </aside>
@@ -405,7 +413,7 @@ export const SystemSettings: React.FC = () => {
       {/* Content Area */}
       <main className="flex-1 max-w-3xl">
         <form onSubmit={handleSave}>
-          <div className="bg-card border rounded-2xl shadow-sm p-8 min-h-[600px] flex flex-col">
+          <div className="bg-card border rounded-xl shadow-sm p-8 min-h-[600px] flex flex-col">
             <div className="flex-1">
               {renderActiveSection()}
             </div>
@@ -419,6 +427,7 @@ export const SystemSettings: React.FC = () => {
           </div>
         </form>
       </main>
+      </div>
     </div>
   );
 };

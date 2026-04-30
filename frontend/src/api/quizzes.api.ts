@@ -21,7 +21,11 @@ export const quizzesApi = {
     return response.data as QuizQuestion[];
   },
   addQuestion: async (moduleId: string, data: { questionText: string; options: { optionText: string; isCorrect: boolean }[] }) => {
-    const response = await apiClient.post(`/quizzes/${moduleId}/questions`, data);
+    const response = await apiClient.post(`/quizzes/${moduleId}/questions`, { questions: [data] });
+    return response.data;
+  },
+  addQuestions: async (moduleId: string, questions: { questionText: string; options: { optionText: string; isCorrect: boolean }[] }[]) => {
+    const response = await apiClient.post(`/quizzes/${moduleId}/questions`, { questions });
     return response.data;
   },
   submitQuiz: async (moduleId: string, answers: { questionId: string; optionId: string }[]) => {

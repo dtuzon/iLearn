@@ -20,8 +20,139 @@ import {
 } from '../../components/ui/dropdown-menu';
 import { Loader2, Plus, Upload, Search, Filter, MoreHorizontal, UserX, UserCheck, Shield, Building } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '../../lib/utils';
+
+interface UserFormFieldsProps {
+  formData: any;
+  setFormData: (data: any) => void;
+  departments: Department[];
+  supervisorCandidates: UserResponse[];
+  selectedUser: UserResponse | null;
+}
+
+const UserFormFields: React.FC<UserFormFieldsProps> = ({ 
+  formData, 
+  setFormData, 
+  departments, 
+  supervisorCandidates, 
+  selectedUser 
+}) => (
+  <>
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label htmlFor="firstName">First Name</Label>
+        <Input 
+          id="firstName" 
+          value={formData.firstName}
+          onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="lastName">Last Name</Label>
+        <Input 
+          id="lastName" 
+          value={formData.lastName}
+          onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+        />
+      </div>
+    </div>
+    
+    <div className="space-y-2">
+      <Label htmlFor="username">Username *</Label>
+      <Input 
+        id="username" 
+        required
+        value={formData.username}
+        onChange={(e) => setFormData({...formData, username: e.target.value})}
+      />
+    </div>
+
+    <div className="space-y-2">
+      <Label htmlFor="email">Email</Label>
+      <Input 
+        id="email" 
+        type="email"
+        value={formData.email}
+        onChange={(e) => setFormData({...formData, email: e.target.value})}
+      />
+    </div>
+
+    {!selectedUser && (
+      <div className="space-y-2">
+        <Label htmlFor="password">Password *</Label>
+        <Input 
+          id="password" 
+          type="password"
+          required
+          value={formData.password}
+          onChange={(e) => setFormData({...formData, password: e.target.value})}
+        />
+      </div>
+    )}
+
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label>Role</Label>
+        <Select 
+          value={formData.role} 
+          onValueChange={(val) => setFormData({...formData, role: val})}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select role" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="EMPLOYEE">Employee</SelectItem>
+            <SelectItem value="SUPERVISOR">Supervisor</SelectItem>
+            <SelectItem value="COURSE_CREATOR">Course Creator</SelectItem>
+            <SelectItem value="DEPARTMENT_HEAD">Department Head</SelectItem>
+            <SelectItem value="LEARNING_MANAGER">Learning Manager</SelectItem>
+            <SelectItem value="ADMINISTRATOR">Administrator</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Department</Label>
+        <Select 
+          value={formData.departmentId} 
+          onValueChange={(val) => setFormData({...formData, departmentId: val})}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select department" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">None</SelectItem>
+            {departments.map(dept => (
+              <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+
+    <div className="space-y-2">
+      <Label>Immediate Superior</Label>
+      <Select 
+        value={formData.immediateSuperiorId} 
+        onValueChange={(val) => setFormData({...formData, immediateSuperiorId: val})}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Select Superior" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">None</SelectItem>
+          {supervisorCandidates.map(sup => (
+            <SelectItem key={sup.id} value={sup.id}>{sup.firstName} {sup.lastName} ({sup.role.replace('_', ' ')})</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  </>
+);
 
 export const UserManagement: React.FC = () => {
+  // ... state ...
+
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -194,126 +325,12 @@ export const UserManagement: React.FC = () => {
 
   const supervisorCandidates = users.filter(u => u.role === 'SUPERVISOR' || u.role === 'DEPARTMENT_HEAD');
 
-  const UserFormFields = () => (
-    <>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="firstName">First Name</Label>
-          <Input 
-            id="firstName" 
-            value={formData.firstName}
-            onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="lastName">Last Name</Label>
-          <Input 
-            id="lastName" 
-            value={formData.lastName}
-            onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-          />
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="username">Username *</Label>
-        <Input 
-          id="username" 
-          required
-          value={formData.username}
-          onChange={(e) => setFormData({...formData, username: e.target.value})}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input 
-          id="email" 
-          type="email"
-          value={formData.email}
-          onChange={(e) => setFormData({...formData, email: e.target.value})}
-        />
-      </div>
-
-      {!selectedUser && (
-        <div className="space-y-2">
-          <Label htmlFor="password">Password *</Label>
-          <Input 
-            id="password" 
-            type="password"
-            required
-            value={formData.password}
-            onChange={(e) => setFormData({...formData, password: e.target.value})}
-          />
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Role</Label>
-          <Select 
-            value={formData.role} 
-            onValueChange={(val) => setFormData({...formData, role: val})}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="EMPLOYEE">Employee</SelectItem>
-              <SelectItem value="SUPERVISOR">Supervisor</SelectItem>
-              <SelectItem value="COURSE_CREATOR">Course Creator</SelectItem>
-              <SelectItem value="DEPARTMENT_HEAD">Department Head</SelectItem>
-              <SelectItem value="LEARNING_MANAGER">Learning Manager</SelectItem>
-              <SelectItem value="ADMINISTRATOR">Administrator</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Department</Label>
-          <Select 
-            value={formData.departmentId} 
-            onValueChange={(val) => setFormData({...formData, departmentId: val})}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select department" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">None</SelectItem>
-              {departments.map(dept => (
-                <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Immediate Superior</Label>
-        <Select 
-          value={formData.immediateSuperiorId} 
-          onValueChange={(val) => setFormData({...formData, immediateSuperiorId: val})}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select Superior" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None</SelectItem>
-            {supervisorCandidates.map(sup => (
-              <SelectItem key={sup.id} value={sup.id}>{sup.firstName} {sup.lastName} ({sup.role.replace('_', ' ')})</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    </>
-  );
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">User Management</h2>
-          <p className="text-muted-foreground">Manage system users, roles, and corporate reporting structure.</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-primary">User Management</h1>
+          <p className="text-muted-foreground text-lg">Manage system users, roles, and corporate reporting structure.</p>
         </div>
         
         <div className="flex items-center gap-2">
@@ -334,7 +351,13 @@ export const UserManagement: React.FC = () => {
                   <DialogDescription>Manually add a new user to the system.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                  <UserFormFields />
+                  <UserFormFields 
+                    formData={formData} 
+                    setFormData={setFormData} 
+                    departments={departments} 
+                    supervisorCandidates={supervisorCandidates} 
+                    selectedUser={selectedUser} 
+                  />
                 </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
@@ -355,7 +378,13 @@ export const UserManagement: React.FC = () => {
                   <DialogDescription>Update user information and reporting structure.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                  <UserFormFields />
+                  <UserFormFields 
+                    formData={formData} 
+                    setFormData={setFormData} 
+                    departments={departments} 
+                    supervisorCandidates={supervisorCandidates} 
+                    selectedUser={selectedUser} 
+                  />
                 </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
@@ -474,9 +503,17 @@ export const UserManagement: React.FC = () => {
             ) : users.length === 0 ? (
                <TableRow><TableCell colSpan={7} className="h-32 text-center text-muted-foreground">No users found matching your criteria.</TableCell></TableRow>
             ) : (
-              users.map((user) => (
-                <TableRow key={user.id} className={selectedUserIds.includes(user.id) ? "bg-accent/30" : ""}>
-                  <TableCell>
+              users.map((user, index) => (
+                <TableRow 
+                  key={user.id} 
+                  className={cn(
+                    "hover:bg-primary/5 transition-colors cursor-pointer group",
+                    index % 2 === 0 ? "bg-background" : "bg-muted/10",
+                    selectedUserIds.includes(user.id) && "bg-primary/10"
+                  )}
+                  onClick={() => openEdit(user)}
+                >
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox 
                       checked={selectedUserIds.includes(user.id)} 
                       onCheckedChange={() => toggleSelectUser(user.id)}
@@ -487,7 +524,7 @@ export const UserManagement: React.FC = () => {
                     <div className="text-xs text-muted-foreground">{user.username}</div>
                   </TableCell>
                   <TableCell>
-                    <span className="inline-flex items-center rounded-full bg-secondary/50 border px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight">
+                    <span className="inline-flex items-center rounded-full bg-secondary/50 border px-2 py-0.5 text-xs font-bold uppercase tracking-tight">
                       {user.role === 'COURSE_CREATOR' ? 'Course Creator' : user.role.replace('_', ' ')}
                     </span>
                   </TableCell>
@@ -495,7 +532,7 @@ export const UserManagement: React.FC = () => {
                     {user.immediateSuperior ? (
                       <div className="flex flex-col">
                         <span className="font-medium">{user.immediateSuperior.firstName} {user.immediateSuperior.lastName}</span>
-                        <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Direct Report</span>
+                        <span className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Direct Report</span>
                       </div>
                     ) : (
                       <span className="text-muted-foreground italic text-xs">Unassigned</span>
@@ -513,7 +550,7 @@ export const UserManagement: React.FC = () => {
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="text-right px-6">
+                  <TableCell className="text-right px-6" onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="sm" onClick={() => openEdit(user)}>
                       Edit
                     </Button>

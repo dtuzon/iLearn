@@ -54,15 +54,12 @@ export class CoursesController {
   static async updateCertificateTemplate(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { nameX, nameY, dateX, dateY } = req.body;
+      const designConfig = req.body.designConfig ? JSON.parse(req.body.designConfig) : undefined;
       const backgroundImageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
 
       const template = await CoursesService.upsertCertificateTemplate(id as string, {
         backgroundImageUrl,
-        nameX: parseInt(nameX),
-        nameY: parseInt(nameY),
-        dateX: parseInt(dateX),
-        dateY: parseInt(dateY)
+        designConfig
       });
 
       res.json(template);
@@ -76,6 +73,26 @@ export class CoursesController {
       const { id } = req.params;
       const course = await CoursesService.partialUpdate(id as string, req.body);
       res.json(course);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  static async updateModule(req: Request, res: Response) {
+    try {
+      const { moduleId } = req.params;
+      const module = await CoursesService.updateModule(moduleId as string, req.body);
+      res.json(module);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  static async deleteModule(req: Request, res: Response) {
+    try {
+      const { moduleId } = req.params;
+      await CoursesService.deleteModule(moduleId as string);
+      res.status(204).send();
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

@@ -217,7 +217,7 @@ export const TeamEvaluations: React.FC = () => {
         >
           <DialogHeader className="p-8 bg-primary text-primary-foreground">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
+              <div className="p-3 bg-white/20 rounded-xl backdrop-blur-md">
                 <ClipboardCheck className="h-8 w-8" />
               </div>
               <div>

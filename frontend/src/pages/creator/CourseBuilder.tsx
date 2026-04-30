@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { coursesApi } from '../../api/courses.api';
+import { departmentsApi } from '../../api/departments.api';
+import type { Department } from '../../api/departments.api';
 import type { Course } from '../../api/courses.api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { Checkbox } from '../../components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { 
@@ -21,19 +24,32 @@ import {
   Play, 
   CheckCircle2,
   Trash2,
-  ChevronDown
+  ChevronDown,
+  GripVertical,
+  Pencil,
+  Save
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '../../components/ui/badge';
 import { Switch } from '../../components/ui/switch';
+import { Textarea } from '../../components/ui/textarea';
 import { QuizBuilder } from '../../components/creator/QuizBuilder';
 import { CertificateBuilder } from '../../components/creator/CertificateBuilder';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from '../../components/ui/dialog';
 
 export const CourseBuilder: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const [course, setCourse] = useState<Course | null>(null);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   // New Module State
@@ -51,16 +67,43 @@ export const CourseBuilder: React.FC = () => {
     moduleTitle: ''
   });
 
+  // Module Management State
+  const [editingModule, setEditingModule] = useState<any>(null);
+  const [isProcessingModule, setIsProcessingModule] = useState(false);
+
+  // Course Identity State
+  const [identityForm, setIdentityForm] = useState({
+    title: '',
+    description: '',
+    targetAudience: '',
+    targetDepartments: [] as string[],
+    passingGrade: 80
+  });
+  const [isSavingIdentity, setIsSavingIdentity] = useState(false);
+
   const fetchCourse = async () => {
     if (!courseId) return;
     setIsLoading(true);
     try {
-      const data = await coursesApi.getById(courseId);
+      const [courseData, deptsData] = await Promise.all([
+        coursesApi.getById(courseId),
+        departmentsApi.getAll()
+      ]);
+      
+      setDepartments(deptsData);
+
       // Sort modules by sequenceOrder
-      if (data.modules) {
-        data.modules.sort((a, b) => a.sequenceOrder - b.sequenceOrder);
+      if (courseData.modules) {
+        courseData.modules.sort((a, b) => a.sequenceOrder - b.sequenceOrder);
       }
-      setCourse(data);
+      setCourse(courseData);
+      setIdentityForm({
+        title: courseData.title,
+        description: courseData.description || '',
+        targetAudience: courseData.targetAudience,
+        targetDepartments: courseData.targetDepartments || [],
+        passingGrade: courseData.passingGrade || 80
+      });
     } catch (error) {
       toast.error('Failed to load course details');
     } finally {
@@ -108,14 +151,58 @@ export const CourseBuilder: React.FC = () => {
     }
   };
 
+  const handleUpdateIdentity = async () => {
+    if (!courseId) return;
+    setIsSavingIdentity(true);
+    try {
+      await coursesApi.partialUpdate(courseId, identityForm);
+      setCourse(prev => prev ? { ...prev, ...identityForm } : null);
+      toast.success('Course identity updated');
+    } catch (error) {
+      toast.error('Failed to update course identity');
+    } finally {
+      setIsSavingIdentity(false);
+    }
+  };
+
+  const handleUpdateModule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!courseId || !editingModule) return;
+    setIsProcessingModule(true);
+    try {
+      await coursesApi.updateModule(courseId, editingModule.id, {
+        title: editingModule.title,
+        type: editingModule.type
+      });
+      toast.success('Module updated');
+      setEditingModule(null);
+      fetchCourse();
+    } catch (error) {
+      toast.error('Failed to update module');
+    } finally {
+      setIsProcessingModule(false);
+    }
+  };
+
+  const handleDeleteModule = async (moduleId: string) => {
+    if (!courseId || !window.confirm('Are you sure you want to remove this component from the loop?')) return;
+    try {
+      await coursesApi.deleteModule(courseId, moduleId);
+      toast.success('Module removed');
+      fetchCourse();
+    } catch (error) {
+      toast.error('Failed to delete module');
+    }
+  };
+
   const getModuleIcon = (type: string) => {
     switch (type) {
-      case 'PRE_QUIZ': return <div className="p-2 rounded-lg bg-blue-100 text-blue-600"><HelpCircle className="h-5 w-5" /></div>;
-      case 'POST_QUIZ': return <div className="p-2 rounded-lg bg-purple-100 text-purple-600"><HelpCircle className="h-5 w-5" /></div>;
-      case 'VIDEO': return <div className="p-2 rounded-lg bg-red-100 text-red-600"><Play className="h-5 w-5" /></div>;
-      case 'WORKSHOP': return <div className="p-2 rounded-lg bg-green-100 text-green-600"><FileText className="h-5 w-5" /></div>;
-      case 'EVALUATION': return <div className="p-2 rounded-lg bg-orange-100 text-orange-600"><ClipboardCheck className="h-5 w-5" /></div>;
-      case 'ONLINE_EVALUATION': return <div className="p-2 rounded-lg bg-cyan-100 text-cyan-600"><ClipboardCheck className="h-5 w-5" /></div>;
+      case 'PRE_QUIZ': return <div className="p-2 rounded-lg bg-primary/10 text-primary"><HelpCircle className="h-5 w-5" /></div>;
+      case 'POST_QUIZ': return <div className="p-2 rounded-lg bg-primary/20 text-primary"><HelpCircle className="h-5 w-5" /></div>;
+      case 'VIDEO': return <div className="p-2 rounded-lg bg-secondary/10 text-secondary-foreground"><Play className="h-5 w-5" /></div>;
+      case 'WORKSHOP': return <div className="p-2 rounded-lg bg-primary/10 text-primary"><FileText className="h-5 w-5" /></div>;
+      case 'EVALUATION': return <div className="p-2 rounded-lg bg-secondary/20 text-secondary-foreground"><ClipboardCheck className="h-5 w-5" /></div>;
+      case 'ONLINE_EVALUATION': return <div className="p-2 rounded-lg bg-secondary/20 text-secondary-foreground"><ClipboardCheck className="h-5 w-5" /></div>;
       default: return <div className="p-2 rounded-lg bg-muted text-muted-foreground"><MessageSquare className="h-5 w-5" /></div>;
     }
   };
@@ -140,7 +227,12 @@ export const CourseBuilder: React.FC = () => {
             <ArrowLeft className="h-6 w-6 text-primary" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">{course.title}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-extrabold tracking-tight text-primary">{course.title}</h1>
+              <Badge variant={course.isPublished ? "success" : "warning"} className="text-[10px] font-black uppercase px-2 py-0">
+                {course.isPublished ? "PUBLISHED" : "DRAFT"}
+              </Badge>
+            </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Layers className="h-4 w-4" />
               <span className="text-sm font-medium">Authoring Studio</span>
@@ -155,7 +247,7 @@ export const CourseBuilder: React.FC = () => {
             <Settings className="mr-2 h-4 w-4" /> Course Config
           </Button>
           <Button size="sm" className="h-10 px-4 shadow-lg shadow-primary/20">
-            <CheckCircle2 className="mr-2 h-4 w-4" /> Publish Studio Version
+            <CheckCircle2 className="mr-2 h-4 w-4" /> Publish Course
           </Button>
         </div>
       </div>
@@ -181,7 +273,7 @@ export const CourseBuilder: React.FC = () => {
                 {course.modules?.length === 0 ? (
                   <div className="ml-4 p-12 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center text-muted-foreground bg-muted/5">
                     <Layers className="h-12 w-12 mb-4 opacity-20" />
-                    <p className="text-lg font-medium italic">No components in the loop yet.</p>
+                    <p className="text-lg font-medium italic">No modules in the loop yet.</p>
                     <p className="text-sm opacity-60">Begin by adding your first module from the right panel.</p>
                   </div>
                 ) : (
@@ -194,12 +286,13 @@ export const CourseBuilder: React.FC = () => {
                         <CardContent className="p-0">
                           <div className="flex flex-col md:flex-row md:items-center justify-between p-5 gap-4">
                             <div className="flex items-center gap-4">
+                              <GripVertical className="h-5 w-5 text-muted-foreground/20 cursor-grab active:cursor-grabbing" />
                               <div className="text-xs font-black text-muted-foreground/30 font-mono">STEP {index + 1}</div>
                               {getModuleIcon(module.type)}
                               <div>
                                 <div className="font-bold text-lg">{module.title}</div>
                                 <div className="flex items-center gap-2">
-                                  <Badge variant="secondary" className="text-[10px] font-bold tracking-tighter uppercase">
+                                  <Badge variant="secondary" className="text-xs font-bold tracking-tighter uppercase">
                                     {module.type.replace('_', ' ')}
                                   </Badge>
                                 </div>
@@ -222,7 +315,21 @@ export const CourseBuilder: React.FC = () => {
                                 </Button>
                               )}
                               
-                              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-muted-foreground hover:text-primary"
+                                onClick={() => setEditingModule(module)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-muted-foreground hover:text-destructive"
+                                onClick={() => handleDeleteModule(module.id)}
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -249,7 +356,7 @@ export const CourseBuilder: React.FC = () => {
             <div className="space-y-6">
               <Card className="border-none shadow-xl bg-primary/5 sticky top-24">
                 <CardHeader>
-                  <CardTitle className="text-lg">Add Component</CardTitle>
+                  <CardTitle className="text-lg">Add Module</CardTitle>
                   <CardDescription>Expand the sequence.</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -331,7 +438,7 @@ export const CourseBuilder: React.FC = () => {
 
                     <Button type="submit" className="w-full h-11 shadow-lg shadow-primary/10 font-bold" disabled={isAddingModule}>
                       {isAddingModule ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                      Inject to Loop
+                      Add Module
                     </Button>
                   </form>
                 </CardContent>
@@ -353,26 +460,159 @@ export const CourseBuilder: React.FC = () => {
         />
       </TabsContent>
       <TabsContent value="settings">
-          <Card className="border-none shadow-lg">
-            <CardHeader>
-              <CardTitle>Course Configuration</CardTitle>
-              <CardDescription>Adjust high-level settings for this course's lifecycle.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between p-4 border rounded-xl bg-muted/20">
-                <div className="space-y-1">
-                  <Label className="text-base font-bold">180-Day Behavioral Change Evaluation</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Automatically trigger a follow-up evaluation 6 months after course completion to measure K.A.S.H. impact.
-                  </p>
+          <div className="space-y-8">
+            <Card className="border-none shadow-lg">
+              <CardHeader>
+                <CardTitle>Course Identity</CardTitle>
+                <CardDescription>Update the primary metadata for this learning experience.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="c-title">Course Title</Label>
+                    <Input 
+                      id="c-title" 
+                      value={identityForm.title}
+                      onChange={(e) => setIdentityForm({...identityForm, title: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Target Audience</Label>
+                    <Select 
+                      value={identityForm.targetAudience} 
+                      onValueChange={(val) => setIdentityForm({...identityForm, targetAudience: val})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select audience" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PHASE_1_NEW_HIRE">Phase 1: Newly Hired</SelectItem>
+                        <SelectItem value="PHASE_2_REGULARIZED">Phase 2: Newly Regularized</SelectItem>
+                        <SelectItem value="GENERAL">General Audience</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <Switch 
-                  checked={course.requires180DayEval} 
-                  onCheckedChange={handleToggleEval}
-                />
-              </div>
-            </CardContent>
-          </Card>
+
+                <div className="space-y-3">
+                  <Label className="text-sm font-bold">Target Departments</Label>
+                  <p className="text-xs text-muted-foreground mb-2">Limit this course visibility to specific departments. If none selected, it remains visible to all.</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-xl bg-muted/10">
+                    {departments.map((dept) => (
+                      <div key={dept.id} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`dept-${dept.id}`}
+                          checked={identityForm.targetDepartments.includes(dept.name)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setIdentityForm({
+                                ...identityForm,
+                                targetDepartments: [...identityForm.targetDepartments, dept.name]
+                              });
+                            } else {
+                              setIdentityForm({
+                                ...identityForm,
+                                targetDepartments: identityForm.targetDepartments.filter(d => d !== dept.name)
+                              });
+                            }
+                          }}
+                        />
+                        <Label 
+                          htmlFor={`dept-${dept.id}`}
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          {dept.name}
+                        </Label>
+                      </div>
+                    ))}
+                    {departments.length === 0 && (
+                      ["Claims", "Underwriting", "HR", "Finance", "IT", "Sales"].map((dept) => (
+                        <div key={dept} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`dept-mock-${dept}`}
+                            checked={identityForm.targetDepartments.includes(dept)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setIdentityForm({
+                                  ...identityForm,
+                                  targetDepartments: [...identityForm.targetDepartments, dept]
+                                });
+                              } else {
+                                setIdentityForm({
+                                  ...identityForm,
+                                  targetDepartments: identityForm.targetDepartments.filter(d => d !== dept)
+                                });
+                              }
+                            }}
+                          />
+                          <Label 
+                            htmlFor={`dept-mock-${dept}`}
+                            className="text-sm font-medium leading-none cursor-pointer"
+                          >
+                            {dept}
+                          </Label>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="c-desc">Executive Summary / Description</Label>
+                  <Textarea 
+                    id="c-desc" 
+                    value={identityForm.description}
+                    onChange={(e) => setIdentityForm({...identityForm, description: e.target.value})}
+                    className="min-h-[100px]"
+                  />
+                </div>
+                <Button onClick={handleUpdateIdentity} disabled={isSavingIdentity}>
+                  {isSavingIdentity ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Save Course Identity
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="border-none shadow-lg">
+              <CardHeader>
+                <CardTitle>Course Lifecycle Configuration</CardTitle>
+                <CardDescription>Adjust high-level settings for this course's lifecycle.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between p-4 border rounded-xl bg-muted/20">
+                  <div className="space-y-1">
+                    <Label className="text-base font-bold">180-Day Behavioral Change Evaluation</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Automatically trigger a follow-up evaluation 6 months after course completion to measure K.A.S.H. impact.
+                    </p>
+                  </div>
+                  <Switch 
+                    checked={course.requires180DayEval} 
+                    onCheckedChange={handleToggleEval}
+                  />
+                </div>
+
+                <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-xl bg-muted/20 gap-4 mt-4">
+                  <div className="space-y-1">
+                    <Label className="text-base font-bold">Global Passing Grade (%)</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Set the minimum percentage required to pass quizzes in this course.
+                    </p>
+                  </div>
+                  <div className="w-full md:w-32">
+                    <Input 
+                      type="number" 
+                      min="0" 
+                      max="100" 
+                      value={identityForm.passingGrade}
+                      onChange={(e) => setIdentityForm({...identityForm, passingGrade: parseInt(e.target.value) || 0})}
+                      className="bg-background font-bold text-center h-11"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -382,6 +622,54 @@ export const CourseBuilder: React.FC = () => {
         isOpen={quizBuilderState.isOpen}
         onClose={() => setQuizBuilderState({ ...quizBuilderState, isOpen: false })}
       />
+
+      <Dialog open={!!editingModule} onOpenChange={(open) => !open && setEditingModule(null)}>
+        <DialogContent className="max-w-md">
+          <form onSubmit={handleUpdateModule}>
+            <DialogHeader>
+              <DialogTitle>Edit Component</DialogTitle>
+              <DialogDescription>Modify the details of this module in the learning loop.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-title">Title</Label>
+                <Input 
+                  id="edit-title" 
+                  required 
+                  value={editingModule?.title || ''} 
+                  onChange={(e) => setEditingModule({...editingModule, title: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Module Type</Label>
+                <Select 
+                  value={editingModule?.type} 
+                  onValueChange={(val) => setEditingModule({...editingModule, type: val})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PRE_QUIZ">Pre-Quiz</SelectItem>
+                    <SelectItem value="VIDEO">Video Production</SelectItem>
+                    <SelectItem value="WORKSHOP">Workshop / Activity</SelectItem>
+                    <SelectItem value="POST_QUIZ">Post-Quiz Assessment</SelectItem>
+                    <SelectItem value="EVALUATION">Quality Evaluation</SelectItem>
+                    <SelectItem value="ONLINE_EVALUATION">Online Evaluation (K.A.S.H.)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditingModule(null)}>Cancel</Button>
+              <Button type="submit" disabled={isProcessingModule}>
+                {isProcessingModule && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Update Component
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

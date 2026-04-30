@@ -101,7 +101,7 @@ export const LoginPage: React.FC = () => {
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <Label className="text-white/80 font-medium">Password</Label>
-                <button type="button" className="text-xs text-white/60 hover:text-white transition-colors">Forgot Password?</button>
+                <Button variant="link" className="p-0 h-auto text-xs text-white/60 hover:text-white transition-colors">Forgot Password?</Button>
               </div>
               <Input 
                 type="password"
@@ -116,7 +116,7 @@ export const LoginPage: React.FC = () => {
             <Button 
               type="submit" 
               disabled={isSubmitting}
-              className="w-full bg-white text-blue-900 hover:bg-white/90 h-12 text-md font-bold shadow-xl transition-all"
+              className="w-full bg-white text-primary hover:bg-white/90 h-12 text-md font-bold shadow-xl transition-all"
             >
               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Log In
@@ -153,7 +153,7 @@ export const LoginPage: React.FC = () => {
                <a href="#" className="hover:text-white transition-colors">Privacy</a>
                <a href="#" className="hover:text-white transition-colors">Contact Us</a>
             </div>
-            <p className="text-[10px] text-white/30 uppercase tracking-widest text-right">
+            <p className="text-xs text-white/30 uppercase tracking-widest text-right">
                {settings?.footerText || '© 2024 Standard Insurance Co., Inc. All Rights Reserved.'}
             </p>
          </div>

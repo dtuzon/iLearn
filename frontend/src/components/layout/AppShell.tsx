@@ -68,7 +68,7 @@ export const AppShell: React.FC = () => {
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="text-muted-foreground relative">
               <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-background"></span>
+              <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-background"></span>
             </Button>
             
             <div className="h-8 w-px bg-border mx-2 hidden sm:block"></div>
@@ -76,7 +76,7 @@ export const AppShell: React.FC = () => {
             <div className="hidden md:flex items-center gap-3 pl-2">
               <div className="text-right">
                 <p className="text-sm font-semibold leading-none">{user?.firstName} {user?.lastName}</p>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-1">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-bold mt-1">
                   {user?.role === 'COURSE_CREATOR' ? 'Course Creator' : user?.role.replace('_', ' ')}
                 </p>
               </div>
@@ -150,16 +150,16 @@ export const AppShell: React.FC = () => {
            
            <div className="mt-auto p-4 border-t border-border/50">
               <div className="bg-primary/5 rounded-xl p-4 border border-primary/10">
-                <p className="text-xs font-medium text-primary mb-1">Learning Support</p>
-                <p className="text-[10px] text-muted-foreground">Need help with your courses?</p>
-                <Button variant="link" className="h-auto p-0 text-[10px] text-primary mt-2">Contact IT Helpdesk</Button>
+                <p className="text-sm font-medium text-primary mb-1">Learning Support</p>
+                <p className="text-xs text-muted-foreground">Need help with your courses?</p>
+                <Button variant="link" className="h-auto p-0 text-xs text-primary mt-2">Contact IT Helpdesk</Button>
               </div>
            </div>
         </aside>
 
         {/* Content */}
         <main className="flex-1 overflow-y-auto bg-muted/10">
-          <div className="container mx-auto p-6 sm:p-8 max-w-7xl animate-in fade-in duration-500">
+          <div className="container mx-auto p-6 md:p-8 space-y-8 max-w-7xl animate-in fade-in duration-500">
             <Outlet />
           </div>
         </main>

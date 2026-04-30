@@ -200,11 +200,12 @@ model Course {
   description  String?
   thumbnailUrl String?
   isPublished  Boolean  @default(false)
-  passingScore Int      @default(80)
+  passingGrade Int      @default(80)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   
   targetAudience     String   @default("GENERAL") // GENERAL, PHASE_1_NEW_HIRE, PHASE_2_REGULARIZED
+  targetDepartments  String[] @default([])
   requires180DayEval Boolean  @default(false)
 
   lecturerId String
@@ -230,6 +231,8 @@ model CourseModule {
   contentUrlOrText String?    // Video file path, workshop instructions HTML, etc.
   durationSeconds  Int?       // For video modules
   facilitators     String[]   @default([])
+  shuffleQuestions Boolean    @default(false)
+  shuffleOptions   Boolean    @default(false)
 
   courseId String
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)

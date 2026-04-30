@@ -34,10 +34,10 @@ export const MyLearning: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">My Learning</h2>
-        <p className="text-muted-foreground">Track your progress and continue your training.</p>
+        <h1 className="text-3xl font-extrabold tracking-tight text-primary">My Learning</h1>
+        <p className="text-muted-foreground text-lg">Track your progress and continue your training.</p>
       </div>
 
       {enrollments.length === 0 ? (

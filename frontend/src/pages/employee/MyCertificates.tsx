@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Loader2, Download, Award } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../api/client';
+import { cn } from '../../lib/utils';
 
 export const MyCertificates: React.FC = () => {
   const [completedEnrollments, setCompletedEnrollments] = useState<Enrollment[]>([]);
@@ -57,12 +58,12 @@ export const MyCertificates: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center gap-3">
         <Award className="h-8 w-8 text-primary" />
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">My Certificates</h2>
-          <p className="text-muted-foreground">Download and view your earned certifications.</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-primary">My Certificates</h1>
+          <p className="text-muted-foreground text-lg">Download and view your earned certifications.</p>
         </div>
       </div>
 
@@ -78,7 +79,7 @@ export const MyCertificates: React.FC = () => {
           </TableHeader>
           <TableBody>
             {completedEnrollments.length === 0 ? (
-              <TableRow>
+              <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={4} className="text-center text-muted-foreground py-12">
                   <div className="flex flex-col items-center gap-2">
                     <Award className="h-10 w-10 opacity-10" />
@@ -87,8 +88,15 @@ export const MyCertificates: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              completedEnrollments.map((enrollment) => (
-                <TableRow key={enrollment.id}>
+              completedEnrollments.map((enrollment, index) => (
+                <TableRow 
+                  key={enrollment.id}
+                  className={cn(
+                    "hover:bg-primary/5 transition-colors cursor-pointer group",
+                    index % 2 === 0 ? "bg-background" : "bg-muted/10"
+                  )}
+                  onClick={() => handleDownload(enrollment.course.id)}
+                >
                   <TableCell className="font-semibold">{enrollment.course.title}</TableCell>
                   <TableCell>{new Date(enrollment.enrolledAt).toLocaleDateString()}</TableCell>
                   <TableCell>{enrollment.course.lecturer?.firstName} {enrollment.course.lecturer?.lastName}</TableCell>
