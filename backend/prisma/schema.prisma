@@ -49,6 +49,19 @@ enum CourseStatus {
   PUBLISHED
 }
 
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CheckerType {
+  IMMEDIATE_SUPERIOR
+  COURSE_CREATOR
+  SPECIFIC_USER
+}
+
+
 
 // ─────────────────────────────────────────────
 // CORE MODELS
@@ -93,6 +106,8 @@ model User {
   coursesAsLecturer Course[]         @relation("LecturerCourses")
   evaluationForms   EvaluationForm[] @relation("FormCreator")
   notifications     Notification[]
+  activitySubmissions ActivitySubmission[]
+
   
   // Direct Reporting Structure
   immediateSuperiorId String?
@@ -245,16 +260,42 @@ model CourseModule {
   facilitators     String[]   @default([])
   shuffleQuestions Boolean    @default(false)
   shuffleOptions   Boolean    @default(false)
+  
+  // Workshop/Activity Fields
+  activityInstructions String?
+  activityTemplateUrl  String?
+  checkerType          CheckerType? @default(COURSE_CREATOR)
+  specificCheckerId    String?
 
   courseId String
+
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   quizQuestions  QuizQuestion[]
   moduleProgress ModuleProgress[]
   onlineEvaluations OnlineEvaluationResult[]
+  activitySubmissions ActivitySubmission[]
 
   @@map("course_modules")
 }
+
+model ActivitySubmission {
+  id            String   @id @default(cuid())
+  moduleId      String
+  userId        String
+  fileUrl       String?
+  textResponse  String?
+  status        SubmissionStatus @default(PENDING)
+  feedback      String? 
+  submittedAt   DateTime @default(now())
+  reviewedAt    DateTime?
+
+  module        CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("activity_submissions")
+}
+
 
 // ─────────────────────────────────────────────
 // QUIZ ENGINE

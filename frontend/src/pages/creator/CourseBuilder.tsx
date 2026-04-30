@@ -37,7 +37,8 @@ import { QuizBuilder } from '../../components/creator/QuizBuilder';
 import { CertificateBuilder } from '../../components/creator/CertificateBuilder';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useAuth } from '../../context/AuthContext';
-import { Clock, XCircle, CheckCircle } from 'lucide-react';
+import { Clock, XCircle, CheckCircle, BookOpen } from 'lucide-react';
+
 
 import { 
   Dialog,
@@ -67,6 +68,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { MultiSelect } from '../../components/ui/multi-select';
 import { VideoUploadModal } from '../../components/creator/VideoUploadModal';
 import { Video as VideoIcon } from 'lucide-react';
+import { WorkshopActivityBuilder } from '../../components/creator/WorkshopActivityBuilder';
+
 
 
 interface SortableModuleItemProps {
@@ -75,7 +78,9 @@ interface SortableModuleItemProps {
   getModuleIcon: (type: string) => React.ReactNode;
   setQuizBuilderState: (state: any) => void;
   setVideoModalState: (state: { isOpen: boolean, moduleId: string }) => void;
+  setWorkshopModalState: (state: { isOpen: boolean, moduleId: string }) => void;
   setEditingModule: (module: any) => void;
+
   handleDeleteModule: (moduleId: string) => void;
 }
 
@@ -86,9 +91,11 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
   getModuleIcon, 
   setQuizBuilderState, 
   setVideoModalState,
+  setWorkshopModalState,
   setEditingModule, 
   handleDeleteModule 
 }) => {
+
 
   const {
     attributes,
@@ -160,6 +167,21 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
                 </Button>
               )}
 
+              {module.type === 'WORKSHOP' && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="font-bold border-green-500/20 hover:border-green-500/50 hover:bg-green-500/5"
+                  onClick={() => setWorkshopModalState({
+                    isOpen: true,
+                    moduleId: module.id
+                  })}
+                >
+                  <BookOpen className="mr-2 h-3.5 w-3.5" /> Manage Activity
+                </Button>
+              )}
+
+
               
               <Button 
                 variant="ghost" 
@@ -220,13 +242,19 @@ export const CourseBuilder: React.FC = () => {
     moduleId: '',
     moduleTitle: ''
   });
-
-
   // Video Management State
   const [videoModalState, setVideoModalState] = useState<{ isOpen: boolean, moduleId: string }>({
     isOpen: false,
     moduleId: ''
   });
+
+
+  // Workshop Activity State
+  const [workshopModalState, setWorkshopModalState] = useState<{ isOpen: boolean, moduleId: string }>({
+    isOpen: false,
+    moduleId: ''
+  });
+
 
 
   // Module Management State
@@ -545,9 +573,11 @@ export const CourseBuilder: React.FC = () => {
                           getModuleIcon={getModuleIcon}
                           setQuizBuilderState={setQuizBuilderState}
                           setVideoModalState={setVideoModalState}
+                          setWorkshopModalState={setWorkshopModalState}
                           setEditingModule={setEditingModule}
                           handleDeleteModule={handleDeleteModule}
                         />
+
 
                       ))}
                     </SortableContext>
@@ -837,8 +867,14 @@ export const CourseBuilder: React.FC = () => {
         onClose={() => setVideoModalState({ ...videoModalState, isOpen: false })}
         onUploadSuccess={handleVideoUploadSuccess}
       />
-    </div>
 
+      <WorkshopActivityBuilder 
+        courseId={courseId!}
+        moduleId={workshopModalState.moduleId}
+        isOpen={workshopModalState.isOpen}
+        onClose={() => setWorkshopModalState({ ...workshopModalState, isOpen: false })}
+        onUpdate={fetchCourse}
+      />
+    </div>
   );
 };
-

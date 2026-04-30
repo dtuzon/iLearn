@@ -45,7 +45,15 @@ export class EnrollmentsService {
       include: {
         moduleProgress: {
           include: { module: true }
+        },
+        user: {
+          include: {
+            activitySubmissions: {
+              where: { module: { courseId } }
+            }
+          }
         }
+
       }
     });
 

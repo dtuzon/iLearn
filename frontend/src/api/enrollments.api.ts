@@ -7,7 +7,11 @@ export interface Enrollment {
   currentModuleOrder: number;
   enrolledAt: string;
   course: Course & { _count: { modules: number } };
+  user?: {
+    activitySubmissions: any[];
+  };
 }
+
 
 export const enrollmentsApi = {
   getMyCourses: async () => {

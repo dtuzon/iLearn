@@ -12,10 +12,15 @@ import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { Progress } from '../../components/ui/progress';
-import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, FileUp, Video, HelpCircle, BookOpen, ClipboardCheck, Star } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '../../components/ui/alert';
+
+import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, Clock, Video, HelpCircle, BookOpen, ClipboardCheck, Star } from 'lucide-react';
+
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 import { LocalVideoPlayer } from '../../components/learner/LocalVideoPlayer';
+import { ActivityPlayer } from '../../components/learner/ActivityPlayer';
+
 
 
 export const CoursePlayer: React.FC = () => {
@@ -127,12 +132,7 @@ export const CoursePlayer: React.FC = () => {
     }
   };
 
-  const handleFileUpload = async () => {
-     // Placeholder for workshop upload - Phase 3 backend usually handles this via a specific route
-     // For now, we'll just simulate completion as requested by the prompt for the "Workshop Module"
-     toast.info('File upload submitted. Processing...');
-     handleCompleteModule();
-  };
+
 
   const handleSubmitEvaluation = async () => {
     if (!currentModule || !enrollment) return;
@@ -175,20 +175,64 @@ export const CoursePlayer: React.FC = () => {
 
   // Course Completed View
   if (!currentModule && enrollment?.status === 'COMPLETED') {
+    const workshopModules = course.modules?.filter(m => m.type === 'WORKSHOP') || [];
+    const submissions = enrollment.user?.activitySubmissions || [];
+    const allApproved = workshopModules.every(m => {
+      const sub = submissions.find((s: any) => s.moduleId === m.id);
+      return sub && sub.status === 'APPROVED';
+    });
+
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-6">
-        <CheckCircle2 className="h-20 w-20 text-green-500" />
-        <div className="text-center">
-          <h2 className="text-3xl font-bold">Congratulations!</h2>
-          <p className="text-muted-foreground mt-2">You have successfully completed {course.title}.</p>
+        <div className="relative">
+          <CheckCircle2 className="h-24 w-24 text-green-500 animate-in zoom-in-50 duration-500" />
+          {!allApproved && (
+            <div className="absolute -top-2 -right-2">
+              <AlertCircle className="h-8 w-8 text-warning fill-warning/20" />
+            </div>
+          )}
         </div>
+        
+        <div className="text-center space-y-2">
+          <h2 className="text-4xl font-black uppercase tracking-tight italic">
+            {allApproved ? "Course Concluded" : "Sequence Finished"}
+          </h2>
+          <p className="text-muted-foreground text-lg">
+            {allApproved 
+              ? `Outstanding performance! You have mastered ${course.title}.`
+              : "You've reached the end of the modules, but your final status is pending verification."}
+          </p>
+        </div>
+
+        {!allApproved && (
+          <Alert variant="warning" className="max-w-md bg-warning/10 border-warning/20 shadow-lg">
+            <Clock className="h-4 w-4" />
+            <AlertTitle className="font-black uppercase tracking-widest text-xs">Certificate Locked</AlertTitle>
+            <AlertDescription className="text-sm font-medium">
+              Your course is complete, but your certificate is locked pending activity approval. Please wait for your assigned checker to review your submissions.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="flex gap-4">
-          <Button variant="outline" onClick={() => navigate('/learning/my-courses')}>Back to My Learning</Button>
-          <Button onClick={() => navigate('/learning/certificates')}>View Certificate</Button>
+          <Button variant="outline" onClick={() => navigate('/learning/my-courses')} className="font-bold border-primary/20">
+            Back to My Learning
+          </Button>
+          <Button 
+            onClick={() => navigate('/learning/certificates')} 
+            disabled={!allApproved}
+            className={cn(
+              "font-black uppercase tracking-widest text-xs h-12 px-8",
+              allApproved ? "shadow-lg shadow-primary/20" : "opacity-50"
+            )}
+          >
+            {allApproved ? "Download Certificate" : "Awaiting Approval"}
+          </Button>
         </div>
       </div>
     );
   }
+
 
   const totalModules = course.modules?.length || 0;
   const progressPercent = totalModules > 0 
@@ -282,26 +326,12 @@ export const CoursePlayer: React.FC = () => {
 
             {/* WORKSHOP VIEW */}
             {currentModule.type === 'WORKSHOP' && (
-              <div className="space-y-6 text-center py-8">
-                <BookOpen className="h-16 w-16 text-primary mx-auto opacity-20" />
-                <div className="max-w-md mx-auto">
-                   <h3 className="text-xl font-semibold mb-2">Practical Workshop</h3>
-                   <p className="text-muted-foreground mb-6">
-                     Follow the instructions provided for this module. Once complete, upload your documentation or project file here for grading.
-                   </p>
-                   <div className="border-2 border-dashed rounded-xl p-8 hover:bg-muted/50 transition-colors cursor-pointer relative">
-                      <input 
-                        type="file" 
-                        className="absolute inset-0 opacity-0 cursor-pointer" 
-                        onChange={handleFileUpload}
-                      />
-                      <FileUp className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-                      <p className="font-medium">Click to upload or drag and drop</p>
-                      <p className="text-xs text-muted-foreground mt-1">PDF, ZIP, or DOCX (Max 10MB)</p>
-                   </div>
-                </div>
-              </div>
+              <ActivityPlayer 
+                module={currentModule} 
+                onComplete={handleCompleteModule} 
+              />
             )}
+
 
             {/* ONLINE EVALUATION VIEW */}
             {currentModule.type === 'ONLINE_EVALUATION' && (

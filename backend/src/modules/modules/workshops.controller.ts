@@ -6,26 +6,52 @@ export class WorkshopsController {
   static async submit(req: AuthenticatedRequest, res: Response) {
     try {
       const { moduleId } = req.params;
-      if (!req.file) throw new Error('No file uploaded');
+      const { textResponse } = req.body;
+      const fileUrl = req.file ? `/uploads/workshops/${req.file.filename}` : undefined;
 
-      const fileUrl = `/uploads/workshops/${req.file.filename}`;
-      const progress = await WorkshopsService.submitWorkshop(req.user!.userId, moduleId as string, fileUrl);
-      res.json(progress);
+      const submission = await WorkshopsService.submitWorkshop(req.user!.userId, moduleId as string, {
+        fileUrl,
+        textResponse
+      });
+      res.json(submission);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
   }
 
-  static async grade(req: AuthenticatedRequest, res: Response) {
+  static async getPending(req: AuthenticatedRequest, res: Response) {
+    try {
+      const submissions = await WorkshopsService.getPendingSubmissions(req.user!.userId, req.user!.role);
+      res.json(submissions);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  static async review(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { submissionId } = req.params;
+      const { status, feedback } = req.body;
+      
+      if (status === 'REJECTED' && !feedback) {
+        return res.status(400).json({ message: 'Feedback is mandatory for rejections' });
+      }
+
+      const submission = await WorkshopsService.reviewSubmission(submissionId as string, req.user!.userId, {
+        status,
+        feedback
+      });
+      res.json(submission);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  static async getMySubmission(req: AuthenticatedRequest, res: Response) {
     try {
       const { moduleId } = req.params;
-      const { enrollmentId, completed, gradeNote } = req.body;
-      const progress = await WorkshopsService.gradeWorkshop(moduleId as string, enrollmentId, {
-        completed,
-        gradeNote,
-        gradedBy: req.user!.userId
-      });
-      res.json(progress);
+      const submission = await WorkshopsService.getSubmission(req.user!.userId, moduleId as string);
+      res.json(submission);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

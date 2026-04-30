@@ -1,5 +1,7 @@
 import { prisma } from '../../lib/prisma';
+import { SubmissionStatus, ModuleType } from '@prisma/client';
 import puppeteer from 'puppeteer';
+
 import path from 'path';
 import fs from 'fs';
 
@@ -25,6 +27,30 @@ export class CertificatesService {
     if (!user || !course || !course.certificateTemplate) {
       throw new Error('User, Course, or Certificate Template not found');
     }
+
+    // GATING LOGIC: Check if all WORKSHOP modules are APPROVED
+    const workshopModules = await prisma.courseModule.findMany({
+      where: { courseId, type: ModuleType.WORKSHOP }
+    });
+
+    if (workshopModules.length > 0) {
+      const submissions = await prisma.activitySubmission.findMany({
+        where: {
+          userId,
+          moduleId: { in: workshopModules.map(m => m.id) }
+        }
+      });
+
+      const allApproved = workshopModules.every(m => {
+        const sub = submissions.find(s => s.moduleId === m.id);
+        return sub && sub.status === SubmissionStatus.APPROVED;
+      });
+
+      if (!allApproved) {
+        throw new Error('Your certificate is locked pending activity approval. Please wait for your assigned checker to review your submissions.');
+      }
+    }
+
 
     const template = course.certificateTemplate;
     const config = template.designConfig as any;

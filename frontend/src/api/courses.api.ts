@@ -28,7 +28,12 @@ export interface CourseModule {
   durationSeconds: number | null;
   facilitators?: string[];
   courseId: string;
+  activityInstructions?: string;
+  activityTemplateUrl?: string;
+  checkerType?: 'IMMEDIATE_SUPERIOR' | 'COURSE_CREATOR' | 'SPECIFIC_USER';
+  specificCheckerId?: string;
 }
+
 
 export const coursesApi = {
   getAll: async () => {

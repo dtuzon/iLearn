@@ -20,6 +20,8 @@ import { CoursePlayer } from './pages/employee/CoursePlayer';
 import { MyCertificates } from './pages/employee/MyCertificates';
 import { TeamEvaluations } from './pages/supervisor/TeamEvaluations';
 import { TeamManagement } from './pages/supervisor/TeamManagement';
+import { ActivityApprovals } from './pages/approvals/ActivityApprovals';
+
 
 import { Dashboard } from './pages/Dashboard';
 import { DiscoverCatalog } from './pages/learner/DiscoverCatalog';
@@ -84,6 +86,16 @@ function App() {
                   <Route path="team-evaluations" element={<TeamEvaluations />} />
                   <Route path="team-management" element={<TeamManagement />} />
                 </Route>
+
+                {/* Shared Approval Routes */}
+                <Route path="/approvals" element={
+                  <RoleGuard allowedRoles={['SUPERVISOR', 'DEPARTMENT_HEAD', 'COURSE_CREATOR', 'ADMINISTRATOR']}>
+                    <Outlet />
+                  </RoleGuard>
+                }>
+                  <Route path="activities" element={<ActivityApprovals />} />
+                </Route>
+
 
 
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
