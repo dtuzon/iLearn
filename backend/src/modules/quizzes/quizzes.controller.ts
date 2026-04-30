@@ -38,7 +38,7 @@ export class QuizzesController {
   static async updateQuestion(req: Request, res: Response) {
     try {
       const { questionId } = req.params;
-      const question = await QuizzesService.updateQuestion(questionId, req.body);
+      const question = await QuizzesService.updateQuestion(questionId as string, req.body);
       res.json(question);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -48,7 +48,7 @@ export class QuizzesController {
   static async deleteQuestion(req: Request, res: Response) {
     try {
       const { questionId } = req.params;
-      await QuizzesService.deleteQuestion(questionId);
+      await QuizzesService.deleteQuestion(questionId as string);
       res.status(204).send();
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -58,7 +58,7 @@ export class QuizzesController {
   static async clearQuestions(req: Request, res: Response) {
     try {
       const { moduleId } = req.params;
-      await QuizzesService.clearQuestions(moduleId);
+      await QuizzesService.clearQuestions(moduleId as string);
       res.status(204).send();
     } catch (error: any) {
       res.status(400).json({ message: error.message });
