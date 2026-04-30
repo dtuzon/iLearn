@@ -149,7 +149,8 @@ export const LearningPathBuilder: React.FC = () => {
       ]);
       setPath(pathData);
       // Only show published courses that aren't already in the path
-      const published = coursesData.filter(c => c.isPublished);
+      const published = coursesData.filter(c => c.status === 'PUBLISHED');
+
       setAllCourses(published);
     } catch (error) {
       toast.error('Failed to load builder data');

@@ -1,5 +1,7 @@
 import { prisma } from '../../lib/prisma';
-import { Role } from '@prisma/client';
+import { Role, CourseStatus } from '@prisma/client';
+
+
 
 export class CoursesService {
   static async getAll(userId: string, role: string) {
@@ -8,10 +10,11 @@ export class CoursesService {
       return prisma.course.findMany({
         where: {
           OR: [
-            { isPublished: true },
+            { status: CourseStatus.PUBLISHED },
             { enrollments: { some: { userId } } }
           ]
         },
+
         include: {
           lecturer: { select: { firstName: true, lastName: true } },
           _count: { select: { modules: true } }
@@ -122,4 +125,12 @@ export class CoursesService {
       where: { id }
     });
   }
+
+  static async updateStatus(id: string, status: CourseStatus) {
+    return prisma.course.update({
+      where: { id },
+      data: { status }
+    });
+  }
 }
+

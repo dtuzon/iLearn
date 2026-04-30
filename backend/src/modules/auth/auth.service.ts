@@ -29,8 +29,10 @@ export class AuthService {
         department: user.department?.name,
         firstName: user.firstName,
         lastName: user.lastName,
+        requiresPasswordChange: user.requiresPasswordChange
       }
     };
+
   }
 
   static async getMe(userId: string) {
@@ -48,9 +50,12 @@ export class AuthService {
             id: true,
             name: true
           }
-        }
+        },
+        requiresPasswordChange: true
       }
     });
+
+
 
     if (!user) {
       throw new Error('User not found');

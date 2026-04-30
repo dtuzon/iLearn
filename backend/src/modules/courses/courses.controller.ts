@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { CoursesService } from './courses.service';
+
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
+import { Role } from '@prisma/client';
+
 
 export class CoursesController {
   static async getAll(req: AuthenticatedRequest, res: Response) {
@@ -107,4 +110,23 @@ export class CoursesController {
       res.status(400).json({ message: error.message });
     }
   }
+
+  static async updateStatus(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const userRole = req.user!.role;
+
+      // RBAC Logic for status transitions
+      if (status === 'PUBLISHED' && userRole === Role.COURSE_CREATOR) {
+        return res.status(403).json({ message: 'Only Learning Managers or Administrators can publish courses.' });
+      }
+
+      const course = await CoursesService.updateStatus(id as string, status);
+      res.json(course);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
+

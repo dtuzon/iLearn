@@ -43,6 +43,13 @@ enum EnrollmentStatus {
   COMPLETED
 }
 
+enum CourseStatus {
+  DRAFT
+  PENDING_APPROVAL
+  PUBLISHED
+}
+
+
 // ─────────────────────────────────────────────
 // CORE MODELS
 // ─────────────────────────────────────────────
@@ -68,9 +75,11 @@ model User {
   firstName    String?
   lastName     String?
   role         Role     @default(EMPLOYEE)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  isActive               Boolean  @default(true)
+  requiresPasswordChange Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
 
   departmentId String?
   department   Department? @relation("DeptMembers", fields: [departmentId], references: [id])
@@ -200,7 +209,8 @@ model Course {
   title        String
   description  String?
   thumbnailUrl String?
-  isPublished  Boolean  @default(false)
+  status       CourseStatus @default(DRAFT)
+
   passingGrade Int      @default(80)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

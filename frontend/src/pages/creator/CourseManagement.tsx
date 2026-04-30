@@ -17,12 +17,12 @@ import {
   Settings2, 
   BookOpen, 
   Layers, 
-  FileText,
   LayoutDashboard,
   MoreVertical,
   Trash2,
   Edit3
 } from 'lucide-react';
+
 import { toast } from 'sonner';
 import { 
   DropdownMenu, 
@@ -34,13 +34,19 @@ import {
 } from '../../components/ui/dropdown-menu';
 import { cn } from '../../lib/utils';
 import { departmentsApi } from '../../api/departments.api';
+
 import type { Department } from '../../api/departments.api';
 import { Checkbox } from '../../components/ui/checkbox';
+import { useAuth } from '../../context/AuthContext';
+import { CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+
 
 export const CourseManagement: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
   
   // Create Dialog State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -103,7 +109,30 @@ export const CourseManagement: React.FC = () => {
   };
 
   const totalModules = courses.reduce((acc, c) => acc + (c.modules?.length || 0), 0);
-  const draftCourses = courses.filter(c => !c.isPublished).length;
+  const pendingApprovals = courses.filter(c => c.status === 'PENDING_APPROVAL');
+
+  
+  const isAdminOrManager = user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER';
+
+  const handleUpdateStatus = async (courseId: string, status: string) => {
+    try {
+      await coursesApi.updateStatus(courseId, status);
+      toast.success(`Course status updated to ${status}`);
+      fetchCourses();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update status');
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'PUBLISHED': return <Badge className="bg-success/10 text-success border-none px-3 py-1">LIVE</Badge>;
+      case 'PENDING_APPROVAL': return <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 border-none px-3 py-1 animate-pulse">PENDING</Badge>;
+      case 'DRAFT': return <Badge variant="outline" className="text-muted-foreground border-dashed px-3 py-1">DRAFT</Badge>;
+      default: return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -262,15 +291,77 @@ export const CourseManagement: React.FC = () => {
         </Card>
         <Card className="bg-gradient-to-br from-yellow-500/5 to-transparent border-yellow-500/10">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Drafting Phase</CardTitle>
-            <FileText className="h-4 w-4 text-yellow-500" />
+            <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{draftCourses}</div>
-            <p className="text-xs text-muted-foreground">Courses pending publication</p>
+            <div className="text-2xl font-bold">{pendingApprovals.length}</div>
+            <p className="text-xs text-muted-foreground">Courses awaiting approval</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Pending Approvals Section for Admins/Managers */}
+      {isAdminOrManager && pendingApprovals.length > 0 && (
+        <Card className="border-none shadow-2xl bg-yellow-50/50 backdrop-blur-sm border-l-4 border-yellow-400 overflow-hidden">
+          <CardHeader className="bg-yellow-100/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-yellow-400 rounded-lg text-white">
+                  <AlertCircle className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">Action Required: Pending Approvals</CardTitle>
+                  <CardDescription>The following courses have been submitted for final review and publication.</CardDescription>
+                </div>
+              </div>
+              <Badge variant="outline" className="bg-yellow-400 text-white border-none">{pendingApprovals.length}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableBody>
+                {pendingApprovals.map(course => (
+                  <TableRow key={course.id} className="hover:bg-yellow-100/20 border-yellow-100">
+                    <TableCell>
+                      <div className="font-bold">{course.title}</div>
+                      <div className="text-xs text-muted-foreground">Submitted by {course.lecturer?.firstName} {course.lecturer?.lastName}</div>
+                    </TableCell>
+                    <TableCell className="text-right px-6">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="rounded-xl border-yellow-200 hover:bg-yellow-100"
+                          onClick={() => navigate(`/creator/courses/${course.id}`)}
+                        >
+                          Review Content
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="destructive" 
+                          className="rounded-xl"
+                          onClick={() => handleUpdateStatus(course.id, 'DRAFT')}
+                        >
+                          <XCircle className="mr-2 h-4 w-4" /> Reject
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          className="rounded-xl bg-success hover:bg-success/90"
+                          onClick={() => handleUpdateStatus(course.id, 'PUBLISHED')}
+                        >
+                          <CheckCircle className="mr-2 h-4 w-4" /> Approve & Publish
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
 
       {/* Course List Table */}
       <Card className="border-none shadow-xl bg-background/50 backdrop-blur-sm">
@@ -324,12 +415,9 @@ export const CourseManagement: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {course.isPublished ? (
-                          <Badge variant="success" className="px-3 py-1">LIVE</Badge>
-                        ) : (
-                          <Badge variant="warning" className="px-3 py-1 text-xs">DRAFTING</Badge>
-                        )}
+                        {getStatusBadge(course.status)}
                       </TableCell>
+
                       <TableCell>
                         <span className="font-mono font-bold text-primary">{course.passingGrade}%</span>
                       </TableCell>

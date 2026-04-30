@@ -68,4 +68,13 @@ router.get(
   CoursesController.getModule
 );
 
+router.patch(
+  '/:id/status',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.LEARNING_MANAGER, Role.ADMINISTRATOR]),
+  auditLog('UPDATE_COURSE_STATUS'),
+  CoursesController.updateStatus
+);
+
 export default router;
+

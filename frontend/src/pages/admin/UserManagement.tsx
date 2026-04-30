@@ -23,19 +23,26 @@ import {
   DropdownMenuTrigger 
 } from '../../components/ui/dropdown-menu';
 import { 
-  Loader2, 
-  Plus, 
-  Upload, 
-  Search, 
-  Filter, 
-  MoreHorizontal, 
-  UserX, 
-  UserCheck, 
-  Shield, 
   Building,
   Route,
-  CheckCircle2
+  CheckCircle2,
+  Copy,
+  RotateCcw,
+  Eye,
+  EyeOff,
+  Loader2,
+  Plus,
+  Upload,
+  Search,
+  Filter,
+  MoreHorizontal,
+  UserX,
+  UserCheck,
+  Shield
 } from 'lucide-react';
+
+import { generateSecurePassword } from '../../lib/password-utils';
+
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 
@@ -53,119 +60,196 @@ const UserFormFields: React.FC<UserFormFieldsProps> = ({
   departments, 
   supervisorCandidates, 
   selectedUser 
-}) => (
-  <>
-    <div className="grid grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <Label htmlFor="firstName">First Name</Label>
-        <Input 
-          id="firstName" 
-          value={formData.firstName}
-          onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="lastName">Last Name</Label>
-        <Input 
-          id="lastName" 
-          value={formData.lastName}
-          onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-        />
-      </div>
-    </div>
-    
-    <div className="space-y-2">
-      <Label htmlFor="username">Username *</Label>
-      <Input 
-        id="username" 
-        required
-        value={formData.username}
-        onChange={(e) => setFormData({...formData, username: e.target.value})}
-      />
-    </div>
+}) => {
+  const [showPassword, setShowPassword] = useState(false);
 
-    <div className="space-y-2">
-      <Label htmlFor="email">Email</Label>
-      <Input 
-        id="email" 
-        type="email"
-        value={formData.email}
-        onChange={(e) => setFormData({...formData, email: e.target.value})}
-      />
-    </div>
+  const handleGeneratePassword = () => {
+    const newPass = generateSecurePassword();
+    setFormData({ ...formData, password: newPass });
+    setShowPassword(true);
+    toast.info('Temporary password generated. Be sure to copy it!');
+  };
 
-    {!selectedUser && (
+  const copyToClipboard = () => {
+    if (!formData.password) return;
+    navigator.clipboard.writeText(formData.password);
+    toast.success('Password copied to clipboard');
+  };
+
+  const isEmployee = formData.role === 'EMPLOYEE';
+  const isSupervisor = formData.role === 'SUPERVISOR';
+  const isDeptHead = formData.role === 'DEPARTMENT_HEAD';
+  const isCourseCreator = formData.role === 'COURSE_CREATOR';
+  const isLearningManager = formData.role === 'LEARNING_MANAGER';
+  const isAdministrator = formData.role === 'ADMINISTRATOR';
+
+  // Dynamic field logic
+  const showDept = !isAdministrator && !isLearningManager;
+  const showSuperior = isEmployee || isSupervisor;
+  const superiorDisabled = isDeptHead || isCourseCreator;
+  const superiorLabel = isEmployee ? "Immediate Superior (Supervisor/Dept Head) *" : "Immediate Superior (Dept Head) *";
+  
+  const filteredSuperiors = supervisorCandidates.filter(u => {
+    if (isEmployee) return u.role === 'SUPERVISOR' || u.role === 'DEPARTMENT_HEAD';
+    if (isSupervisor) return u.role === 'DEPARTMENT_HEAD';
+    return false;
+  });
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="firstName">First Name</Label>
+          <Input 
+            id="firstName" 
+            value={formData.firstName}
+            onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="lastName">Last Name</Label>
+          <Input 
+            id="lastName" 
+            value={formData.lastName}
+            onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+          />
+        </div>
+      </div>
+      
       <div className="space-y-2">
-        <Label htmlFor="password">Password *</Label>
+        <Label htmlFor="username">Username *</Label>
         <Input 
-          id="password" 
-          type="password"
+          id="username" 
           required
-          value={formData.password}
-          onChange={(e) => setFormData({...formData, password: e.target.value})}
+          value={formData.username}
+          onChange={(e) => setFormData({...formData, username: e.target.value})}
         />
       </div>
-    )}
 
-    <div className="grid grid-cols-2 gap-4">
       <div className="space-y-2">
-        <Label>Role</Label>
-        <Select 
-          value={formData.role} 
-          onValueChange={(val) => setFormData({...formData, role: val})}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select role" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="EMPLOYEE">Employee</SelectItem>
-            <SelectItem value="SUPERVISOR">Supervisor</SelectItem>
-            <SelectItem value="COURSE_CREATOR">Course Creator</SelectItem>
-            <SelectItem value="DEPARTMENT_HEAD">Department Head</SelectItem>
-            <SelectItem value="LEARNING_MANAGER">Learning Manager</SelectItem>
-            <SelectItem value="ADMINISTRATOR">Administrator</SelectItem>
-          </SelectContent>
-        </Select>
+        <Label htmlFor="email">Email</Label>
+        <Input 
+          id="email" 
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData({...formData, email: e.target.value})}
+        />
       </div>
 
       <div className="space-y-2">
-        <Label>Department</Label>
-        <Select 
-          value={formData.departmentId} 
-          onValueChange={(val) => setFormData({...formData, departmentId: val})}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select department" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None</SelectItem>
-            {departments.map(dept => (
-              <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label htmlFor="password">{selectedUser ? 'New Password (Leave blank to keep old)' : 'Temporary Password *'}</Label>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Input 
+              id="password" 
+              type={showPassword ? "text" : "password"}
+              required={!selectedUser}
+              value={formData.password}
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              className="pr-20"
+            />
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7"
+                onClick={copyToClipboard}
+                disabled={!formData.password}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={handleGeneratePassword}
+            className="flex-shrink-0"
+          >
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Generate
+          </Button>
+        </div>
       </div>
-    </div>
 
-    <div className="space-y-2">
-      <Label>Immediate Superior</Label>
-      <Select 
-        value={formData.immediateSuperiorId} 
-        onValueChange={(val) => setFormData({...formData, immediateSuperiorId: val})}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Select Superior" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="none">None</SelectItem>
-          {supervisorCandidates.map(sup => (
-            <SelectItem key={sup.id} value={sup.id}>{sup.firstName} {sup.lastName} ({sup.role.replace('_', ' ')})</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  </>
-);
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Role</Label>
+          <Select 
+            value={formData.role} 
+            onValueChange={(val) => setFormData({...formData, role: val, immediateSuperiorId: 'none'})}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="EMPLOYEE">Employee</SelectItem>
+              <SelectItem value="SUPERVISOR">Supervisor</SelectItem>
+              <SelectItem value="COURSE_CREATOR">Course Creator</SelectItem>
+              <SelectItem value="DEPARTMENT_HEAD">Department Head</SelectItem>
+              <SelectItem value="LEARNING_MANAGER">Learning Manager</SelectItem>
+              <SelectItem value="ADMINISTRATOR">Administrator</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {showDept && (
+          <div className="space-y-2">
+            <Label>Department {isAdministrator || isLearningManager ? "" : "*"}</Label>
+            <Select 
+              value={formData.departmentId} 
+              onValueChange={(val) => setFormData({...formData, departmentId: val})}
+              required={showDept}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {departments.map(dept => (
+                  <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+
+      {(showSuperior || superiorDisabled) && (
+        <div className="space-y-2">
+          <Label className={superiorDisabled ? "opacity-50" : ""}>{superiorLabel}</Label>
+          <Select 
+            value={formData.immediateSuperiorId} 
+            onValueChange={(val) => setFormData({...formData, immediateSuperiorId: val})}
+            disabled={superiorDisabled}
+            required={showSuperior && !superiorDisabled}
+          >
+            <SelectTrigger className={superiorDisabled ? "bg-muted opacity-50" : ""}>
+              <SelectValue placeholder={superiorDisabled ? "None (Direct Access)" : "Select Superior"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              {filteredSuperiors.map(sup => (
+                <SelectItem key={sup.id} value={sup.id}>{sup.firstName} {sup.lastName} ({sup.role.replace('_', ' ')})</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+    </>
+  );
+};
+
 
 export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<UserResponse[]>([]);

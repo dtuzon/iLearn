@@ -96,13 +96,16 @@ export class UsersService {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
-        immediateSuperiorId: data.immediateSuperiorId
+        immediateSuperiorId: data.immediateSuperiorId,
+        requiresPasswordChange: true // Always true for newly created users with temp passwords
       }
     });
   }
 
+
   static async update(id: string, data: Partial<{
     username: string;
+    password?: string;
     role: Role;
     departmentId: string | null;
     firstName: string;
@@ -111,11 +114,20 @@ export class UsersService {
     isActive: boolean;
     immediateSuperiorId: string | null;
   }>) {
+    const updateData: any = { ...data };
+    
+    if (data.password) {
+      updateData.passwordHash = await hashPassword(data.password);
+      updateData.requiresPasswordChange = true;
+      delete updateData.password;
+    }
+
     return prisma.user.update({
       where: { id },
-      data
+      data: updateData
     });
   }
+
 
   static async bulkImport(csvBuffer: Buffer) {
     interface BulkImportRecord {
@@ -175,5 +187,18 @@ export class UsersService {
       }
     });
   }
+
+  static async changePassword(userId: string, newPassword: string) {
+
+    const passwordHash = await hashPassword(newPassword);
+    return prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash,
+        requiresPasswordChange: false
+      }
+    });
+  }
 }
+
 

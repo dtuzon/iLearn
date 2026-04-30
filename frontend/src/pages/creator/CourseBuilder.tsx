@@ -36,6 +36,9 @@ import { Textarea } from '../../components/ui/textarea';
 import { QuizBuilder } from '../../components/creator/QuizBuilder';
 import { CertificateBuilder } from '../../components/creator/CertificateBuilder';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { useAuth } from '../../context/AuthContext';
+import { Clock, XCircle, CheckCircle } from 'lucide-react';
+
 import { 
   Dialog,
   DialogContent,
@@ -164,9 +167,22 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
 export const CourseBuilder: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [course, setCourse] = useState<Course | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const handleUpdateStatus = async (status: string) => {
+    if (!courseId) return;
+    try {
+      await coursesApi.updateStatus(courseId, status);
+      toast.success(`Course status updated to ${status}`);
+      fetchCourse();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update status');
+    }
+  };
+
   
   // New Module State
   const [isAddingModule, setIsAddingModule] = useState(false);
@@ -380,9 +396,10 @@ export const CourseBuilder: React.FC = () => {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-extrabold tracking-tight text-primary">{course.title}</h1>
-              <Badge variant={course.isPublished ? "success" : "warning"} className="text-[10px] font-black uppercase px-2 py-0">
-                {course.isPublished ? "PUBLISHED" : "DRAFT"}
-              </Badge>
+              {course.status === 'PUBLISHED' && <Badge variant="success" className="text-[10px] font-black uppercase px-2 py-0">PUBLISHED</Badge>}
+              {course.status === 'PENDING_APPROVAL' && <Badge variant="warning" className="text-[10px] font-black uppercase px-2 py-0 animate-pulse">PENDING</Badge>}
+              {course.status === 'DRAFT' && <Badge variant="outline" className="text-[10px] font-black uppercase px-2 py-0 text-muted-foreground border-dashed">DRAFT</Badge>}
+
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Layers className="h-4 w-4" />
@@ -397,10 +414,50 @@ export const CourseBuilder: React.FC = () => {
           <Button variant="outline" size="sm" className="h-10 px-4">
             <Settings className="mr-2 h-4 w-4" /> Course Config
           </Button>
-          <Button size="sm" className="h-10 px-4 shadow-lg shadow-primary/20">
-            <CheckCircle2 className="mr-2 h-4 w-4" /> Publish Course
-          </Button>
+          {course.status === 'DRAFT' && (
+            <Button 
+              size="sm" 
+              className="h-10 px-4 shadow-lg shadow-primary/20"
+              onClick={() => handleUpdateStatus('PENDING_APPROVAL')}
+            >
+              <Clock className="mr-2 h-4 w-4" /> Request Approval
+            </Button>
+          )}
+
+          {course.status === 'PENDING_APPROVAL' && (
+            <div className="flex gap-2">
+              <Badge variant="secondary" className="h-10 px-4 flex items-center bg-yellow-500/10 text-yellow-600 border-none animate-pulse">
+                <Clock className="mr-2 h-4 w-4" /> Pending Approval
+              </Badge>
+              {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
+                <>
+                  <Button 
+                    size="sm" 
+                    variant="destructive"
+                    className="h-10 px-4 shadow-lg shadow-destructive/20"
+                    onClick={() => handleUpdateStatus('DRAFT')}
+                  >
+                    <XCircle className="mr-2 h-4 w-4" /> Reject
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    className="h-10 px-4 shadow-lg shadow-success/20 bg-success hover:bg-success/90"
+                    onClick={() => handleUpdateStatus('PUBLISHED')}
+                  >
+                    <CheckCircle className="mr-2 h-4 w-4" /> Approve & Publish
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+
+          {course.status === 'PUBLISHED' && (
+            <Badge variant="success" className="h-10 px-4 flex items-center gap-2 text-sm">
+              <CheckCircle2 className="h-4 w-4" /> Published & Live
+            </Badge>
+          )}
         </div>
+
       </div>
 
       <Tabs defaultValue="curriculum" className="w-full">

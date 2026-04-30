@@ -5,8 +5,10 @@ export interface Course {
   title: string;
   description: string | null;
   thumbnailUrl: string | null;
-  isPublished: boolean;
+  isPublished: boolean; // Keep for compatibility if needed, but we should use status
+  status: 'DRAFT' | 'PENDING_APPROVAL' | 'PUBLISHED';
   passingGrade: number;
+
   targetAudience: string;
   targetDepartments: string[];
   requires180DayEval: boolean;
@@ -63,5 +65,10 @@ export const coursesApi = {
   partialUpdate: async (courseId: string, data: Partial<Course>) => {
     const response = await apiClient.patch(`/courses/${courseId}`, data);
     return response.data as Course;
+  },
+  updateStatus: async (courseId: string, status: string) => {
+    const response = await apiClient.patch(`/courses/${courseId}/status`, { status });
+    return response.data;
   }
 };
+

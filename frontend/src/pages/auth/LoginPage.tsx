@@ -33,6 +33,12 @@ export const LoginPage: React.FC = () => {
       
       login(token, user);
       
+      // Redirect based on password change requirement
+      if (user.requiresPasswordChange) {
+        navigate('/reset-password');
+        return;
+      }
+
       // Redirect based on role
       switch(user.role) {
         case 'ADMINISTRATOR': navigate('/dashboard'); break;
@@ -41,6 +47,7 @@ export const LoginPage: React.FC = () => {
         case 'EMPLOYEE': navigate('/dashboard'); break;
         default: navigate('/dashboard');
       }
+
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {

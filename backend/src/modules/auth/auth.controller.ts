@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
+import { UsersService } from '../users/users.service';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
+
 
 export class AuthController {
   static async login(req: Request, res: Response) {
@@ -26,4 +28,19 @@ export class AuthController {
       res.status(404).json({ message: error.message });
     }
   }
+  static async changePassword(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) throw new Error('Not authenticated');
+      
+      const { newPassword } = req.body;
+      if (!newPassword) throw new Error('New password is required');
+
+      await UsersService.changePassword(userId, newPassword);
+      res.json({ message: 'Password changed successfully' });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
+

@@ -4,6 +4,8 @@ import { ThemeProvider } from './context/ThemeContext';
 import { AppShell } from './components/layout/AppShell';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { LoginPage } from './pages/auth/LoginPage';
+import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
+
 import { SystemSettings } from './pages/admin/SystemSettings';
 import { DepartmentManagement } from './pages/admin/DepartmentManagement';
 import { UserManagement } from './pages/admin/UserManagement';
@@ -32,7 +34,9 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             
             <Route element={<ProtectedRoute />}>
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route element={<AppShell />}>
+
                 <Route path="/dashboard" element={<Dashboard />} />
                 
                 {/* Admin & HR Routes */}
