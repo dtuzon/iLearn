@@ -31,5 +31,15 @@ export const quizzesApi = {
   submitQuiz: async (moduleId: string, answers: { questionId: string; optionId: string }[]) => {
     const response = await apiClient.post(`/quizzes/${moduleId}/submit`, { answers });
     return response.data as { score: number; passed: boolean; message: string };
+  },
+  updateQuestion: async (questionId: string, data: { questionText: string; options: { optionText: string; isCorrect: boolean }[] }) => {
+    const response = await apiClient.patch(`/quizzes/questions/${questionId}`, data);
+    return response.data;
+  },
+  deleteQuestion: async (questionId: string) => {
+    await apiClient.delete(`/quizzes/questions/${questionId}`);
+  },
+  clearQuestions: async (moduleId: string) => {
+    await apiClient.delete(`/quizzes/${moduleId}/questions`);
   }
 };

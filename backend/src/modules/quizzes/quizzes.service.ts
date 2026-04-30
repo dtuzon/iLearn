@@ -23,6 +23,11 @@ export class QuizzesService {
   }
 
   static async getQuizForEmployee(moduleId: string) {
+    const module = await prisma.courseModule.findUnique({
+      where: { id: moduleId },
+      select: { shuffleQuestions: true, shuffleOptions: true }
+    });
+
     const questions = await prisma.quizQuestion.findMany({
       where: { moduleId },
       include: {
@@ -30,20 +35,20 @@ export class QuizzesService {
           select: {
             id: true,
             optionText: true
-            // CRITICAL: strip isCorrect
           }
         }
       }
     });
 
-    // Shuffle questions
-    const shuffledQuestions = shuffle(questions).map((q) => ({
-      ...q,
-      // Shuffle options within each question
-      options: shuffle(q.options)
-    }));
+    let finalQuestions = questions;
+    if (module?.shuffleQuestions) {
+      finalQuestions = shuffle(finalQuestions);
+    }
 
-    return shuffledQuestions;
+    return finalQuestions.map((q) => ({
+      ...q,
+      options: module?.shuffleOptions ? shuffle(q.options) : q.options
+    }));
   }
 
   static async submitQuiz(userId: string, moduleId: string, submissions: { questionId: string; optionId: string }[]) {
@@ -120,6 +125,40 @@ export class QuizzesService {
         completedAt: completed ? new Date() : undefined,
         attempts: 1
       }
+    });
+  }
+
+  static async updateQuestion(questionId: string, data: any) {
+    return prisma.$transaction(async (tx) => {
+      // Delete existing options
+      await tx.quizOption.deleteMany({ where: { questionId } });
+      
+      // Update question and create new options
+      return tx.quizQuestion.update({
+        where: { id: questionId },
+        data: {
+          questionText: data.questionText,
+          options: {
+            create: data.options.map((opt: any) => ({
+              optionText: opt.optionText,
+              isCorrect: opt.isCorrect
+            }))
+          }
+        },
+        include: { options: true }
+      });
+    });
+  }
+
+  static async deleteQuestion(questionId: string) {
+    return prisma.quizQuestion.delete({
+      where: { id: questionId }
+    });
+  }
+
+  static async clearQuestions(moduleId: string) {
+    return prisma.quizQuestion.deleteMany({
+      where: { moduleId }
     });
   }
 }

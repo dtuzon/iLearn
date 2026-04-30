@@ -80,6 +80,12 @@ export class CoursesService {
     });
   }
 
+  static async getModule(id: string) {
+    return prisma.courseModule.findUnique({
+      where: { id }
+    });
+  }
+
   static async upsertCertificateTemplate(courseId: string, data: any) {
     const { backgroundImageUrl, designConfig } = data;
 

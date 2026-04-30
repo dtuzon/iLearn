@@ -24,4 +24,25 @@ router.post(
   QuizzesController.submitQuiz
 );
 
+router.patch(
+  '/questions/:questionId',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  QuizzesController.updateQuestion
+);
+
+router.delete(
+  '/questions/:questionId',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  QuizzesController.deleteQuestion
+);
+
+router.delete(
+  '/:moduleId/questions',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  QuizzesController.clearQuestions
+);
+
 export default router;

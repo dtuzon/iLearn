@@ -62,4 +62,10 @@ router.delete(
   CoursesController.deleteModule
 );
 
+router.get(
+  '/modules/:moduleId',
+  authenticate,
+  CoursesController.getModule
+);
+
 export default router;

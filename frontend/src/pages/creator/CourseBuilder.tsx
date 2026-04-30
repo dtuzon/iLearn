@@ -617,6 +617,7 @@ export const CourseBuilder: React.FC = () => {
       </Tabs>
 
       <QuizBuilder 
+        courseId={course.id}
         moduleId={quizBuilderState.moduleId}
         moduleTitle={quizBuilderState.moduleTitle}
         isOpen={quizBuilderState.isOpen}

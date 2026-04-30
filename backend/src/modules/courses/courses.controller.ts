@@ -41,6 +41,16 @@ export class CoursesController {
     }
   }
 
+  static async getModule(req: Request, res: Response) {
+    try {
+      const { moduleId } = req.params;
+      const module = await CoursesService.getModule(moduleId as string);
+      res.json(module);
+    } catch (error: any) {
+      res.status(404).json({ message: error.message });
+    }
+  }
+
   static async getModules(req: Request, res: Response) {
     try {
       const { courseId } = req.params;
