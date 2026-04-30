@@ -3,6 +3,8 @@ import { usersApi } from '../../api/users.api';
 import type { UserResponse } from '../../api/users.api';
 import { departmentsApi } from '../../api/departments.api';
 import type { Department } from '../../api/departments.api';
+import { learningPathsApi } from '../../api/learning-paths.api';
+import type { LearningPath } from '../../api/learning-paths.api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -10,6 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Checkbox } from '../../components/ui/checkbox';
+import { Badge } from '../../components/ui/badge';
+
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -18,7 +22,20 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '../../components/ui/dropdown-menu';
-import { Loader2, Plus, Upload, Search, Filter, MoreHorizontal, UserX, UserCheck, Shield, Building } from 'lucide-react';
+import { 
+  Loader2, 
+  Plus, 
+  Upload, 
+  Search, 
+  Filter, 
+  MoreHorizontal, 
+  UserX, 
+  UserCheck, 
+  Shield, 
+  Building,
+  Route,
+  CheckCircle2
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 
@@ -151,10 +168,9 @@ const UserFormFields: React.FC<UserFormFieldsProps> = ({
 );
 
 export const UserManagement: React.FC = () => {
-  // ... state ...
-
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   // Filtering State
@@ -165,11 +181,15 @@ export const UserManagement: React.FC = () => {
   // Selection State
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
 
-  // Create/Edit Dialog State
+  // Dialog States
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  
   const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null);
+  const [selectedPathId, setSelectedPathId] = useState<string>("");
+  
   const [formData, setFormData] = useState({
     username: '', 
     email: '', 
@@ -181,23 +201,24 @@ export const UserManagement: React.FC = () => {
     immediateSuperiorId: 'none'
   });
 
-  // Bulk Import State
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [userData, deptData] = await Promise.all([
+      const [userData, deptData, pathData] = await Promise.all([
         usersApi.getAll({ 
           search, 
           role: roleFilter === 'all' ? undefined : roleFilter,
           departmentId: deptFilter === 'all' ? undefined : deptFilter
         }),
-        departmentsApi.getAll()
+        departmentsApi.getAll(),
+        learningPathsApi.getAll()
       ]);
       setUsers(userData);
       setDepartments(deptData);
+      setLearningPaths(pathData.filter(p => p.isPublished));
     } catch (error) {
       toast.error('Failed to load data');
     } finally {
@@ -208,7 +229,7 @@ export const UserManagement: React.FC = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchData();
-    }, 300); // Debounce search
+    }, 300);
     return () => clearTimeout(timer);
   }, [search, roleFilter, deptFilter]);
 
@@ -253,6 +274,21 @@ export const UserManagement: React.FC = () => {
     }
   };
 
+  const handleAssignPath = async () => {
+    if (!selectedUser || !selectedPathId) return;
+    setIsProcessing(true);
+    try {
+      await learningPathsApi.enroll(selectedPathId, selectedUser.id);
+      toast.success(`Path assigned to ${selectedUser.firstName}`);
+      setIsAssignOpen(false);
+      setSelectedPathId("");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to assign path');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       username: '', email: '', firstName: '', lastName: '', role: 'EMPLOYEE', departmentId: 'none', password: '', immediateSuperiorId: 'none'
@@ -275,9 +311,14 @@ export const UserManagement: React.FC = () => {
     setIsEditOpen(true);
   };
 
+  const openAssign = (user: UserResponse) => {
+    setSelectedUser(user);
+    setSelectedPathId("");
+    setIsAssignOpen(true);
+  };
+
   const handleBulkAction = async (action: string, extraData: any = {}) => {
     if (selectedUserIds.length === 0) return;
-    
     setIsLoading(true);
     try {
       await usersApi.bulkUpdate(selectedUserIds, { action, ...extraData });
@@ -326,28 +367,28 @@ export const UserManagement: React.FC = () => {
   const supervisorCandidates = users.filter(u => u.role === 'SUPERVISOR' || u.role === 'DEPARTMENT_HEAD');
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-primary">User Management</h1>
-          <p className="text-muted-foreground text-lg">Manage system users, roles, and corporate reporting structure.</p>
+          <p className="text-muted-foreground text-lg italic">Manage system users, roles, and corporate reporting structure.</p>
         </div>
         
         <div className="flex items-center gap-2">
           <input type="file" accept=".csv" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
-          <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
+          <Button variant="outline" className="rounded-xl shadow-sm" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
             {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
             Bulk Import
           </Button>
 
           <Dialog open={isCreateOpen} onOpenChange={(open) => { setIsCreateOpen(open); if(!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button><Plus className="mr-2 h-4 w-4" /> Create User</Button>
+              <Button className="rounded-xl shadow-lg shadow-primary/20"><Plus className="mr-2 h-4 w-4" /> Create User</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md rounded-3xl">
               <form onSubmit={handleCreate}>
                 <DialogHeader>
-                  <DialogTitle>Create User</DialogTitle>
+                  <DialogTitle className="text-2xl font-bold">Create User</DialogTitle>
                   <DialogDescription>Manually add a new user to the system.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
@@ -360,21 +401,22 @@ export const UserManagement: React.FC = () => {
                   />
                 </div>
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-                  <Button type="submit" disabled={isProcessing}>
+                  <Button type="button" variant="outline" className="rounded-xl" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+                  <Button type="submit" className="rounded-xl" disabled={isProcessing}>
                     {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Create
+                    Create User
                   </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
 
+          {/* Edit User Dialog */}
           <Dialog open={isEditOpen} onOpenChange={(open) => { setIsEditOpen(open); if(!open) resetForm(); }}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md rounded-3xl">
               <form onSubmit={handleUpdate}>
                 <DialogHeader>
-                  <DialogTitle>Edit User</DialogTitle>
+                  <DialogTitle className="text-2xl font-bold">Edit User</DialogTitle>
                   <DialogDescription>Update user information and reporting structure.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
@@ -387,8 +429,8 @@ export const UserManagement: React.FC = () => {
                   />
                 </div>
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
-                  <Button type="submit" disabled={isProcessing}>
+                  <Button type="button" variant="outline" className="rounded-xl" onClick={() => setIsEditOpen(false)}>Cancel</Button>
+                  <Button type="submit" className="rounded-xl" disabled={isProcessing}>
                     {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Update User
                   </Button>
@@ -396,27 +438,86 @@ export const UserManagement: React.FC = () => {
               </form>
             </DialogContent>
           </Dialog>
+
+          {/* Assign Learning Path Dialog */}
+          <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
+            <DialogContent className="max-w-md rounded-3xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
+                  <Route className="h-6 w-6 text-primary" />
+                  Assign Learning Path
+                </DialogTitle>
+                <DialogDescription>
+                  Enroll <strong>{selectedUser?.firstName} {selectedUser?.lastName}</strong> in a sequenced path.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>Select Learning Path</Label>
+                  <Select value={selectedPathId} onValueChange={setSelectedPathId}>
+                    <SelectTrigger className="rounded-xl h-12 bg-muted/30">
+                      <SelectValue placeholder="Choose a published path..." />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      {learningPaths.length === 0 ? (
+                        <div className="p-4 text-center text-xs text-muted-foreground italic">No published paths available</div>
+                      ) : (
+                        learningPaths.map(path => (
+                          <SelectItem key={path.id} value={path.id} className="rounded-lg">
+                            <div className="flex flex-col">
+                              <span className="font-bold">{path.title}</span>
+                              <span className="text-[10px] opacity-70">{path.pathCourses.length} Courses</span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {selectedPathId && (
+                  <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-bold text-primary">Confirmed Action</p>
+                      <p className="text-muted-foreground">The user will receive a notification and see this path in their "My Learning" dashboard immediately.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" className="rounded-xl" onClick={() => setIsAssignOpen(false)}>Cancel</Button>
+                <Button 
+                  className="rounded-xl shadow-lg shadow-primary/20"
+                  disabled={!selectedPathId || isProcessing}
+                  onClick={handleAssignPath}
+                >
+                  {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Assign Now
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="flex flex-col md:flex-row gap-4 bg-muted/20 p-4 rounded-xl border border-border/50">
+      <div className="flex flex-col md:flex-row gap-4 bg-muted/20 p-4 rounded-2xl border shadow-sm">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
             placeholder="Search by name or username..." 
-            className="pl-10 bg-background"
+            className="pl-10 h-11 bg-background rounded-xl border-primary/5"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <div className="flex gap-2">
           <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-[160px] bg-background">
+            <SelectTrigger className="w-[160px] h-11 bg-background rounded-xl border-primary/5">
               <Filter className="mr-2 h-3 w-3" />
               <SelectValue placeholder="Role" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="rounded-xl">
               <SelectItem value="all">All Roles</SelectItem>
               <SelectItem value="EMPLOYEE">Employee</SelectItem>
               <SelectItem value="SUPERVISOR">Supervisor</SelectItem>
@@ -428,11 +529,11 @@ export const UserManagement: React.FC = () => {
           </Select>
 
           <Select value={deptFilter} onValueChange={setDeptFilter}>
-            <SelectTrigger className="w-[180px] bg-background">
+            <SelectTrigger className="w-[180px] h-11 bg-background rounded-xl border-primary/5">
               <Building className="mr-2 h-3 w-3" />
               <SelectValue placeholder="Department" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="rounded-xl">
               <SelectItem value="all">All Departments</SelectItem>
               <SelectItem value="none">None</SelectItem>
               {departments.map(dept => (
@@ -443,43 +544,42 @@ export const UserManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Bulk Actions Menu */}
       {selectedUserIds.length > 0 && (
-        <div className="flex items-center justify-between bg-primary/5 border border-primary/20 p-3 rounded-lg animate-in slide-in-from-top-2">
-          <div className="text-sm font-medium text-primary">
+        <div className="flex items-center justify-between bg-primary/5 border border-primary/20 p-3 rounded-2xl animate-in slide-in-from-top-2 shadow-sm">
+          <div className="text-sm font-bold text-primary pl-2">
             {selectedUserIds.length} users selected
           </div>
           <div className="flex gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm">
+                <Button size="sm" className="rounded-lg">
                   Bulk Actions <MoreHorizontal className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="w-56 rounded-xl">
                 <DropdownMenuLabel>Modify Selected</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleBulkAction('ACTIVATE')} className="text-green-600">
+                <DropdownMenuItem onClick={() => handleBulkAction('ACTIVATE')} className="text-green-600 rounded-lg">
                   <UserCheck className="mr-2 h-4 w-4" /> Activate Accounts
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkAction('DEACTIVATE')} className="text-destructive">
+                <DropdownMenuItem onClick={() => handleBulkAction('DEACTIVATE')} className="text-destructive rounded-lg">
                   <UserX className="mr-2 h-4 w-4" /> Deactivate Accounts
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>Change Role</DropdownMenuLabel>
                 {['EMPLOYEE', 'SUPERVISOR', 'COURSE_CREATOR', 'DEPARTMENT_HEAD', 'LEARNING_MANAGER', 'ADMINISTRATOR'].map(role => (
-                  <DropdownMenuItem key={role} onClick={() => handleBulkAction('CHANGE_ROLE', { role })}>
-                    <Shield className="mr-2 h-4 w-4" /> {role === 'COURSE_CREATOR' ? 'Course Creator' : role.replace('_', ' ')}
+                  <DropdownMenuItem key={role} onClick={() => handleBulkAction('CHANGE_ROLE', { role })} className="rounded-lg">
+                    <Shield className="mr-2 h-4 w-4" /> {role.replace('_', ' ')}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" size="sm" onClick={() => setSelectedUserIds([])}>Cancel</Button>
+            <Button variant="ghost" size="sm" className="rounded-lg" onClick={() => setSelectedUserIds([])}>Cancel</Button>
           </div>
         </div>
       )}
 
-      <div className="border rounded-xl bg-card overflow-hidden">
+      <div className="border rounded-2xl bg-card overflow-hidden shadow-xl bg-background/50 backdrop-blur-sm">
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
@@ -489,29 +589,28 @@ export const UserManagement: React.FC = () => {
                   onCheckedChange={toggleSelectAll}
                 />
               </TableHead>
-              <TableHead>User</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Immediate Superior</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right px-6">Actions</TableHead>
+              <TableHead className="font-bold">Employee</TableHead>
+              <TableHead className="font-bold">Role</TableHead>
+              <TableHead className="font-bold">Reporting Line</TableHead>
+              <TableHead className="font-bold">Department</TableHead>
+              <TableHead className="font-bold">Status</TableHead>
+              <TableHead className="text-right px-6 font-bold">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-               <TableRow><TableCell colSpan={7} className="h-32 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+               <TableRow><TableCell colSpan={7} className="h-64 text-center"><Loader2 className="h-10 w-10 animate-spin mx-auto text-primary/50" /></TableCell></TableRow>
             ) : users.length === 0 ? (
-               <TableRow><TableCell colSpan={7} className="h-32 text-center text-muted-foreground">No users found matching your criteria.</TableCell></TableRow>
+               <TableRow><TableCell colSpan={7} className="h-64 text-center text-muted-foreground italic">No users found matching your criteria.</TableCell></TableRow>
             ) : (
-              users.map((user, index) => (
+              users.map((user) => (
+
                 <TableRow 
                   key={user.id} 
                   className={cn(
                     "hover:bg-primary/5 transition-colors cursor-pointer group",
-                    index % 2 === 0 ? "bg-background" : "bg-muted/10",
                     selectedUserIds.includes(user.id) && "bg-primary/10"
                   )}
-                  onClick={() => openEdit(user)}
                 >
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox 
@@ -519,41 +618,49 @@ export const UserManagement: React.FC = () => {
                       onCheckedChange={() => toggleSelectUser(user.id)}
                     />
                   </TableCell>
-                  <TableCell>
-                    <div className="font-semibold">{user.firstName} {user.lastName}</div>
-                    <div className="text-xs text-muted-foreground">{user.username}</div>
+                  <TableCell onClick={() => openEdit(user)}>
+                    <div className="font-bold group-hover:text-primary transition-colors">{user.firstName} {user.lastName}</div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">{user.username}</div>
                   </TableCell>
-                  <TableCell>
-                    <span className="inline-flex items-center rounded-full bg-secondary/50 border px-2 py-0.5 text-xs font-bold uppercase tracking-tight">
-                      {user.role === 'COURSE_CREATOR' ? 'Course Creator' : user.role.replace('_', ' ')}
-                    </span>
+                  <TableCell onClick={() => openEdit(user)}>
+                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-tighter">
+                      {user.role.replace('_', ' ')}
+                    </Badge>
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell className="text-sm" onClick={() => openEdit(user)}>
                     {user.immediateSuperior ? (
                       <div className="flex flex-col">
-                        <span className="font-medium">{user.immediateSuperior.firstName} {user.immediateSuperior.lastName}</span>
-                        <span className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Direct Report</span>
+                        <span className="font-bold text-xs">{user.immediateSuperior.firstName} {user.immediateSuperior.lastName}</span>
+                        <span className="text-[9px] text-muted-foreground uppercase font-black tracking-widest opacity-50">Superior</span>
                       </div>
                     ) : (
-                      <span className="text-muted-foreground italic text-xs">Unassigned</span>
+                      <span className="text-muted-foreground italic text-xs opacity-50">Independent</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm">{user.department?.name || <span className="text-muted-foreground">None</span>}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-sm" onClick={() => openEdit(user)}>{user.department?.name || <span className="text-muted-foreground opacity-50">N/A</span>}</TableCell>
+                  <TableCell onClick={() => openEdit(user)}>
                     {user.isActive ? (
-                      <div className="flex items-center gap-1.5 text-green-600 font-medium text-sm">
-                        <div className="h-1.5 w-1.5 rounded-full bg-green-600" /> Active
-                      </div>
+                      <Badge className="bg-success/10 text-success hover:bg-success/20 border-none px-3 py-1">Active</Badge>
                     ) : (
-                      <div className="flex items-center gap-1.5 text-destructive font-medium text-sm">
-                        <div className="h-1.5 w-1.5 rounded-full bg-destructive" /> Inactive
-                      </div>
+                      <Badge variant="destructive" className="px-3 py-1">Inactive</Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-right px-6" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="sm" onClick={() => openEdit(user)}>
-                      Edit
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                        <DropdownMenuItem onClick={() => openEdit(user)} className="rounded-lg">
+                          <Shield className="mr-2 h-4 w-4" /> Edit Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openAssign(user)} className="rounded-lg text-primary font-bold">
+                          <Route className="mr-2 h-4 w-4" /> Assign Path
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))
@@ -564,3 +671,4 @@ export const UserManagement: React.FC = () => {
     </div>
   );
 };
+

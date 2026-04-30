@@ -40,9 +40,14 @@ export const usersApi = {
     return response.data;
   },
   update: async (id: string, data: Partial<UserResponse>) => {
-    const response = await apiClient.patch(`/users/${id}`, data);
+    const response = await apiClient.put(`/users/${id}`, data);
     return response.data;
   },
+  getMyTeam: async () => {
+    const response = await apiClient.get('/users/my-team');
+    return response.data;
+  },
+
   bulkImport: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);

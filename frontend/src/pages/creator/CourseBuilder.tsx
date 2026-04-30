@@ -7,7 +7,6 @@ import type { Course } from '../../api/courses.api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Checkbox } from '../../components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { 
@@ -29,6 +28,7 @@ import {
   Pencil,
   Save
 } from 'lucide-react';
+
 import { toast } from 'sonner';
 import { Badge } from '../../components/ui/badge';
 import { Switch } from '../../components/ui/switch';
@@ -433,10 +433,11 @@ export const CourseBuilder: React.FC = () => {
                     onDragEnd={handleDragEnd}
                   >
                     <SortableContext 
-                      items={course.modules.map(m => m.id)}
+                      items={(course.modules || []).map(m => m.id)}
                       strategy={verticalListSortingStrategy}
                     >
-                      {course.modules.map((module, index) => (
+                      {(course.modules || []).map((module, index) => (
+
                         <SortableModuleItem 
                           key={module.id}
                           module={module}
@@ -562,12 +563,10 @@ export const CourseBuilder: React.FC = () => {
           <CertificateBuilder 
             courseId={courseId!} 
             initialData={{
-              // These would ideally come from the backend if we add these fields to Course
-              nameX: 500,
-              nameY: 450,
-              dateX: 500,
-              dateY: 600
+              backgroundUrl: (course as any).certificateBackgroundUrl,
+              designConfig: (course as any).certificateDesignConfig
           }}
+
         />
       </TabsContent>
         <TabsContent value="settings">

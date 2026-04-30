@@ -93,6 +93,7 @@ model User {
   onlineEvaluations   OnlineEvaluationResult[] @relation("UserOnlineEvaluations")
   supervisorEvaluations BehavioralEvaluation[] @relation("SupervisorEvaluations")
   employeeEvaluations BehavioralEvaluation[] @relation("EmployeeEvaluations")
+  learningPathEnrollments LearningPathEnrollment[]
 
   @@map("users")
 }
@@ -219,6 +220,7 @@ model Course {
   transcripts         Transcript[]
   certificateTemplate CertificateTemplate?
   behavioralEvaluations BehavioralEvaluation[]
+  learningPathCourses LearningPathCourse[]
 
   @@map("courses")
 }
@@ -408,3 +410,48 @@ model BehavioralEvaluation {
 
   @@map("behavioral_evaluations")
 }
+
+model LearningPath {
+  id                String   @id @default(cuid())
+  title             String
+  description       String?
+  targetAudience    String?  // e.g., "Phase 1: Newly Hired"
+  targetDepartments String[] // Array of department names
+  isPublished       Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  pathCourses       LearningPathCourse[]
+  enrollments       LearningPathEnrollment[]
+  
+  @@map("learning_paths")
+}
+
+model LearningPathCourse {
+  id             String       @id @default(cuid())
+  learningPathId String
+  courseId       String
+  order          Int          // 1, 2, 3, etc. for strict sequencing
+
+  learningPath   LearningPath @relation(fields: [learningPathId], references: [id], onDelete: Cascade)
+  course         Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([learningPathId, courseId]) // Prevent duplicate courses in the same path
+  @@map("learning_path_courses")
+}
+
+model LearningPathEnrollment {
+  id             String         @id @default(cuid())
+  userId         String
+  learningPathId String
+  status         EnrollmentStatus @default(IN_PROGRESS)
+  enrolledAt     DateTime       @default(now())
+  completedAt    DateTime?
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  learningPath   LearningPath   @relation(fields: [learningPathId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, learningPathId]) // Prevent double enrollment
+  @@map("learning_path_enrollments")
+}
+

@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Loader2, Save, Upload, Image as ImageIcon, MapPin, Type, Calendar, User, Percent } from 'lucide-react';
+import { Loader2, Save, Upload, Image as ImageIcon, Type, Calendar, User, Percent } from 'lucide-react';
+
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Switch } from '../ui/switch';

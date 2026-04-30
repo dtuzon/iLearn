@@ -11,11 +11,17 @@ import { RoleGuard } from './components/auth/RoleGuard';
 import { Toaster } from './components/ui/sonner';
 import { CourseManagement } from './pages/creator/CourseManagement';
 import { CourseBuilder } from './pages/creator/CourseBuilder';
+import { LearningPaths } from './pages/creator/LearningPaths';
+import { LearningPathBuilder } from './pages/creator/LearningPathBuilder';
 import { MyLearning } from './pages/employee/MyLearning';
 import { CoursePlayer } from './pages/employee/CoursePlayer';
 import { MyCertificates } from './pages/employee/MyCertificates';
 import { TeamEvaluations } from './pages/supervisor/TeamEvaluations';
+import { TeamManagement } from './pages/supervisor/TeamManagement';
+
 import { Dashboard } from './pages/Dashboard';
+import { DiscoverCatalog } from './pages/learner/DiscoverCatalog';
+import { PathRoadmap } from './pages/learner/PathRoadmap';
 
 function App() {
   return (
@@ -48,17 +54,21 @@ function App() {
                 }>
                   <Route path="courses" element={<CourseManagement />} />
                   <Route path="courses/:courseId" element={<CourseBuilder />} />
+                  <Route path="learning-paths" element={<LearningPaths />} />
+                  <Route path="learning-paths/:id" element={<LearningPathBuilder />} />
                 </Route>
 
                 {/* Employee Routes */}
                 <Route path="/learning" element={
-                  <RoleGuard allowedRoles={['EMPLOYEE']}>
+                  <RoleGuard allowedRoles={['EMPLOYEE', 'ADMINISTRATOR']}>
                     <Outlet />
                   </RoleGuard>
                 }>
                   <Route path="my-courses" element={<MyLearning />} />
                   <Route path="course/:courseId" element={<CoursePlayer />} />
                   <Route path="certificates" element={<MyCertificates />} />
+                  <Route path="discover" element={<DiscoverCatalog />} />
+                  <Route path="paths/:id" element={<PathRoadmap />} />
                 </Route>
 
                 {/* Supervisor Routes */}
@@ -68,7 +78,9 @@ function App() {
                   </RoleGuard>
                 }>
                   <Route path="team-evaluations" element={<TeamEvaluations />} />
+                  <Route path="team-management" element={<TeamManagement />} />
                 </Route>
+
 
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
               </Route>

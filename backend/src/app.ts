@@ -17,6 +17,7 @@ import workshopsRouter from './modules/modules/workshops.router';
 import certificatesRouter from './modules/certificates/certificates.router';
 import enrollmentsRouter from './modules/enrollments/enrollments.router';
 import evaluationsRouter from './modules/evaluations/evaluations.router';
+import learningPathsRouter from './modules/learning-paths/learning-paths.router';
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use('/api/workshops', workshopsRouter);
 app.use('/api/certificates', certificatesRouter);
 app.use('/api/enrollments', enrollmentsRouter);
 app.use('/api/evaluations', evaluationsRouter);
+app.use('/api/learning-paths', learningPathsRouter);
 
 // Error Handling Middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

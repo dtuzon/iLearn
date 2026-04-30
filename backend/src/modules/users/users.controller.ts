@@ -58,4 +58,14 @@ export class UsersController {
       res.status(400).json({ message: error.message });
     }
   }
+
+  static async getTeam(req: AuthenticatedRequest, res: Response) {
+    try {
+      const team = await UsersService.getTeam(req.user!.userId);
+      res.json(team);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
 }
+

@@ -20,7 +20,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "./popover"
-import { Separator } from "./separator"
+
 
 interface MultiSelectProps {
   options: { label: string; value: string }[]

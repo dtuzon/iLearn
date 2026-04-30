@@ -101,14 +101,21 @@ export class EnrollmentsService {
 
       const isFinished = nextOrder >= totalModules;
 
-      await prisma.enrollment.update({
-        where: { id: enrollment.id },
-        data: {
-          currentModuleOrder: nextOrder,
-          status: isFinished ? EnrollmentStatus.COMPLETED : EnrollmentStatus.IN_PROGRESS
+        await prisma.enrollment.update({
+          where: { id: enrollment.id },
+          data: {
+            currentModuleOrder: nextOrder,
+            status: isFinished ? EnrollmentStatus.COMPLETED : EnrollmentStatus.IN_PROGRESS,
+            completedAt: isFinished ? new Date() : undefined
+          }
+        });
+
+        // NEW: Learning Path Completion Logic
+        if (isFinished) {
+          await this.checkLearningPathCompletion(userId, module.courseId);
         }
-      });
-    }
+      }
+
 
     return { message: 'Module completed' };
   }
@@ -127,4 +134,48 @@ export class EnrollmentsService {
     // 2. Mark the module as complete
     return this.completeModule(userId, data.moduleId);
   }
+
+  static async checkLearningPathCompletion(userId: string, completedCourseId: string) {
+    // 1. Find all learning path enrollments for this user that include this course
+    const pathEnrollments = await prisma.learningPathEnrollment.findMany({
+      where: {
+        userId,
+        status: { not: EnrollmentStatus.COMPLETED }
+      },
+      include: {
+        learningPath: {
+          include: {
+            pathCourses: true
+          }
+        }
+      }
+    });
+
+    for (const pe of pathEnrollments) {
+      // 2. Check if the completed course is part of this path
+      const courseIdsInPath = pe.learningPath.pathCourses.map(pc => pc.courseId);
+      if (courseIdsInPath.includes(completedCourseId)) {
+        // 3. Check if all courses in this path are completed by the user
+        const completedCount = await prisma.enrollment.count({
+          where: {
+            userId,
+            courseId: { in: courseIdsInPath },
+            status: EnrollmentStatus.COMPLETED
+          }
+        });
+
+        if (completedCount === courseIdsInPath.length) {
+          // 4. Mark Learning Path as completed
+          await prisma.learningPathEnrollment.update({
+            where: { id: pe.id },
+            data: {
+              status: EnrollmentStatus.COMPLETED,
+              completedAt: new Date()
+            }
+          });
+        }
+      }
+    }
+  }
 }
+

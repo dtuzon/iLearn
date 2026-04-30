@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { quizzesApi } from '../../api/quizzes.api';
 import { coursesApi } from '../../api/courses.api';
-import type { QuizQuestion } from '../../api/quizzes.api';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Loader2, Plus, Download, FileSpreadsheet, Pencil, Trash2, Settings as SettingsIcon, Trash, AlertCircle, Check, X, Save } from 'lucide-react';
+import { Loader2, Plus, Download, FileSpreadsheet, Pencil, Trash2, Trash, AlertCircle, Check, X, Save } from 'lucide-react';
+
 import { toast } from 'sonner';
 import Papa from 'papaparse';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';

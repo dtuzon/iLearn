@@ -156,4 +156,24 @@ export class UsersService {
 
     return results;
   }
+
+  static async getTeam(userId: string) {
+    return prisma.user.findMany({
+      where: { immediateSuperiorId: userId },
+      include: {
+        department: true,
+        enrollments: {
+          include: {
+            course: true
+          }
+        },
+        learningPathEnrollments: {
+          include: {
+            learningPath: true
+          }
+        }
+      }
+    });
+  }
 }
+

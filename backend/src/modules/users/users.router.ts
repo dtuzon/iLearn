@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { UsersController } from './users.controller';
+import { LearningPathsController } from '../learning-paths/learning-paths.controller';
 import { authenticate } from '../../middleware/auth.middleware';
 import { authorize } from '../../middleware/rbac.middleware';
 import { auditLog } from '../../middleware/audit.middleware';
@@ -48,5 +49,20 @@ router.patch(
   auditLog('BULK_UPDATE_USERS'),
   UsersController.bulkUpdate
 );
+
+router.get(
+  '/my-team',
+  authenticate,
+  authorize([Role.SUPERVISOR, Role.DEPARTMENT_HEAD, Role.ADMINISTRATOR]),
+  UsersController.getTeam
+);
+
+router.get(
+  '/:userId/learning-paths',
+  authenticate,
+  LearningPathsController.getUserEnrollments
+);
+
+
 
 export default router;

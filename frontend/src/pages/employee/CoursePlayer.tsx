@@ -113,10 +113,11 @@ export const CoursePlayer: React.FC = () => {
         toast.success(`Quiz Passed! Score: ${result.score}%`);
         handleCompleteModule(); // This will advance them
       } else {
-        toast.error(`Quiz Failed. Score: ${result.score}%. Required: ${course?.passingScore}%. Try again!`);
+        toast.error(`Quiz Failed. Score: ${result.score}%. Required: ${course?.passingGrade}%. Try again!`);
         // Reset answers for retry
         setQuizAnswers({});
       }
+
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to submit quiz');
     } finally {
