@@ -2,6 +2,12 @@ import { prisma } from '../../lib/prisma';
 import { shuffle } from '../../utils/shuffle';
 import { ModuleType, CourseModule } from '@prisma/client';
 
+// Local interface extension to handle potential Prisma client sync delays
+interface ExtendedCourseModule extends CourseModule {
+  shuffleQuestions: boolean;
+  shuffleOptions: boolean;
+}
+
 export class QuizzesService {
   static async addQuestions(moduleId: string, questions: any[]) {
     return prisma.$transaction(async (tx) => {
@@ -40,13 +46,15 @@ export class QuizzesService {
     });
 
     let finalQuestions = questions;
-    if ((module as CourseModule)?.shuffleQuestions) {
+    const mod = module as unknown as ExtendedCourseModule;
+    
+    if (mod?.shuffleQuestions) {
       finalQuestions = shuffle(finalQuestions);
     }
 
     return finalQuestions.map((q) => ({
       ...q,
-      options: (module as CourseModule)?.shuffleOptions ? shuffle(q.options) : q.options
+      options: mod?.shuffleOptions ? shuffle(q.options) : q.options
     }));
   }
 
