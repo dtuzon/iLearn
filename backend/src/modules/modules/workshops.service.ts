@@ -1,6 +1,10 @@
 import { prisma } from '../../lib/prisma';
 import { EnrollmentStatus, SubmissionStatus, CheckerType, Role } from '@prisma/client';
 
+import { sendActivityUpdateEmail } from '../../lib/email-service';
+import { NotificationsService } from '../notifications/notifications.service';
+
+
 export class WorkshopsService {
   static async submitWorkshop(userId: string, moduleId: string, data: { fileUrl?: string; textResponse?: string }) {
     const module = await prisma.courseModule.findUnique({
@@ -69,15 +73,15 @@ export class WorkshopsService {
     }
 
     if (checkerId) {
-      await prisma.notification.create({
-        data: {
-          userId: checkerId,
-          message: `New activity submission from ${student?.firstName} ${student?.lastName} for course: ${module.course.title}`,
-          link: `/approvals/activities`
-        }
+      await NotificationsService.createNotification({
+        userId: checkerId,
+        title: 'New Activity Submission',
+        message: `${student?.firstName} ${student?.lastName} submitted an activity for ${module.course.title}`,
+        actionUrl: '/approvals/activities'
       });
     }
   }
+
 
   static async getPendingSubmissions(checkerId: string, role: Role) {
     // This is a complex query because of different checker types.
@@ -133,16 +137,36 @@ export class WorkshopsService {
     });
 
     // Notify Student
-    await prisma.notification.create({
-      data: {
-        userId: submission.userId,
-        message: `Your activity for "${submission.module.title}" has been ${data.status.toLowerCase()}.`,
-        link: `/learning/course/${submission.module.courseId}`
-      }
+    const user = await prisma.user.findUnique({ where: { id: submission.userId } });
+    const isApproved = data.status === SubmissionStatus.APPROVED;
+    const title = isApproved ? 'Activity Approved!' : 'Action Required: Activity Rejected';
+    const message = isApproved 
+      ? `Your submission for "${submission.module.course.title}" has been approved.` 
+      : `Your submission for "${submission.module.course.title}" requires changes. Feedback: ${data.feedback}`;
+    const actionUrl = `/learning/course/${submission.module.courseId}`;
+
+    await NotificationsService.createNotification({
+      userId: submission.userId,
+      title,
+      message,
+      actionUrl
     });
+
+    if (user?.email) {
+      const fullActionUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'}${actionUrl}`;
+      await sendActivityUpdateEmail(
+        user.email,
+        data.status as 'APPROVED' | 'REJECTED',
+        submission.module.course.title,
+
+        data.feedback,
+        fullActionUrl
+      );
+    }
 
     return submission;
   }
+
 
   static async getSubmission(userId: string, moduleId: string) {
     return prisma.activitySubmission.findFirst({

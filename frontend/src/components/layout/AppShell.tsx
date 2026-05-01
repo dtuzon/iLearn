@@ -12,13 +12,15 @@ import {
   BookOpen, 
   GraduationCap, 
   Award,
-  Bell,
   ClipboardCheck,
   Route,
   Compass
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
+import { NotificationBell } from './NotificationBell';
+
+
 
 export const AppShell: React.FC = () => {
   const { user, logout } = useAuth();
@@ -68,10 +70,8 @@ export const AppShell: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="text-muted-foreground relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-background"></span>
-            </Button>
+            <NotificationBell />
+
             
             <div className="h-8 w-px bg-border mx-2 hidden sm:block"></div>
 
@@ -150,8 +150,18 @@ export const AppShell: React.FC = () => {
                 <NavLink to="/supervisor/team-management" icon={Users}>Team Management</NavLink>
                 <NavLink to="/supervisor/team-evaluations" icon={ClipboardCheck}>Team Evaluations</NavLink>
               </>
-
             )}
+
+            {(user?.role === 'SUPERVISOR' || user?.role === 'DEPARTMENT_HEAD' || user?.role === 'ADMINISTRATOR' || user?.role === 'COURSE_CREATOR') && (
+              <>
+                <div className="mt-6 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest opacity-70">
+                  Compliance
+                </div>
+                <NavLink to="/approvals/activities" icon={ClipboardCheck}>Activity Approvals</NavLink>
+              </>
+            )}
+
+
            </nav>
            
            <div className="mt-auto p-4 border-t border-border/50">

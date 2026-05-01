@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { WorkshopsService } from './workshops.service';
+import { Role } from '@prisma/client';
+
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
 
 export class WorkshopsController {
@@ -21,7 +23,8 @@ export class WorkshopsController {
 
   static async getPending(req: AuthenticatedRequest, res: Response) {
     try {
-      const submissions = await WorkshopsService.getPendingSubmissions(req.user!.userId, req.user!.role);
+      const submissions = await WorkshopsService.getPendingSubmissions(req.user!.userId, req.user!.role as Role);
+
       res.json(submissions);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
