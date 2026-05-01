@@ -3,23 +3,26 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { enrollmentsApi } from '../../api/enrollments.api';
 import { coursesApi } from '../../api/courses.api';
 import { quizzesApi } from '../../api/quizzes.api';
-import { evaluationsApi } from '../../api/evaluations.api';
+
 import type { Course, CourseModule } from '../../api/courses.api';
 import type { QuizQuestion } from '../../api/quizzes.api';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Label } from '../../components/ui/label';
-import { Textarea } from '../../components/ui/textarea';
+
 import { Progress } from '../../components/ui/progress';
 import { Alert, AlertTitle, AlertDescription } from '../../components/ui/alert';
 
-import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, Clock, Video, HelpCircle, BookOpen, ClipboardCheck, Star } from 'lucide-react';
+import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, Clock, Video, HelpCircle, BookOpen, ClipboardCheck } from 'lucide-react';
+
 
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 import { LocalVideoPlayer } from '../../components/learner/LocalVideoPlayer';
 import { ActivityPlayer } from '../../components/learner/ActivityPlayer';
+import { EvaluationPlayer } from '../../components/learner/EvaluationPlayer';
+
 
 
 
@@ -37,9 +40,7 @@ export const CoursePlayer: React.FC = () => {
   // Quiz State
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
 
-  // Online Evaluation State
-  const [evalRatings, setEvalRatings] = useState<Record<string, number>>({});
-  const [evalComments, setEvalComments] = useState('');
+
 
   const fetchData = async () => {
     if (!courseId) return;
@@ -134,38 +135,7 @@ export const CoursePlayer: React.FC = () => {
 
 
 
-  const handleSubmitEvaluation = async () => {
-    if (!currentModule || !enrollment) return;
 
-    const facilitators = currentModule.facilitators || [];
-    const allRated = facilitators.every(f => evalRatings[f] !== undefined);
-
-    if (!allRated) {
-      toast.error('Please rate all facilitators before submitting.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const facilitatorRatings = facilitators.map(f => ({
-        name: f,
-        rating: evalRatings[f]
-      }));
-
-      await evaluationsApi.submitOnlineEvaluation(enrollment.id, {
-        moduleId: currentModule.id,
-        comments: evalComments,
-        facilitatorRatings
-      });
-
-      toast.success('Evaluation submitted successfully!');
-      fetchData(); // This will advance to the next module
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to submit evaluation');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   if (isLoading) {
     return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -295,7 +265,8 @@ export const CoursePlayer: React.FC = () => {
             )}
 
             {/* QUIZ VIEW */}
-            {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ' || currentModule.type === 'EVALUATION') && (
+            {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ') && (
+
               <div className="space-y-8">
                  {quizQuestions.map((q, idx) => (
                    <div key={q.id} className="space-y-4 p-4 border rounded-lg bg-muted/20">
@@ -333,75 +304,16 @@ export const CoursePlayer: React.FC = () => {
             )}
 
 
-            {/* ONLINE EVALUATION VIEW */}
-            {currentModule.type === 'ONLINE_EVALUATION' && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="text-center space-y-2">
-                  <h3 className="text-2xl font-bold text-primary flex items-center justify-center gap-2">
-                    <ClipboardCheck className="h-7 w-7" /> Online Training Evaluation
-                  </h3>
-                  <p className="text-muted-foreground italic">Your feedback helps us maintain corporate training excellence.</p>
-                </div>
-
-                <div className="space-y-6">
-                  {currentModule.facilitators && currentModule.facilitators.length > 0 ? (
-                    currentModule.facilitators.map((facilitator) => (
-                      <div key={facilitator} className="p-6 border rounded-xl bg-muted/20 space-y-4 shadow-sm">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-lg font-bold flex items-center gap-2">
-                            <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                            {facilitator}
-                          </Label>
-                          <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">Facilitator</span>
-                        </div>
-                        
-                        <RadioGroup 
-                          value={evalRatings[facilitator]?.toString()} 
-                          onValueChange={(val) => setEvalRatings({...evalRatings, [facilitator]: parseInt(val)})}
-                          className="flex justify-between items-center gap-2"
-                        >
-                          {[1, 2, 3, 4, 5].map((num) => (
-                            <div key={num} className="flex-1">
-                              <RadioGroupItem value={num.toString()} id={`${facilitator}-${num}`} className="peer sr-only" />
-                              <Label 
-                                htmlFor={`${facilitator}-${num}`}
-                                className={cn(
-                                  "flex flex-col items-center justify-center p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 peer-data-[state=checked]:shadow-md",
-                                  "hover:bg-muted/50",
-                                  "peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2"
-                                )}
-                              >
-                                <span className="text-lg font-bold">{num}</span>
-                                <span className="text-xs uppercase font-bold tracking-tighter text-muted-foreground">
-                                  {num === 1 ? 'Poor' : num === 5 ? 'Excellent' : ''}
-                                </span>
-                              </Label>
-                            </div>
-                          ))}
-                        </RadioGroup>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 border-2 border-dashed rounded-xl opacity-50">
-                      <AlertCircle className="h-10 w-10 mx-auto mb-2" />
-                      <p className="font-medium">No facilitators listed for evaluation.</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                    Additional Comments & Feedback
-                  </Label>
-                  <Textarea 
-                    placeholder="Share your thoughts on the module delivery, content relevance, and overall experience..."
-                    className="min-h-[120px] rounded-xl border-2 focus:border-primary/50"
-                    value={evalComments}
-                    onChange={(e) => setEvalComments(e.target.value)}
-                  />
-                </div>
-              </div>
+            {/* UNIFIED EVALUATION VIEW */}
+            {(currentModule.type === 'EVALUATION' || currentModule.type === 'ONLINE_EVALUATION') && (
+              <EvaluationPlayer 
+                courseId={courseId!}
+                moduleId={currentModule.id}
+                templateId={(currentModule as any).evaluationTemplateId}
+                onComplete={handleCompleteModule}
+              />
             )}
+
           </CardContent>
 
           <CardFooter className="border-t bg-muted/10 p-6 flex justify-between">
@@ -413,26 +325,17 @@ export const CoursePlayer: React.FC = () => {
             {/* Button removed for Video - completion handled by player */}
 
 
-            {currentModule.type === 'ONLINE_EVALUATION' && (
-              <Button 
-                onClick={handleSubmitEvaluation} 
-                disabled={isSubmitting || (currentModule.facilitators?.some(f => evalRatings[f] === undefined) ?? false)}
-              >
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Submit Evaluation & Complete Module
-              </Button>
-            )}
-
-            {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ' || currentModule.type === 'EVALUATION') && quizQuestions.length > 0 && (
+            {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ') && quizQuestions.length > 0 && (
               <Button onClick={handleSubmitQuiz} disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Submit Answers
               </Button>
             )}
             
-            {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ' || currentModule.type === 'EVALUATION') && quizQuestions.length === 0 && (
+            {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ') && quizQuestions.length === 0 && (
                <Button onClick={handleCompleteModule} disabled={isSubmitting}>Skip Empty Quiz</Button>
             )}
+
           </CardFooter>
         </Card>
       )}

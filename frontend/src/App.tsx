@@ -9,6 +9,8 @@ import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 import { SystemSettings } from './pages/admin/SystemSettings';
 import { DepartmentManagement } from './pages/admin/DepartmentManagement';
 import { UserManagement } from './pages/admin/UserManagement';
+import { EvaluationTemplates } from './pages/admin/EvaluationTemplates';
+
 import { RoleGuard } from './components/auth/RoleGuard';
 import { Toaster } from './components/ui/sonner';
 import { CourseManagement } from './pages/creator/CourseManagement';
@@ -50,6 +52,8 @@ function App() {
                   <Route path="settings" element={<SystemSettings />} />
                   <Route path="departments" element={<DepartmentManagement />} />
                   <Route path="users" element={<UserManagement />} />
+                  <Route path="evaluation-templates" element={<EvaluationTemplates />} />
+
                 </Route>
 
                 {/* COURSE_CREATOR Routes */}

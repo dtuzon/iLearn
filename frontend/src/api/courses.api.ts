@@ -32,7 +32,9 @@ export interface CourseModule {
   activityTemplateUrl?: string;
   checkerType?: 'IMMEDIATE_SUPERIOR' | 'COURSE_CREATOR' | 'SPECIFIC_USER';
   specificCheckerId?: string;
+  evaluationTemplateId?: string;
 }
+
 
 
 export const coursesApi = {

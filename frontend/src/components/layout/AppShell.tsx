@@ -13,9 +13,11 @@ import {
   GraduationCap, 
   Award,
   ClipboardCheck,
+  ClipboardList,
   Route,
   Compass
 } from 'lucide-react';
+
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
 import { NotificationBell } from './NotificationBell';
@@ -121,15 +123,23 @@ export const AppShell: React.FC = () => {
               </>
             )}
 
-            {(user?.role === 'ADMINISTRATOR' || user?.role === 'COURSE_CREATOR') && (
+            {(user?.role === 'ADMINISTRATOR' || user?.role === 'COURSE_CREATOR' || user?.role === 'LEARNING_MANAGER') && (
               <>
                 <div className="mt-6 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest opacity-70">
                   Course Studio
                 </div>
-                <NavLink to="/creator/courses" icon={BookOpen}>Manage Courses</NavLink>
-                <NavLink to="/creator/learning-paths" icon={Route}>Learning Paths</NavLink>
+                {(user?.role === 'ADMINISTRATOR' || user?.role === 'COURSE_CREATOR') && (
+                  <>
+                    <NavLink to="/creator/courses" icon={BookOpen}>Manage Courses</NavLink>
+                    <NavLink to="/creator/learning-paths" icon={Route}>Learning Paths</NavLink>
+                  </>
+                )}
+                {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
+                  <NavLink to="/admin/evaluation-templates" icon={ClipboardList}>Evaluation Templates</NavLink>
+                )}
               </>
             )}
+
 
             {(user?.role === 'EMPLOYEE' || user?.role === 'ADMINISTRATOR') && (
               <>

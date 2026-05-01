@@ -69,6 +69,9 @@ import { MultiSelect } from '../../components/ui/multi-select';
 import { VideoUploadModal } from '../../components/creator/VideoUploadModal';
 import { Video as VideoIcon } from 'lucide-react';
 import { WorkshopActivityBuilder } from '../../components/creator/WorkshopActivityBuilder';
+import { EvaluationTemplatePicker } from '../../components/creator/EvaluationTemplatePicker';
+import { TemplateCategory } from '../../api/evaluations.api';
+
 
 
 
@@ -79,7 +82,9 @@ interface SortableModuleItemProps {
   setQuizBuilderState: (state: any) => void;
   setVideoModalState: (state: { isOpen: boolean, moduleId: string }) => void;
   setWorkshopModalState: (state: { isOpen: boolean, moduleId: string }) => void;
+  setEvaluationModalState: (state: { isOpen: boolean, moduleId: string, category: TemplateCategory }) => void;
   setEditingModule: (module: any) => void;
+
 
   handleDeleteModule: (moduleId: string) => void;
 }
@@ -92,6 +97,7 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
   setQuizBuilderState, 
   setVideoModalState,
   setWorkshopModalState,
+  setEvaluationModalState,
   setEditingModule, 
   handleDeleteModule 
 }) => {
@@ -181,6 +187,37 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
                 </Button>
               )}
 
+              {module.type === 'EVALUATION' && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="font-bold border-blue-500/20 hover:border-blue-500/50 hover:bg-blue-500/5"
+                  onClick={() => setEvaluationModalState({
+                    isOpen: true,
+                    moduleId: module.id,
+                    category: TemplateCategory.COURSE_QUALITY
+                  })}
+                >
+                  <ClipboardCheck className="mr-2 h-3.5 w-3.5" /> Manage Evaluation
+                </Button>
+              )}
+
+              {module.type === 'ONLINE_EVALUATION' && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="font-bold border-purple-500/20 hover:border-purple-500/50 hover:bg-purple-500/5"
+                  onClick={() => setEvaluationModalState({
+                    isOpen: true,
+                    moduleId: module.id,
+                    category: TemplateCategory.KASH_EVALUATION
+                  })}
+                >
+                  <Award className="mr-2 h-3.5 w-3.5" /> Manage K.A.S.H.
+                </Button>
+              )}
+
+
 
               
               <Button 
@@ -254,6 +291,15 @@ export const CourseBuilder: React.FC = () => {
     isOpen: false,
     moduleId: ''
   });
+
+  // Evaluation Template Picker State
+
+  const [evaluationModalState, setEvaluationModalState] = useState<{ isOpen: boolean, moduleId: string, category: TemplateCategory }>({
+    isOpen: false,
+    moduleId: '',
+    category: TemplateCategory.COURSE_QUALITY
+  });
+
 
 
 
@@ -574,7 +620,9 @@ export const CourseBuilder: React.FC = () => {
                           setQuizBuilderState={setQuizBuilderState}
                           setVideoModalState={setVideoModalState}
                           setWorkshopModalState={setWorkshopModalState}
+                          setEvaluationModalState={setEvaluationModalState}
                           setEditingModule={setEditingModule}
+
                           handleDeleteModule={handleDeleteModule}
                         />
 
@@ -875,6 +923,16 @@ export const CourseBuilder: React.FC = () => {
         onClose={() => setWorkshopModalState({ ...workshopModalState, isOpen: false })}
         onUpdate={fetchCourse}
       />
+
+      <EvaluationTemplatePicker 
+        courseId={courseId!}
+        moduleId={evaluationModalState.moduleId}
+        category={evaluationModalState.category}
+        isOpen={evaluationModalState.isOpen}
+        onClose={() => setEvaluationModalState({ ...evaluationModalState, isOpen: false })}
+        onUpdate={fetchCourse}
+      />
+
     </div>
   );
 };

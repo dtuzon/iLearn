@@ -30,11 +30,8 @@ enum ModuleType {
   ONLINE_EVALUATION
 }
 
-enum QuestionType {
-  TEXT
-  RATING
-  MULTIPLE_CHOICE
-}
+
+
 
 enum EnrollmentStatus {
   NOT_STARTED
@@ -60,6 +57,27 @@ enum CheckerType {
   COURSE_CREATOR
   SPECIFIC_USER
 }
+
+enum TemplateCategory {
+
+  COURSE_QUALITY
+  KASH_EVALUATION
+  BEHAVIORAL_180_DAY
+}
+
+enum KashDomain {
+  KNOWLEDGE
+  ATTITUDE
+  SKILLS
+  HABITS
+}
+
+enum EvalQuestionType {
+  RATING_1_TO_5
+  TEXT_RESPONSE
+  YES_NO
+}
+
 
 
 
@@ -104,9 +122,11 @@ model User {
   transcripts       Transcript[]
   auditLogs         AuditLog[]
   coursesAsLecturer Course[]         @relation("LecturerCourses")
-  evaluationForms   EvaluationForm[] @relation("FormCreator")
   notifications     Notification[]
+
   activitySubmissions ActivitySubmission[]
+  evaluationResponses EvaluationResponse[]
+
 
   
   // Direct Reporting Structure
@@ -154,10 +174,6 @@ model SystemSettings {
   @@map("system_settings")
 }
 
-// ─────────────────────────────────────────────
-// IN-APP NOTIFICATIONS
-// ─────────────────────────────────────────────
-
 model Notification {
   id          String   @id @default(cuid())
   userId      String   // The user receiving the notification
@@ -174,48 +190,55 @@ model Notification {
 
 
 // ─────────────────────────────────────────────
-// EVALUATION FORM BUILDER
+// UNIFIED EVALUATION TEMPLATE ENGINE
 // ─────────────────────────────────────────────
 
-model EvaluationForm {
-  id        String   @id @default(cuid())
-  title     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model EvaluationTemplate {
+  id          String   @id @default(cuid())
+  name        String   // e.g., "Standard Corporate Survey" or "Sales Dept K.A.S.H."
+  description String?
+  category    TemplateCategory
+  isActive    Boolean  @default(true)
+  questions   EvaluationQuestion[]
+  modules     CourseModule[] // Modules that use this template
+  courses     Course[]       // Courses that use this template as their survey
+  createdAt   DateTime @default(now())
 
-  createdById String
-  createdBy   User   @relation("FormCreator", fields: [createdById], references: [id])
 
-  questions EvaluationQuestion[]
-  courses   Course[]
-
-  @@map("evaluation_forms")
+  @@map("evaluation_templates")
 }
 
 model EvaluationQuestion {
-  id            String       @id @default(cuid())
-  questionText  String
-  type          QuestionType
-  options       Json?        // ["Option A", "Option B"] for MULTIPLE_CHOICE; null for TEXT/RATING
-  sequenceOrder Int          @default(0)
-
-  formId String
-  form   EvaluationForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  templateId  String
+  text        String
+  type        EvalQuestionType 
+  kashDomain  KashDomain? // ONLY used if the template category is KASH_EVALUATION
+  order       Int
+  
+  template    EvaluationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@map("evaluation_questions")
 }
 
-// Stores an employee's submitted answers for a course evaluation
 model EvaluationResponse {
-  id        String   @id @default(cuid())
-  answers   Json     // [{ questionId, answer }]
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  courseId    String
+  userId      String
+  templateId  String
+  evaluatorId String?  // Optional: If a manager is filling out the 180-day review for the learner
+  answers     Json     // Store the Q&A pairs/ratings here
+  submittedAt DateTime @default(now())
 
-  enrollmentId String     @unique
-  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@map("evaluation_responses")
 }
+
+
+
+
 
 // ─────────────────────────────────────────────
 // COURSES & MODULES
@@ -240,7 +263,9 @@ model Course {
   lecturer   User   @relation("LecturerCourses", fields: [lecturerId], references: [id])
 
   evaluationFormId String?
-  evaluationForm   EvaluationForm? @relation(fields: [evaluationFormId], references: [id])
+  evaluationForm   EvaluationTemplate? @relation(fields: [evaluationFormId], references: [id])
+  evaluationResponses EvaluationResponse[]
+
 
   modules             CourseModule[]
   enrollments         Enrollment[]
@@ -272,6 +297,10 @@ model CourseModule {
   courseId String
 
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  evaluationTemplateId String?
+  evaluationTemplate   EvaluationTemplate? @relation(fields: [evaluationTemplateId], references: [id])
+
 
   quizQuestions  QuizQuestion[]
   moduleProgress ModuleProgress[]
@@ -374,7 +403,7 @@ model Enrollment {
   course   Course @relation(fields: [courseId], references: [id])
 
   moduleProgress     ModuleProgress[]
-  evaluationResponse EvaluationResponse?
+
 
   @@unique([userId, courseId])
   @@map("enrollments")

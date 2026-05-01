@@ -25,3 +25,13 @@ export const authenticate = (req: AuthenticatedRequest, res: Response, next: Nex
     return res.status(401).json({ message: 'Invalid or expired token' });
   }
 };
+
+export const authorize = (...roles: string[]) => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
+    }
+    next();
+  };
+};
+
