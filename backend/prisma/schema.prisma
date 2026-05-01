@@ -295,7 +295,8 @@ model ActivitySubmission {
   module        CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, moduleId])
+  @@unique([userId, moduleId], name: "user_module_submission")
+
   @@map("activity_submissions")
 }
 

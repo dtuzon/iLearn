@@ -17,8 +17,9 @@ export class WorkshopsService {
     // Find existing submission or create new one using the unique constraint [userId, moduleId]
     const submission = await prisma.activitySubmission.upsert({
       where: {
-        userId_moduleId: { userId, moduleId }
+        user_module_submission: { userId, moduleId }
       },
+
       update: {
         fileUrl: data.fileUrl,
         textResponse: data.textResponse,
