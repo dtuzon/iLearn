@@ -1,11 +1,7 @@
 @import "tailwindcss";
 
-@source "../components";
-@source "../pages";
-@source "../context";
-@source "./";
-
 @theme {
+
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
 

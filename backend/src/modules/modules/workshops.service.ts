@@ -14,15 +14,10 @@ export class WorkshopsService {
 
     if (!module) throw new Error('Module not found');
 
-    // Find existing submission or create new one
+    // Find existing submission or create new one using the unique constraint [userId, moduleId]
     const submission = await prisma.activitySubmission.upsert({
       where: {
-        // We don't have a unique constraint on [userId, moduleId] in ActivitySubmission yet, 
-        // but we should probably find the most recent one or enforce uniqueness.
-        // For now, let's assume one submission per user per module.
-        id: (await prisma.activitySubmission.findFirst({
-          where: { userId, moduleId }
-        }))?.id || 'new-id' 
+        userId_moduleId: { userId, moduleId }
       },
       update: {
         fileUrl: data.fileUrl,
@@ -39,6 +34,7 @@ export class WorkshopsService {
         status: SubmissionStatus.PENDING
       }
     });
+
 
     // Mark module as completed in progress so they can move to the next module
     // But the certificate will be gated by the APPROVED status of this submission.

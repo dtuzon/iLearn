@@ -159,17 +159,19 @@ model SystemSettings {
 // ─────────────────────────────────────────────
 
 model Notification {
-  id        String   @id @default(cuid())
-  message   String
-  isRead    Boolean  @default(false)
-  link      String?
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  userId      String   // The user receiving the notification
+  title       String
+  message     String
+  isRead      Boolean  @default(false)
+  actionUrl   String?  // The URL to route to when clicked (e.g., the specific course/module)
+  createdAt   DateTime @default(now())
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }
+
 
 // ─────────────────────────────────────────────
 // EVALUATION FORM BUILDER
@@ -293,8 +295,10 @@ model ActivitySubmission {
   module        CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, moduleId])
   @@map("activity_submissions")
 }
+
 
 
 // ─────────────────────────────────────────────
