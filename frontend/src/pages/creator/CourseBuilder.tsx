@@ -522,20 +522,19 @@ export const CourseBuilder: React.FC = () => {
 
             <div className="flex items-center gap-2 text-muted-foreground">
               <Layers className="h-4 w-4" />
-              <span className="text-sm font-medium">Authoring Studio</span>
+              <span className="text-sm font-bold text-primary uppercase tracking-widest">{isReadonly ? 'Blueprint View' : 'Authoring Studio'}</span>
               <span className="text-muted-foreground/30">•</span>
-              <span className="text-sm font-bold text-primary uppercase tracking-widest">{course.modules?.length || 0} Components</span>
+              <span className="text-sm font-bold text-primary uppercase tracking-widest">{(course._count?.modules ?? course.modules?.length ?? 0)} Components</span>
             </div>
+
           </div>
         </div>
 
         <div className="flex gap-2">
           {!isReadonly && (
             <>
-              <Button variant="outline" size="sm" className="h-10 px-4">
-                <Settings className="mr-2 h-4 w-4" /> Course Config
-              </Button>
               {course.status === 'DRAFT' && (
+
                 <Button 
                   size="sm" 
                   className="h-10 px-4 shadow-lg shadow-primary/20"
@@ -772,7 +771,9 @@ export const CourseBuilder: React.FC = () => {
                     options={departments.map(d => ({ label: d.name, value: d.name }))}
                     selected={identityForm.targetDepartments}
                     onChange={(selected) => setIdentityForm({ ...identityForm, targetDepartments: selected })}
+                    disabled={isReadonly}
                   />
+
 
                 </div>
 

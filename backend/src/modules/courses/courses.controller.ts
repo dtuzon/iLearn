@@ -123,6 +123,15 @@ export class CoursesController {
         return res.status(403).json({ message: 'Only Learning Managers or Administrators can publish courses.' });
       }
 
+      // CRIT-03: Block Course Creator from retiring a Published course
+      if (status === 'RETIRED' && userRole === Role.COURSE_CREATOR) {
+        const currentCourse = await CoursesService.getById(id as string);
+        if (currentCourse?.status === 'PUBLISHED') {
+          return res.status(403).json({ message: 'Only Learning Managers or Administrators can retire live courses.' });
+        }
+      }
+
+
       const course = await CoursesService.updateStatus(id as string, status, req.user!.userId);
 
       res.json(course);

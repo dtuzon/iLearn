@@ -480,9 +480,10 @@ export const CourseManagement: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="font-bold">{course.modules?.length || 0} Components</Badge>
+                          <Badge variant="secondary" className="font-bold">{(course._count?.modules ?? course.modules?.length ?? 0)} Components</Badge>
                         </div>
                       </TableCell>
+
                       <TableCell>
                         {getStatusBadge(course.status)}
                       </TableCell>
@@ -494,11 +495,18 @@ export const CourseManagement: React.FC = () => {
                           <Button 
                             variant="default" 
                             size="sm"
-                            className="bg-primary/90 hover:bg-primary shadow-sm group-hover:translate-x-1 transition-transform"
+                            className={cn(
+                              "shadow-sm group-hover:translate-x-1 transition-transform",
+                              (course.status === 'PUBLISHED' || course.status === 'ARCHIVED') ? "bg-secondary hover:bg-secondary/90" : "bg-primary/90 hover:bg-primary text-white"
+                            )}
                           >
-                            <Settings2 className="mr-2 h-4 w-4" />
-                            Author
+                            {(course.status === 'PUBLISHED' || course.status === 'ARCHIVED') ? (
+                              <><Eye className="mr-2 h-4 w-4" /> View Blueprint</>
+                            ) : (
+                              <><Settings2 className="mr-2 h-4 w-4" /> Author</>
+                            )}
                           </Button>
+
                           
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>

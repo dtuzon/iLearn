@@ -28,6 +28,7 @@ interface MultiSelectProps {
   onChange: (selected: string[]) => void
   placeholder?: string
   className?: string
+  disabled?: boolean
 }
 
 export function MultiSelect({
@@ -36,7 +37,9 @@ export function MultiSelect({
   onChange,
   placeholder = "Select items...",
   className,
+  disabled = false,
 }: MultiSelectProps) {
+
   const [open, setOpen] = React.useState(false)
 
   const handleUnselect = (item: string) => {
@@ -58,11 +61,13 @@ export function MultiSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          disabled={disabled}
           className={cn(
             "w-full justify-between hover:bg-background h-auto min-h-11",
             className
           )}
         >
+
           <div className="flex flex-wrap gap-1">
             {selected.length > 0 ? (
               selected.map((item) => (

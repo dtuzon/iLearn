@@ -12,7 +12,6 @@ export class CoursesService {
       return prisma.course.findMany({
         where: {
           isLatest: true,
-          status: CourseStatus.PUBLISHED,
           OR: [
             { status: CourseStatus.PUBLISHED },
             { enrollments: { some: { userId } } }
@@ -23,31 +22,46 @@ export class CoursesService {
           _count: { select: { modules: true } }
         }
       });
+
     }
 
     const baseWhere: any = {
-      isLatest: true,
       status: isRetired ? CourseStatus.RETIRED : { not: CourseStatus.RETIRED }
     };
 
     if (role === Role.COURSE_CREATOR) {
-      return prisma.course.findMany({
-        where: { 
-          ...baseWhere,
-          lecturerId: userId 
-        },
-        include: { _count: { select: { modules: true } } }
-      });
+      baseWhere.lecturerId = userId;
     }
 
-    // Admin/HR: See everything filtered by isLatest
-    return prisma.course.findMany({
-      where: baseWhere,
+    const courses = await prisma.course.findMany({
+      where: {
+        ...baseWhere,
+        OR: [
+          { isLatest: true },
+          { status: CourseStatus.DRAFT, parentId: { not: null } }
+        ]
+      },
       include: {
         lecturer: { select: { firstName: true, lastName: true } },
         _count: { select: { modules: true } }
       }
     });
+
+    // Post-process to prioritize DRAFTs in the same lineage for management view
+    const lineageMap = new Map();
+    courses.forEach(course => {
+      const lineageId = course.parentId || course.id;
+      const existing = lineageMap.get(lineageId);
+      
+      // Prioritize DRAFT over others for management
+      if (!existing || course.status === CourseStatus.DRAFT) {
+        lineageMap.set(lineageId, course);
+      }
+    });
+
+    return Array.from(lineageMap.values());
+
+
   }
 
   static async getById(id: string) {
@@ -168,6 +182,10 @@ export class CoursesService {
     });
 
     if (!original) throw new Error('Course not found');
+    if (original.status !== CourseStatus.PUBLISHED) {
+      throw new Error('Can only create a new version from a Published course.');
+    }
+
 
     return prisma.$transaction(async (tx) => {
       // Create new course draft
@@ -257,7 +275,20 @@ export class CoursesService {
         }
       });
 
-      // 2. Publish current draft
+      // 2. Delete any "Ghost" drafts or pending approvals in this lineage
+      await tx.course.deleteMany({
+        where: {
+          OR: [
+            { id: pId },
+            { parentId: pId }
+          ],
+          status: { in: [CourseStatus.DRAFT, CourseStatus.PENDING_APPROVAL] },
+          id: { not: courseId }
+        }
+      });
+
+      // 3. Publish current draft
+
       return tx.course.update({
         where: { id: courseId },
         data: {
@@ -306,6 +337,11 @@ export class CoursesService {
 
     if (!versionToRestore) throw new Error('Version not found');
 
+    if (versionToRestore.status !== CourseStatus.ARCHIVED && versionToRestore.status !== CourseStatus.RETIRED) {
+      throw new Error('Can only restore from Archived or Retired versions.');
+    }
+
+
     const pId = versionToRestore.parentId || versionToRestore.id;
     const latestVersion = await prisma.course.findFirst({
       where: {
@@ -334,8 +370,9 @@ export class CoursesService {
           status: CourseStatus.DRAFT,
           version: newVersionNum,
           parentId: pId,
-          isLatest: false,
+          isLatest: true,
           modules: {
+
             create: versionToRestore.modules.map(module => ({
               title: module.title,
               type: module.type,
@@ -378,11 +415,30 @@ export class CoursesService {
   }
 
   static async unretire(id: string) {
+    const course = await prisma.course.findUnique({
+      where: { id }
+    });
+
+    if (!course) throw new Error('Course not found');
+
+    const pId = course.parentId || course.id;
+    const activeSibling = await prisma.course.findFirst({
+      where: {
+        OR: [{ id: pId }, { parentId: pId }],
+        isLatest: true,
+        id: { not: id }
+      }
+    });
+
     return prisma.course.update({
       where: { id },
-      data: { status: CourseStatus.DRAFT }
+      data: { 
+        status: CourseStatus.DRAFT,
+        isLatest: !activeSibling
+      }
     });
   }
+
 }
 
 
