@@ -16,7 +16,8 @@ router.get('/:id', authenticate, CoursesController.getById);
 router.post(
   '/',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+
   auditLog('CREATE_COURSE'),
   CoursesController.create
 );
@@ -26,7 +27,8 @@ router.get('/:courseId/modules', authenticate, CoursesController.getModules);
 router.post(
   '/:courseId/modules',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+
   auditLog('ADD_MODULE'),
   CoursesController.addModule
 );
@@ -34,7 +36,8 @@ router.post(
 router.put(
   '/:id/certificate-template',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+
   upload.single('certificateBackground'),
   auditLog('UPDATE_CERTIFICATE_TEMPLATE'),
   CoursesController.updateCertificateTemplate
@@ -43,7 +46,8 @@ router.put(
 router.patch(
   '/:id',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+
   auditLog('UPDATE_COURSE'),
   CoursesController.partialUpdate
 );
@@ -51,7 +55,8 @@ router.patch(
 router.patch(
   '/:courseId/modules/:moduleId',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+
   auditLog('UPDATE_MODULE'),
   CoursesController.updateModule
 );
@@ -59,7 +64,8 @@ router.patch(
 router.delete(
   '/:courseId/modules/:moduleId',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+
   auditLog('DELETE_MODULE'),
   CoursesController.deleteModule
 );
@@ -81,7 +87,8 @@ router.patch(
 router.post(
   '/modules/video/upload',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+
   videoUpload.single('video'),
   CoursesController.uploadVideo
 );
@@ -89,7 +96,8 @@ router.post(
 router.post(
   '/:id/create-draft-version',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+
   auditLog('CREATE_COURSE_VERSION'),
   CoursesController.createDraftVersion
 );
@@ -104,7 +112,8 @@ router.get(
 router.post(
   '/:id/restore-version',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+
   auditLog('RESTORE_COURSE_VERSION'),
   CoursesController.restoreVersion
 );
@@ -112,7 +121,9 @@ router.post(
 router.put(
   '/:id/unretire',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+
+
   auditLog('UNRETIRE_COURSE'),
   CoursesController.unretire
 );

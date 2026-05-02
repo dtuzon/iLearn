@@ -13,7 +13,9 @@ router.get('/:id', authenticate, LearningPathsController.getById);
 router.post(
   '/',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+
+
   auditLog('CREATE_LEARNING_PATH'),
   LearningPathsController.create
 );
@@ -21,7 +23,9 @@ router.post(
 router.put(
   '/:id',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+
+
   auditLog('UPDATE_LEARNING_PATH'),
   LearningPathsController.update
 );
@@ -29,7 +33,9 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+
+
   auditLog('DELETE_LEARNING_PATH'),
   LearningPathsController.delete
 );
@@ -37,7 +43,9 @@ router.delete(
 router.put(
   '/:id/courses',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+
+
   auditLog('SYNC_LEARNING_PATH_COURSES'),
   LearningPathsController.syncCourses
 );

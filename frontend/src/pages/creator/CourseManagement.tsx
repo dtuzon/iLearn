@@ -233,12 +233,18 @@ export const CourseManagement: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-4">
-          <ShadcnTabs value={activeTab} onValueChange={setActiveTab} className="w-[400px]">
-            <ShadcnTabsList className="grid w-full grid-cols-2 h-11 bg-muted/50 p-1">
-              <ShadcnTabsTrigger value="active" className="font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">Active Courses</ShadcnTabsTrigger>
-              <ShadcnTabsTrigger value="retired" className="font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">Retired Inventory</ShadcnTabsTrigger>
+          <ShadcnTabs value={activeTab} onValueChange={setActiveTab} className={cn("transition-all", isAdminOrManager ? "w-[500px]" : "w-[400px]")}>
+            <ShadcnTabsList className={cn("grid w-full h-11 bg-muted/50 p-1", isAdminOrManager ? "grid-cols-3" : "grid-cols-2")}>
+              <ShadcnTabsTrigger value="active" className="font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">Active</ShadcnTabsTrigger>
+              {isAdminOrManager && (
+                <ShadcnTabsTrigger value="pending" className="font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  Pending
+                </ShadcnTabsTrigger>
+              )}
+              <ShadcnTabsTrigger value="retired" className="font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">Retired</ShadcnTabsTrigger>
             </ShadcnTabsList>
           </ShadcnTabs>
+
 
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
@@ -497,15 +503,16 @@ export const CourseManagement: React.FC = () => {
                             size="sm"
                             className={cn(
                               "shadow-sm group-hover:translate-x-1 transition-transform",
-                              (course.status === 'PUBLISHED' || course.status === 'ARCHIVED') ? "bg-secondary hover:bg-secondary/90" : "bg-primary/90 hover:bg-primary text-white"
+                              (course.status === 'PUBLISHED' || course.status === 'ARCHIVED' || (user?.role === 'COURSE_CREATOR' && course.lecturerId !== user?.userId)) ? "bg-secondary hover:bg-secondary/90" : "bg-primary/90 hover:bg-primary text-white"
                             )}
                           >
-                            {(course.status === 'PUBLISHED' || course.status === 'ARCHIVED') ? (
+                            {(course.status === 'PUBLISHED' || course.status === 'ARCHIVED' || (user?.role === 'COURSE_CREATOR' && course.lecturerId !== user?.userId)) ? (
                               <><Eye className="mr-2 h-4 w-4" /> View Blueprint</>
                             ) : (
                               <><Settings2 className="mr-2 h-4 w-4" /> Author</>
                             )}
                           </Button>
+
 
                           
                           <DropdownMenu>
@@ -532,11 +539,16 @@ export const CourseManagement: React.FC = () => {
                                   e.stopPropagation();
                                   navigate(`/creator/courses/${course.id}`);
                                 }}>
-                                  <Edit3 className="mr-2 h-4 w-4" /> Author/Edit Blueprint
+                                  {(user?.role === 'COURSE_CREATOR' && course.lecturerId !== user?.userId) ? (
+                                    <><Eye className="mr-2 h-4 w-4" /> View Blueprint</>
+                                  ) : (
+                                    <><Edit3 className="mr-2 h-4 w-4" /> Author/Edit Blueprint</>
+                                  )}
                                 </DropdownMenuItem>
                               )}
 
-                              {course.status === 'PUBLISHED' && (
+
+                              {course.status === 'PUBLISHED' && (user?.role !== 'COURSE_CREATOR' || course.lecturerId === user?.userId) && (
                                 <DropdownMenuItem onClick={(e) => {
                                   e.stopPropagation();
                                   triggerDraftCreation(course);
@@ -544,6 +556,7 @@ export const CourseManagement: React.FC = () => {
                                   <CopyPlus className="mr-2 h-4 w-4" /> Create New Draft Version
                                 </DropdownMenuItem>
                               )}
+
 
 
                               {course.status !== 'RETIRED' && course.version > 1 && (
@@ -557,7 +570,7 @@ export const CourseManagement: React.FC = () => {
 
                               <DropdownMenuSeparator />
 
-                              {course.status !== 'RETIRED' && (
+                              {course.status !== 'RETIRED' && user?.role !== 'COURSE_CREATOR' && (
                                 <DropdownMenuItem className="text-destructive" onClick={(e) => {
                                   e.stopPropagation();
                                   handleRetire(course.id);
@@ -566,7 +579,8 @@ export const CourseManagement: React.FC = () => {
                                 </DropdownMenuItem>
                               )}
 
-                              {course.status === 'RETIRED' && (
+
+                              {course.status === 'RETIRED' && user?.role !== 'COURSE_CREATOR' && (
                                 <DropdownMenuItem className="text-primary font-bold" onClick={(e) => {
                                   e.stopPropagation();
                                   handleUnretire(course.id);
@@ -574,6 +588,7 @@ export const CourseManagement: React.FC = () => {
                                   <RefreshCw className="mr-2 h-4 w-4" /> Unretire / Restore to Draft
                                 </DropdownMenuItem>
                               )}
+
 
                             </DropdownMenuContent>
                           </DropdownMenu>

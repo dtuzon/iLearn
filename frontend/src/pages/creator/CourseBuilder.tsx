@@ -255,7 +255,11 @@ export const CourseBuilder: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isReadonly = course?.status === 'PUBLISHED' || course?.status === 'ARCHIVED' || course?.status === 'RETIRED';
+  const isReadonly = course?.status === 'PUBLISHED' || 
+                    course?.status === 'ARCHIVED' || 
+                    course?.status === 'RETIRED' || 
+                    (user?.role === 'COURSE_CREATOR' && course?.lecturerId !== user?.userId);
+
 
   const [identityForm, setIdentityForm] = useState({
     title: '',

@@ -58,10 +58,11 @@ function App() {
 
                 {/* COURSE_CREATOR Routes */}
                 <Route path="/creator" element={
-                  <RoleGuard allowedRoles={['ADMINISTRATOR', 'COURSE_CREATOR']}>
+                  <RoleGuard allowedRoles={['ADMINISTRATOR', 'COURSE_CREATOR', 'LEARNING_MANAGER']}>
                     <Outlet />
                   </RoleGuard>
                 }>
+
                   <Route path="courses" element={<CourseManagement />} />
                   <Route path="courses/:courseId" element={<CourseBuilder />} />
                   <Route path="learning-paths" element={<LearningPaths />} />
@@ -93,10 +94,11 @@ function App() {
 
                 {/* Shared Approval Routes */}
                 <Route path="/approvals" element={
-                  <RoleGuard allowedRoles={['SUPERVISOR', 'DEPARTMENT_HEAD', 'COURSE_CREATOR', 'ADMINISTRATOR']}>
+                  <RoleGuard allowedRoles={['SUPERVISOR', 'DEPARTMENT_HEAD', 'COURSE_CREATOR', 'LEARNING_MANAGER', 'ADMINISTRATOR']}>
                     <Outlet />
                   </RoleGuard>
                 }>
+
                   <Route path="activities" element={<ActivityApprovals />} />
                 </Route>
 

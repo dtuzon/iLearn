@@ -35,15 +35,25 @@ export class CoursesController {
     }
   }
 
-  static async addModule(req: Request, res: Response) {
+  static async addModule(req: AuthenticatedRequest, res: Response) {
     try {
       const { courseId } = req.params;
+      
+      // Ownership check
+      if (req.user!.role === Role.COURSE_CREATOR) {
+        const course = await CoursesService.getById(courseId as string);
+        if (!course || course.lecturerId !== req.user!.userId) {
+          return res.status(403).json({ message: 'Forbidden: You do not own this course.' });
+        }
+      }
+
       const module = await CoursesService.addModule(courseId as string, req.body);
       res.status(201).json(module);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
   }
+
 
   static async getModule(req: Request, res: Response) {
     try {
@@ -65,9 +75,18 @@ export class CoursesController {
     }
   }
 
-  static async updateCertificateTemplate(req: Request, res: Response) {
+  static async updateCertificateTemplate(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
+
+      // Ownership check
+      if (req.user!.role === Role.COURSE_CREATOR) {
+        const course = await CoursesService.getById(id as string);
+        if (!course || course.lecturerId !== req.user!.userId) {
+          return res.status(403).json({ message: 'Forbidden: You do not own this course.' });
+        }
+      }
+
       const designConfig = req.body.designConfig ? JSON.parse(req.body.designConfig) : undefined;
       const backgroundImageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
 
@@ -82,9 +101,19 @@ export class CoursesController {
     }
   }
 
-  static async partialUpdate(req: Request, res: Response) {
+
+  static async partialUpdate(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
+
+      // Ownership check
+      if (req.user!.role === Role.COURSE_CREATOR) {
+        const course = await CoursesService.getById(id as string);
+        if (!course || course.lecturerId !== req.user!.userId) {
+          return res.status(403).json({ message: 'Forbidden: You do not own this course.' });
+        }
+      }
+
       const course = await CoursesService.partialUpdate(id as string, req.body);
       res.json(course);
     } catch (error: any) {
@@ -92,9 +121,22 @@ export class CoursesController {
     }
   }
 
-  static async updateModule(req: Request, res: Response) {
+
+  static async updateModule(req: AuthenticatedRequest, res: Response) {
     try {
       const { moduleId } = req.params;
+
+      // Ownership check
+      if (req.user!.role === Role.COURSE_CREATOR) {
+        const moduleObj = await CoursesService.getModule(moduleId as string);
+        if (moduleObj) {
+          const course = await CoursesService.getById(moduleObj.courseId);
+          if (!course || course.lecturerId !== req.user!.userId) {
+            return res.status(403).json({ message: 'Forbidden: You do not own this course.' });
+          }
+        }
+      }
+
       const module = await CoursesService.updateModule(moduleId as string, req.body);
       res.json(module);
     } catch (error: any) {
@@ -102,15 +144,28 @@ export class CoursesController {
     }
   }
 
-  static async deleteModule(req: Request, res: Response) {
+  static async deleteModule(req: AuthenticatedRequest, res: Response) {
     try {
       const { moduleId } = req.params;
+
+      // Ownership check
+      if (req.user!.role === Role.COURSE_CREATOR) {
+        const moduleObj = await CoursesService.getModule(moduleId as string);
+        if (moduleObj) {
+          const course = await CoursesService.getById(moduleObj.courseId);
+          if (!course || course.lecturerId !== req.user!.userId) {
+            return res.status(403).json({ message: 'Forbidden: You do not own this course.' });
+          }
+        }
+      }
+
       await CoursesService.deleteModule(moduleId as string);
       res.status(204).send();
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
   }
+
 
   static async updateStatus(req: AuthenticatedRequest, res: Response) {
     try {
@@ -123,13 +178,19 @@ export class CoursesController {
         return res.status(403).json({ message: 'Only Learning Managers or Administrators can publish courses.' });
       }
 
-      // CRIT-03: Block Course Creator from retiring a Published course
+      // Block Course Creator from retiring ANY course
       if (status === 'RETIRED' && userRole === Role.COURSE_CREATOR) {
+        return res.status(403).json({ message: 'Only Learning Managers or Administrators can retire courses.' });
+      }
+
+      // Ownership check
+      if (userRole === Role.COURSE_CREATOR) {
         const currentCourse = await CoursesService.getById(id as string);
-        if (currentCourse?.status === 'PUBLISHED') {
-          return res.status(403).json({ message: 'Only Learning Managers or Administrators can retire live courses.' });
+        if (!currentCourse || currentCourse.lecturerId !== req.user!.userId) {
+          return res.status(403).json({ message: 'Forbidden: You do not own this course.' });
         }
       }
+
 
 
       const course = await CoursesService.updateStatus(id as string, status, req.user!.userId);
@@ -152,15 +213,25 @@ export class CoursesController {
     }
   }
 
-  static async restoreVersion(req: Request, res: Response) {
+  static async restoreVersion(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
+
+      // Ownership check (IDOR protection)
+      if (req.user!.role === Role.COURSE_CREATOR) {
+        const versionToRestore = await CoursesService.getById(id as string);
+        if (!versionToRestore || versionToRestore.lecturerId !== req.user!.userId) {
+          return res.status(403).json({ message: 'Forbidden: You do not own this course lineage.' });
+        }
+      }
+
       const newDraft = await CoursesService.restoreVersion(id as string);
       res.status(201).json(newDraft);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
   }
+
 
   static async unretire(req: Request, res: Response) {
     try {
@@ -186,13 +257,23 @@ export class CoursesController {
     }
   }
 
-  static async createDraftVersion(req: Request, res: Response) {
+  static async createDraftVersion(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
+
+      // Ownership check
+      if (req.user!.role === Role.COURSE_CREATOR) {
+        const course = await CoursesService.getById(id as string);
+        if (!course || course.lecturerId !== req.user!.userId) {
+          return res.status(403).json({ message: 'Forbidden: You do not own this course.' });
+        }
+      }
+
       const newDraft = await CoursesService.createDraftVersion(id as string);
       res.status(201).json(newDraft);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
   }
+
 }

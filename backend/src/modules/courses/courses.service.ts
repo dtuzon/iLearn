@@ -6,6 +6,8 @@ import { Role, CourseStatus } from '@prisma/client';
 export class CoursesService {
   static async getAll(userId: string, role: string, tab: string = 'active') {
     const isRetired = tab === 'retired';
+    const isPending = tab === 'pending';
+
     
     if (role === Role.EMPLOYEE) {
       // Employees: Show latest active published courses or enrolled ones
@@ -25,9 +27,14 @@ export class CoursesService {
 
     }
 
+
+    
     const baseWhere: any = {
-      status: isRetired ? CourseStatus.RETIRED : { not: CourseStatus.RETIRED }
+      status: isRetired 
+        ? CourseStatus.RETIRED 
+        : (isPending ? CourseStatus.PENDING_APPROVAL : { not: CourseStatus.RETIRED })
     };
+
 
     if (role === Role.COURSE_CREATOR) {
       baseWhere.lecturerId = userId;
