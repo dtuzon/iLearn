@@ -8,8 +8,21 @@ import {
   ClipboardList,
   AlertCircle,
   CheckCircle2,
-  ListFilter
+  ListFilter,
+  FileDown,
+  UploadCloud,
+  FileSpreadsheet
 } from 'lucide-react';
+import Papa from 'papaparse';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter
+} from '../../components/ui/dialog';
+
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -32,6 +45,8 @@ import {
 } from '../../components/ui/table';
 import { Badge } from '../../components/ui/badge';
 import { toast } from 'sonner';
+import { cn } from '../../lib/utils';
+
 import { 
   evaluationsApi, 
   TemplateCategory, 
@@ -51,6 +66,11 @@ export const EvaluationTemplates: React.FC = () => {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<TemplateCategory | ''>('');
   const [questions, setQuestions] = useState<Omit<EvaluationQuestion, 'id'>[]>([]);
+
+  // Bulk Import State
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+
 
   useEffect(() => {
     fetchTemplates();
@@ -87,6 +107,86 @@ export const EvaluationTemplates: React.FC = () => {
     newQuestions[index] = { ...newQuestions[index], [field]: value };
     setQuestions(newQuestions);
   };
+
+  const downloadSampleCSV = () => {
+    const headers = 'text,type,kashDomain,order';
+    const rows = [
+      '"How clear were the learning objectives?",RATING_1_TO_5,,1',
+      '"Do you feel confident applying this to your work?",YES_NO,,2',
+      '"What was the most valuable part of this training?",TEXT_RESPONSE,,3',
+      '"I can explain the core compliance principles.",RATING_1_TO_5,KNOWLEDGE,4',
+      '"I consistently apply these new security measures.",YES_NO,HABITS,5'
+    ];
+    
+    const csvContent = [headers, ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'elevate-evaluation-template.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Sample CSV downloaded');
+  };
+
+  const handleBulkImport = () => {
+    if (!importFile) {
+      toast.error('Please select a CSV file');
+      return;
+    }
+
+    Papa.parse(importFile, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const parsedQuestions: any[] = [];
+        const errors: string[] = [];
+
+        results.data.forEach((row: any, index: number) => {
+          const rowNum = index + 1;
+          const { text, type, kashDomain, order } = row;
+
+          if (!text) {
+            errors.push(`Row ${rowNum}: Question text is missing`);
+            return;
+          }
+
+          if (![EvalQuestionType.RATING_1_TO_5, EvalQuestionType.TEXT_RESPONSE, EvalQuestionType.YES_NO].includes(type)) {
+            errors.push(`Row ${rowNum}: Invalid type "${type}"`);
+            return;
+          }
+
+          if (category === TemplateCategory.KASH_EVALUATION && !kashDomain) {
+            errors.push(`Row ${rowNum}: K.A.S.H. domain is required for this template`);
+            return;
+          }
+
+          parsedQuestions.push({
+            text,
+            type,
+            kashDomain: category === TemplateCategory.KASH_EVALUATION ? kashDomain : undefined,
+            order: parseInt(order) || questions.length + parsedQuestions.length + 1
+          });
+        });
+
+        if (errors.length > 0) {
+          errors.forEach(err => toast.error(err));
+          return;
+        }
+
+        setQuestions([...questions, ...parsedQuestions]);
+        toast.success(`Successfully imported ${parsedQuestions.length} questions`);
+        setIsImportModalOpen(false);
+        setImportFile(null);
+      },
+      error: (error) => {
+        toast.error(`CSV Parsing Error: ${error.message}`);
+      }
+    });
+  };
+
 
   const handleSave = async () => {
     if (!name || !category || questions.length === 0) {
@@ -224,10 +324,21 @@ export const EvaluationTemplates: React.FC = () => {
                   <CardTitle className="text-lg">Questions Builder</CardTitle>
                   <CardDescription>Add and configure the evaluation criteria.</CardDescription>
                 </div>
-                <Button onClick={handleAddQuestion} size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" /> Add Question
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2 border-primary/20 hover:border-primary/50"
+                    onClick={() => setIsImportModalOpen(true)}
+                  >
+                    <UploadCloud className="h-4 w-4" /> Bulk Import
+                  </Button>
+                  <Button onClick={handleAddQuestion} size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" /> Add Question
+                  </Button>
+                </div>
               </CardHeader>
+
               <CardContent className="space-y-4">
                 {questions.length === 0 ? (
                   <div className="py-12 flex flex-col items-center justify-center text-center border-2 border-dashed rounded-xl bg-muted/20">
@@ -331,7 +442,96 @@ export const EvaluationTemplates: React.FC = () => {
             </Card>
           </div>
         </div>
+
+        {/* Bulk Import Modal */}
+        <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileSpreadsheet className="h-5 w-5 text-primary" />
+                Bulk Import Questions
+              </DialogTitle>
+              <DialogDescription>
+                Upload a CSV file to populate your evaluation template. Ensure your file follows the standard format.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6 py-4">
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold uppercase tracking-wider text-primary">Requirement Guide</span>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    className="h-auto p-0 text-primary font-bold"
+                    onClick={downloadSampleCSV}
+                  >
+                    <FileDown className="mr-2 h-4 w-4" /> Download Sample CSV
+                  </Button>
+                </div>
+                <ul className="text-xs space-y-1 text-muted-foreground list-disc pl-4">
+                  <li>Headers: <strong>text, type, kashDomain, order</strong></li>
+                  <li>Types: RATING_1_TO_5, TEXT_RESPONSE, YES_NO</li>
+                  <li>Domains (KASH only): KNOWLEDGE, ATTITUDE, SKILLS, HABITS</li>
+                </ul>
+              </div>
+
+              <div 
+                className={cn(
+                  "border-2 border-dashed rounded-2xl p-10 flex flex-col items-center justify-center space-y-4 transition-all",
+                  importFile ? "border-primary bg-primary/5" : "border-muted-foreground/20 hover:border-primary/50"
+                )}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files[0];
+                  if (file && file.type === 'text/csv') setImportFile(file);
+                  else toast.error('Please upload a valid CSV file');
+                }}
+              >
+                <div className="p-4 rounded-full bg-muted/50">
+                  <UploadCloud className={cn("h-8 w-8", importFile ? "text-primary" : "text-muted-foreground")} />
+                </div>
+                <div className="text-center">
+                  {importFile ? (
+                    <div className="space-y-1">
+                      <p className="font-bold text-primary">{importFile.name}</p>
+                      <p className="text-xs text-muted-foreground">{(importFile.size / 1024).toFixed(2)} KB</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="font-bold">Drag & drop your CSV here</p>
+                      <p className="text-xs text-muted-foreground">or click to browse from your device</p>
+                    </div>
+                  )}
+                </div>
+                <Input 
+                  type="file" 
+                  accept=".csv" 
+                  className="hidden" 
+                  id="csv-upload"
+                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                />
+                <Button 
+                  variant="outline" 
+                  onClick={() => document.getElementById('csv-upload')?.click()}
+                  disabled={!!importFile}
+                >
+                  {importFile ? 'Change File' : 'Select File'}
+                </Button>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button variant="ghost" onClick={() => { setIsImportModalOpen(false); setImportFile(null); }}>Cancel</Button>
+              <Button onClick={handleBulkImport} disabled={!importFile} className="shadow-lg shadow-primary/20">
+                Confirm Import
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
+
     );
   }
 
