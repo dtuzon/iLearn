@@ -258,7 +258,8 @@ export const CourseBuilder: React.FC = () => {
   const isReadonly = course?.status === 'PUBLISHED' || 
                     course?.status === 'ARCHIVED' || 
                     course?.status === 'RETIRED' || 
-                    (user?.role === 'COURSE_CREATOR' && course?.lecturerId !== user?.userId);
+                    (user?.role === 'COURSE_CREATOR' && course?.lecturerId !== user?.id);
+
 
 
   const [identityForm, setIdentityForm] = useState({

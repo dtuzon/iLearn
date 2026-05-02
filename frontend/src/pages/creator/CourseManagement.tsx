@@ -503,10 +503,12 @@ export const CourseManagement: React.FC = () => {
                             size="sm"
                             className={cn(
                               "shadow-sm group-hover:translate-x-1 transition-transform",
-                              (course.status === 'PUBLISHED' || course.status === 'ARCHIVED' || (user?.role === 'COURSE_CREATOR' && course.lecturerId !== user?.userId)) ? "bg-secondary hover:bg-secondary/90" : "bg-primary/90 hover:bg-primary text-white"
+                              (course.status === 'PUBLISHED' || course.status === 'ARCHIVED' || (user?.role === 'COURSE_CREATOR' && course.lecturerId !== user?.id)) ? "bg-secondary hover:bg-secondary/90" : "bg-primary/90 hover:bg-primary text-white"
+
                             )}
                           >
-                            {(course.status === 'PUBLISHED' || course.status === 'ARCHIVED' || (user?.role === 'COURSE_CREATOR' && course.lecturerId !== user?.userId)) ? (
+                            {(course.status === 'PUBLISHED' || course.status === 'ARCHIVED' || (user?.role === 'COURSE_CREATOR' && course.lecturerId !== user?.id)) ? (
+
                               <><Eye className="mr-2 h-4 w-4" /> View Blueprint</>
                             ) : (
                               <><Settings2 className="mr-2 h-4 w-4" /> Author</>
@@ -539,7 +541,8 @@ export const CourseManagement: React.FC = () => {
                                   e.stopPropagation();
                                   navigate(`/creator/courses/${course.id}`);
                                 }}>
-                                  {(user?.role === 'COURSE_CREATOR' && course.lecturerId !== user?.userId) ? (
+                                  {(user?.role === 'COURSE_CREATOR' && course.lecturerId !== user?.id) ? (
+
                                     <><Eye className="mr-2 h-4 w-4" /> View Blueprint</>
                                   ) : (
                                     <><Edit3 className="mr-2 h-4 w-4" /> Author/Edit Blueprint</>
@@ -548,7 +551,8 @@ export const CourseManagement: React.FC = () => {
                               )}
 
 
-                              {course.status === 'PUBLISHED' && (user?.role !== 'COURSE_CREATOR' || course.lecturerId === user?.userId) && (
+                              {course.status === 'PUBLISHED' && (user?.role !== 'COURSE_CREATOR' || course.lecturerId === user?.id) && (
+
                                 <DropdownMenuItem onClick={(e) => {
                                   e.stopPropagation();
                                   triggerDraftCreation(course);
