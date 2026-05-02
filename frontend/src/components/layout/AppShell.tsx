@@ -15,12 +15,16 @@ import {
   ClipboardCheck,
   ClipboardList,
   Route,
-  Compass
+  Compass,
+  Newspaper
 } from 'lucide-react';
+
 
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
 import { NotificationBell } from './NotificationBell';
+import { ManageBulletinDialog } from '../admin/ManageBulletinDialog';
+
 
 
 
@@ -29,6 +33,8 @@ export const AppShell: React.FC = () => {
   const { settings } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isBulletinOpen, setIsBulletinOpen] = React.useState(false);
+
 
   const handleLogout = () => {
     logout();
@@ -111,6 +117,18 @@ export const AppShell: React.FC = () => {
               Overview
             </div>
             <NavLink to="/dashboard" icon={LayoutDashboard}>Dashboard</NavLink>
+            
+            {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start gap-3 px-3 py-2 h-10 text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground transition-all duration-200 mt-1"
+                onClick={() => setIsBulletinOpen(true)}
+              >
+                <Newspaper className="h-4 w-4" />
+                Manage Bulletin
+              </Button>
+            )}
+
 
             {(user?.role === 'ADMINISTRATOR') && (
 
@@ -192,6 +210,8 @@ export const AppShell: React.FC = () => {
           </div>
         </main>
       </div>
+      <ManageBulletinDialog isOpen={isBulletinOpen} onClose={() => setIsBulletinOpen(false)} />
     </div>
   );
 };
+
