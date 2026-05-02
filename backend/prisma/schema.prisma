@@ -45,7 +45,9 @@ enum CourseStatus {
   PENDING_APPROVAL
   PUBLISHED
   ARCHIVED
+  RETIRED
 }
+
 
 
 enum SubmissionStatus {

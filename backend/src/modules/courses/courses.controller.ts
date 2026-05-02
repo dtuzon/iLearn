@@ -8,7 +8,8 @@ import { Role } from '@prisma/client';
 export class CoursesController {
   static async getAll(req: AuthenticatedRequest, res: Response) {
     try {
-      const courses = await CoursesService.getAll(req.user!.userId, req.user!.role);
+      const { tab } = req.query;
+      const courses = await CoursesService.getAll(req.user!.userId, req.user!.role, tab as string);
       res.json(courses);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -129,7 +130,39 @@ export class CoursesController {
     }
   }
 
+  static async getVersions(req: Request, res: Response) {
+
+    try {
+      const { parentId } = req.params;
+      const versions = await CoursesService.getVersions(parentId as string);
+      res.json(versions);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  static async restoreVersion(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const newDraft = await CoursesService.restoreVersion(id as string);
+      res.status(201).json(newDraft);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  static async unretire(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const course = await CoursesService.unretire(id as string);
+      res.json(course);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
   static async uploadVideo(req: Request, res: Response) {
+
     try {
       if (!req.file) {
         return res.status(400).json({ message: 'No video file uploaded' });

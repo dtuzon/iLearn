@@ -94,4 +94,27 @@ router.post(
   CoursesController.createDraftVersion
 );
 
+router.get(
+  '/:parentId/versions',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.LEARNING_MANAGER, Role.ADMINISTRATOR]),
+  CoursesController.getVersions
+);
+
+router.post(
+  '/:id/restore-version',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  auditLog('RESTORE_COURSE_VERSION'),
+  CoursesController.restoreVersion
+);
+
+router.put(
+  '/:id/unretire',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  auditLog('UNRETIRE_COURSE'),
+  CoursesController.unretire
+);
+
 export default router;

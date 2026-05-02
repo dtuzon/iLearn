@@ -1,29 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { coursesApi } from '../../api/courses.api';
-import type { Course } from '../../api/courses.api';
+import { coursesApi, type Course } from '../../api/courses.api';
+import { departmentsApi, type Department } from '../../api/departments.api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
-import { 
-  Loader2, 
-  Plus, 
-  Settings2, 
-  BookOpen, 
-  Layers, 
-  LayoutDashboard,
-  MoreVertical,
-  Trash2,
-  Edit3
-} from 'lucide-react';
-
-import { toast } from 'sonner';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -32,13 +17,37 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '../../components/ui/dropdown-menu';
-import { cn } from '../../lib/utils';
-import { departmentsApi } from '../../api/departments.api';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle,
+  DialogTrigger
+} from '../../components/ui/dialog';
+import { 
+  Plus, 
+  MoreVertical, 
+  Edit3, 
+  Trash2, 
+  BookOpen, 
+  Layers, 
+  Loader2, 
+  Settings2,
+  Clock, 
+  AlertCircle, 
+  CopyPlus, 
+  History, 
+  RefreshCw, 
+  Eye 
+} from 'lucide-react';
 
-import type { Department } from '../../api/departments.api';
-import { Checkbox } from '../../components/ui/checkbox';
-import { useAuth } from '../../context/AuthContext';
-import { CheckCircle, XCircle, Clock, AlertCircle, CopyPlus } from 'lucide-react';
+import { 
+  Tabs as ShadcnTabs, 
+  TabsList as ShadcnTabsList, 
+  TabsTrigger as ShadcnTabsTrigger 
+} from '../../components/ui/tabs';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -49,21 +58,28 @@ import {
   AlertDialogHeader,
   AlertDialogTitle 
 } from '../../components/ui/alert-dialog';
-
-
+import { toast } from 'sonner';
+import { cn } from '../../lib/utils';
+import { Checkbox } from '../../components/ui/checkbox';
+import { useAuth } from '../../context/AuthContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 
 export const CourseManagement: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+  const [activeTab, setActiveTab] = useState('active');
+
   // Versioning State
   const [courseToVersion, setCourseToVersion] = useState<Course | null>(null);
   const [isVersioning, setIsVersioning] = useState(false);
 
+  // History State
+  const [historyCourse, setHistoryCourse] = useState<Course | null>(null);
+  const [versions, setVersions] = useState<Course[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
-  
   // Create Dialog State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -71,24 +87,20 @@ export const CourseManagement: React.FC = () => {
   const [newCourse, setNewCourse] = useState({
     title: '',
     description: '',
-    passingGrade: 80,
+    passingGrade: 70,
     targetAudience: 'GENERAL',
     targetDepartments: [] as string[]
   });
 
-  const fetchDepartments = async () => {
-    try {
-      const data = await departmentsApi.getAll();
-      setDepartments(data);
-    } catch (error) {
-      console.error('Failed to load departments');
-    }
-  };
+  useEffect(() => {
+    fetchCourses(activeTab);
+    fetchDepartments();
+  }, [activeTab]);
 
-  const fetchCourses = async () => {
+  const fetchCourses = async (tab: string = activeTab) => {
     setIsLoading(true);
     try {
-      const data = await coursesApi.getAll();
+      const data = await coursesApi.getAll(tab);
       setCourses(data);
     } catch (error) {
       toast.error('Failed to load courses');
@@ -97,46 +109,27 @@ export const CourseManagement: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchCourses();
-    fetchDepartments();
-  }, []);
+  const fetchDepartments = async () => {
+    try {
+      const data = await departmentsApi.getAll();
+      setDepartments(data);
+    } catch (error) {
+      console.error('Failed to fetch departments');
+    }
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsCreating(true);
     try {
-      const created = await coursesApi.create(newCourse);
-      toast.success('Course created successfully');
+      const course = await coursesApi.create(newCourse);
+      toast.success('Course identity registered in the studio');
       setIsCreateOpen(false);
-      setNewCourse({ 
-        title: '', 
-        description: '', 
-        passingGrade: 80, 
-        targetAudience: 'GENERAL',
-        targetDepartments: []
-      });
-      navigate(`/creator/courses/${created.id}`);
+      navigate(`/creator/courses/${course.id}`);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to create course');
     } finally {
       setIsCreating(false);
-    }
-  };
-
-  const totalModules = courses.reduce((acc, c) => acc + (c.modules?.length || 0), 0);
-  const pendingApprovals = courses.filter(c => c.status === 'PENDING_APPROVAL');
-
-  
-  const isAdminOrManager = user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER';
-
-  const handleUpdateStatus = async (courseId: string, status: string) => {
-    try {
-      await coursesApi.updateStatus(courseId, status);
-      toast.success(`Course status updated to ${status}`);
-      fetchCourses();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update status');
     }
   };
 
@@ -163,6 +156,49 @@ export const CourseManagement: React.FC = () => {
     }
   };
 
+  const handleFetchVersions = async (course: Course) => {
+    setHistoryCourse(course);
+    setIsHistoryLoading(true);
+    try {
+      const pId = course.parentId || course.id;
+      const data = await coursesApi.getVersions(pId);
+      setVersions(data);
+    } catch (error) {
+      toast.error('Failed to load version history');
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  };
+
+  const handleRestore = async (versionId: string) => {
+    try {
+      const newDraft = await coursesApi.restoreVersion(versionId);
+      toast.success('Version restored to a new draft');
+      navigate(`/creator/courses/${newDraft.id}`);
+    } catch (error) {
+      toast.error('Failed to restore version');
+    }
+  };
+
+  const handleRetire = async (courseId: string) => {
+    try {
+      await coursesApi.updateStatus(courseId, 'RETIRED');
+      toast.success('Course retired successfully');
+      fetchCourses();
+    } catch (error) {
+      toast.error('Failed to retire course');
+    }
+  };
+
+  const handleUnretire = async (courseId: string) => {
+    try {
+      await coursesApi.unretire(courseId);
+      toast.success('Course restored to Draft');
+      fetchCourses();
+    } catch (error) {
+      toast.error('Failed to unretire course');
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -170,11 +206,14 @@ export const CourseManagement: React.FC = () => {
       case 'PENDING_APPROVAL': return <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 border-none px-3 py-1 animate-pulse">PENDING</Badge>;
       case 'DRAFT': return <Badge variant="outline" className="text-muted-foreground border-dashed px-3 py-1">DRAFT</Badge>;
       case 'ARCHIVED': return <Badge variant="outline" className="bg-muted text-muted-foreground border-none px-3 py-1">ARCHIVED</Badge>;
+      case 'RETIRED': return <Badge variant="destructive" className="px-3 py-1">RETIRED</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
-
     }
   };
 
+  const isAdminOrManager = user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER';
+  const totalModules = courses.reduce((acc, course) => acc + (course.modules?.length || 0), 0);
+  const pendingApprovals = courses.filter(c => c.status === 'PENDING_APPROVAL');
 
   if (isLoading) {
     return (
@@ -196,117 +235,126 @@ export const CourseManagement: React.FC = () => {
           <p className="text-muted-foreground text-lg italic">Design, build, and deploy premium corporate learning experiences.</p>
         </div>
         
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button size="lg" className="shadow-lg hover:shadow-xl transition-all duration-300">
-              <Plus className="mr-2 h-5 w-5" /> Create Course
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <form onSubmit={handleCreate}>
-              <DialogHeader>
-                <DialogTitle>New Course Configuration</DialogTitle>
-                <DialogDescription>Set the foundation for your new educational content.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Course Title *</Label>
-                  <Input 
-                    id="title" 
-                    required
-                    value={newCourse.title}
-                    onChange={(e) => setNewCourse({...newCourse, title: e.target.value})}
-                    placeholder="e.g. Masterclass: Advanced Insurance Underwriting"
-                    className="h-11"
-                  />
-                </div>
+        <div className="flex items-center gap-4">
+          <ShadcnTabs value={activeTab} onValueChange={setActiveTab} className="w-[400px]">
+            <ShadcnTabsList className="grid w-full grid-cols-2 h-11 bg-muted/50 p-1">
+              <ShadcnTabsTrigger value="active" className="font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">Active Courses</ShadcnTabsTrigger>
+              <ShadcnTabsTrigger value="retired" className="font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">Retired Inventory</ShadcnTabsTrigger>
+            </ShadcnTabsList>
+          </ShadcnTabs>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">Executive Summary</Label>
-                  <Textarea 
-                    id="description" 
-                    value={newCourse.description}
-                    onChange={(e) => setNewCourse({...newCourse, description: e.target.value})}
-                    placeholder="A brief overview of the course objectives..."
-                    className="min-h-[100px]"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button size="lg" className="h-11 shadow-lg hover:shadow-xl transition-all duration-300">
+                <Plus className="mr-2 h-5 w-5" /> Create Course
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <form onSubmit={handleCreate}>
+                <DialogHeader>
+                  <DialogTitle>New Course Configuration</DialogTitle>
+                  <DialogDescription>Set the foundation for your new educational content.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="passingGrade">Passing Grade (%) *</Label>
+                    <Label htmlFor="title">Course Title *</Label>
                     <Input 
-                      id="passingGrade" 
-                      type="number"
-                      min="0"
-                      max="100"
+                      id="title" 
                       required
-                      value={newCourse.passingGrade}
-                      onChange={(e) => setNewCourse({...newCourse, passingGrade: parseInt(e.target.value) || 0})}
+                      value={newCourse.title}
+                      onChange={(e) => setNewCourse({...newCourse, title: e.target.value})}
+                      placeholder="e.g. Masterclass: Advanced Insurance Underwriting"
                       className="h-11"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Target Audience</Label>
-                    <Select 
-                      value={newCourse.targetAudience} 
-                      onValueChange={(val) => setNewCourse({...newCourse, targetAudience: val})}
-                    >
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Select Audience" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="GENERAL">General</SelectItem>
-                        <SelectItem value="PHASE_1_NEW_HIRE">Phase 1: Newly Hired</SelectItem>
-                        <SelectItem value="PHASE_2_REGULARIZED">Phase 2: Newly Regularized</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-bold">Target Departments</Label>
-                  <div className="grid grid-cols-2 gap-2 p-3 border rounded-lg bg-muted/5 max-h-[120px] overflow-y-auto">
-                    {(departments.length > 0 ? departments : [{id:'1', name:'Claims'}, {id:'2', name:'Underwriting'}, {id:'3', name:'HR'}, {id:'4', name:'Finance'}, {id:'5', name:'IT'}, {id:'6', name:'Sales'}]).map((dept) => (
-                      <div key={dept.id} className="flex items-center space-x-2">
-                        <Checkbox 
-                          id={`new-dept-${dept.id}`}
-                          checked={newCourse.targetDepartments.includes(dept.name)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setNewCourse({
-                                ...newCourse,
-                                targetDepartments: [...newCourse.targetDepartments, dept.name]
-                              });
-                            } else {
-                              setNewCourse({
-                                ...newCourse,
-                                targetDepartments: newCourse.targetDepartments.filter(d => d !== dept.name)
-                              });
-                            }
-                          }}
-                        />
-                        <Label 
-                          htmlFor={`new-dept-${dept.id}`}
-                          className="text-xs font-medium leading-none cursor-pointer"
-                        >
-                          {dept.name}
-                        </Label>
-                      </div>
-                    ))}
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Executive Summary</Label>
+                    <Textarea 
+                      id="description" 
+                      value={newCourse.description}
+                      onChange={(e) => setNewCourse({...newCourse, description: e.target.value})}
+                      placeholder="A brief overview of the course objectives..."
+                      className="min-h-[100px]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="passingGrade">Passing Grade (%) *</Label>
+                      <Input 
+                        id="passingGrade" 
+                        type="number"
+                        min="0"
+                        max="100"
+                        required
+                        value={newCourse.passingGrade}
+                        onChange={(e) => setNewCourse({...newCourse, passingGrade: parseInt(e.target.value) || 0})}
+                        className="h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Target Audience</Label>
+                      <Select 
+                        value={newCourse.targetAudience} 
+                        onValueChange={(val) => setNewCourse({...newCourse, targetAudience: val})}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select Audience" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="GENERAL">General</SelectItem>
+                          <SelectItem value="PHASE_1_NEW_HIRE">Phase 1: Newly Hired</SelectItem>
+                          <SelectItem value="PHASE_2_REGULARIZED">Phase 2: Newly Regularized</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold">Target Departments</Label>
+                    <div className="grid grid-cols-2 gap-2 p-3 border rounded-lg bg-muted/5 max-h-[120px] overflow-y-auto">
+                      {departments.map((dept) => (
+                        <div key={dept.id} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`new-dept-${dept.id}`}
+                            checked={newCourse.targetDepartments.includes(dept.name)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setNewCourse({
+                                  ...newCourse,
+                                  targetDepartments: [...newCourse.targetDepartments, dept.name]
+                                });
+                              } else {
+                                setNewCourse({
+                                  ...newCourse,
+                                  targetDepartments: newCourse.targetDepartments.filter(d => d !== dept.name)
+                                });
+                              }
+                            }}
+                          />
+                          <Label 
+                            htmlFor={`new-dept-${dept.id}`}
+                            className="text-xs font-medium leading-none cursor-pointer"
+                          >
+                            {dept.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={isCreating}>
-                  {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create Course
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+                  <Button type="submit" disabled={isCreating}>
+                    {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Create Course
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Stats Row */}
@@ -379,21 +427,6 @@ export const CourseManagement: React.FC = () => {
                         >
                           Review Content
                         </Button>
-                        <Button 
-                          size="sm" 
-                          variant="destructive" 
-                          className="rounded-xl"
-                          onClick={() => handleUpdateStatus(course.id, 'DRAFT')}
-                        >
-                          <XCircle className="mr-2 h-4 w-4" /> Reject
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          className="rounded-xl bg-success hover:bg-success/90"
-                          onClick={() => handleUpdateStatus(course.id, 'PUBLISHED')}
-                        >
-                          <CheckCircle className="mr-2 h-4 w-4" /> Approve & Publish
-                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -404,26 +437,18 @@ export const CourseManagement: React.FC = () => {
         </Card>
       )}
 
-
-      {/* Course List Table */}
-      <Card className="border-none shadow-xl bg-background/50 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <LayoutDashboard className="h-5 w-5 text-primary" />
-            Active Inventory
-          </CardTitle>
-          <CardDescription>Manage your course assets and builder configurations.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="border rounded-xl overflow-hidden bg-background">
+      {/* Main Table */}
+      <Card className="border-none shadow-2xl overflow-hidden bg-background/50 backdrop-blur-md">
+        <CardContent className="p-0">
+          <div className="border rounded-xl overflow-hidden">
             <Table>
-              <TableHeader className="bg-muted/50">
-                <TableRow>
-                  <TableHead className="w-[40%]">Course Identity</TableHead>
-                  <TableHead>Complexity</TableHead>
-                  <TableHead>Launch Status</TableHead>
-                  <TableHead>Target Score</TableHead>
-                  <TableHead className="text-right px-6">Actions</TableHead>
+              <TableHeader className="bg-muted/50 text-[10px] font-black uppercase tracking-widest">
+                <TableRow className="hover:bg-transparent border-none">
+                  <TableHead className="py-4">Course Identity & Version</TableHead>
+                  <TableHead>Composition</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Standards</TableHead>
+                  <TableHead className="text-right px-6">Intelligence</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -447,14 +472,12 @@ export const CourseManagement: React.FC = () => {
                         course.status === 'ARCHIVED' && "opacity-60"
                       )}
                       onClick={() => handleEdit(course)}
-
                     >
                       <TableCell>
                         <div className="font-semibold text-base group-hover:text-primary transition-colors flex items-center gap-2">
                           {course.title}
                           <Badge variant="outline" className="text-[10px] h-4 px-1 font-mono opacity-60">v{course.version}</Badge>
                         </div>
-
                         <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{course.description || 'No description provided.'}</div>
                       </TableCell>
                       <TableCell>
@@ -465,7 +488,6 @@ export const CourseManagement: React.FC = () => {
                       <TableCell>
                         {getStatusBadge(course.status)}
                       </TableCell>
-
                       <TableCell>
                         <span className="font-mono font-bold text-primary">{course.passingGrade}%</span>
                       </TableCell>
@@ -486,16 +508,47 @@ export const CourseManagement: React.FC = () => {
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuLabel>Course Actions</DropdownMenuLabel>
+                            <DropdownMenuContent align="end" className="w-56">
+                              <DropdownMenuLabel>Intelligence & Control</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleEdit(course)}>
-                                <Edit3 className="mr-2 h-4 w-4" /> Edit Blueprint
-                              </DropdownMenuItem>
+                              
+                              {course.status === 'PUBLISHED' && (
+                                <DropdownMenuItem onClick={() => navigate(`/creator/courses/${course.id}`)}>
+                                  <Eye className="mr-2 h-4 w-4" /> View Blueprint (Live)
+                                </DropdownMenuItem>
+                              )}
 
-                              <DropdownMenuItem className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" /> Retire Course
-                              </DropdownMenuItem>
+                              {(course.status === 'DRAFT' || course.status === 'PENDING_APPROVAL') && (
+                                <DropdownMenuItem onClick={() => handleEdit(course)}>
+                                  <Edit3 className="mr-2 h-4 w-4" /> Author/Edit Blueprint
+                                </DropdownMenuItem>
+                              )}
+
+                              {course.status === 'PUBLISHED' && (
+                                <DropdownMenuItem onClick={() => handleEdit(course)}>
+                                  <CopyPlus className="mr-2 h-4 w-4" /> Create New Draft Version
+                                </DropdownMenuItem>
+                              )}
+
+                              {course.status !== 'RETIRED' && (
+                                <DropdownMenuItem onClick={() => handleFetchVersions(course)}>
+                                  <History className="mr-2 h-4 w-4" /> Version History
+                                </DropdownMenuItem>
+                              )}
+
+                              <DropdownMenuSeparator />
+
+                              {course.status !== 'RETIRED' && (
+                                <DropdownMenuItem className="text-destructive" onClick={() => handleRetire(course.id)}>
+                                  <Trash2 className="mr-2 h-4 w-4" /> Retire Course
+                                </DropdownMenuItem>
+                              )}
+
+                              {course.status === 'RETIRED' && (
+                                <DropdownMenuItem className="text-primary font-bold" onClick={() => handleUnretire(course.id)}>
+                                  <RefreshCw className="mr-2 h-4 w-4" /> Unretire / Restore to Draft
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -509,6 +562,7 @@ export const CourseManagement: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Deep Clone Confirmation */}
       <AlertDialog open={!!courseToVersion} onOpenChange={(open) => !open && setCourseToVersion(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -535,8 +589,72 @@ export const CourseManagement: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Version History Modal */}
+      <Dialog open={!!historyCourse} onOpenChange={(open) => !open && setHistoryCourse(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              Version History: {historyCourse?.title}
+            </DialogTitle>
+            <DialogDescription>
+              Inspect and restore historical versions of this course curriculum.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            {isHistoryLoading ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="border rounded-xl overflow-hidden bg-background">
+                <Table>
+                  <TableHeader className="bg-muted/50 text-[10px] font-black uppercase tracking-widest">
+                    <TableRow>
+                      <TableHead>Version</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Last Modified</TableHead>
+                      <TableHead className="text-right px-6">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {versions.map((v) => (
+                      <TableRow key={v.id} className={cn(v.status === 'PUBLISHED' && "bg-success/5 font-bold")}>
+                        <TableCell className="font-mono">v{v.version}</TableCell>
+                        <TableCell>{getStatusBadge(v.status)}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {new Date(v.updatedAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right px-6">
+                          {v.status === 'ARCHIVED' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="h-8 text-xs font-bold"
+                              onClick={() => handleRestore(v.id)}
+                            >
+                              <RefreshCw className="mr-2 h-3 w-3" /> Restore
+                            </Button>
+                          )}
+                          {v.status === 'PUBLISHED' && (
+                            <Badge variant="success">Active Live Version</Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHistoryCourse(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
-
-

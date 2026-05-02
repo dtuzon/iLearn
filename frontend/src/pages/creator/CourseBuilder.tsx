@@ -13,9 +13,7 @@ import {
   ArrowLeft, 
   Loader2, 
   Plus, 
-  HelpCircle, 
   FileText,
-  MessageSquare, 
   ClipboardCheck, 
   Settings, 
   Award, 
@@ -23,11 +21,14 @@ import {
   Play, 
   CheckCircle2,
   Trash2,
-  ChevronDown,
   GripVertical,
   Pencil,
-  Save
+  Save,
+  Video as VideoIcon,
+  Eye
 } from 'lucide-react';
+
+
 
 import { toast } from 'sonner';
 import { Badge } from '../../components/ui/badge';
@@ -67,13 +68,9 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { MultiSelect } from '../../components/ui/multi-select';
 import { VideoUploadModal } from '../../components/creator/VideoUploadModal';
-import { Video as VideoIcon } from 'lucide-react';
 import { WorkshopActivityBuilder } from '../../components/creator/WorkshopActivityBuilder';
 import { EvaluationTemplatePicker } from '../../components/creator/EvaluationTemplatePicker';
 import { TemplateCategory } from '../../api/evaluations.api';
-
-
-
 
 interface SortableModuleItemProps {
   module: any;
@@ -84,11 +81,9 @@ interface SortableModuleItemProps {
   setWorkshopModalState: (state: { isOpen: boolean, moduleId: string }) => void;
   setEvaluationModalState: (state: { isOpen: boolean, moduleId: string, category: TemplateCategory }) => void;
   setEditingModule: (module: any) => void;
-
-
   handleDeleteModule: (moduleId: string) => void;
+  readonly?: boolean;
 }
-
 
 const SortableModuleItem: React.FC<SortableModuleItemProps> = ({ 
   module, 
@@ -99,10 +94,9 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
   setWorkshopModalState,
   setEvaluationModalState,
   setEditingModule, 
-  handleDeleteModule 
+  handleDeleteModule,
+  readonly
 }) => {
-
-
   const {
     attributes,
     listeners,
@@ -128,9 +122,11 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
         <CardContent className="p-0">
           <div className="flex flex-col md:flex-row md:items-center justify-between p-5 gap-4">
             <div className="flex items-center gap-4">
-              <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-2 hover:bg-muted rounded-md">
-                <GripVertical className="h-5 w-5 text-muted-foreground/30" />
-              </div>
+              {!readonly && (
+                <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-2 hover:bg-muted rounded-md">
+                  <GripVertical className="h-5 w-5 text-muted-foreground/30" />
+                </div>
+              )}
               <div className="text-xs font-black text-muted-foreground/30 font-mono min-w-[50px]">STEP {index + 1}</div>
               {getModuleIcon(module.type)}
               <div>
@@ -144,99 +140,102 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
             </div>
             
             <div className="flex items-center gap-3">
-              {(module.type === 'PRE_QUIZ' || module.type === 'POST_QUIZ') && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="font-bold border-primary/20 hover:border-primary/50 hover:bg-primary/5"
-                  onClick={() => setQuizBuilderState({
-                    isOpen: true,
-                    moduleId: module.id,
-                    moduleTitle: module.title
-                  })}
-                >
-                  <Settings className="mr-2 h-3.5 w-3.5" /> Manage Quiz
-                </Button>
+              {!readonly ? (
+                <>
+                  {(module.type === 'PRE_QUIZ' || module.type === 'POST_QUIZ') && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="font-bold border-primary/20 hover:border-primary/50 hover:bg-primary/5"
+                      onClick={() => setQuizBuilderState({
+                        isOpen: true,
+                        moduleId: module.id,
+                        moduleTitle: module.title
+                      })}
+                    >
+                      <Settings className="mr-2 h-3.5 w-3.5" /> Manage Quiz
+                    </Button>
+                  )}
+                  
+                  {module.type === 'VIDEO' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="font-bold border-secondary/20 hover:border-secondary/50 hover:bg-secondary/5"
+                      onClick={() => setVideoModalState({
+                        isOpen: true,
+                        moduleId: module.id
+                      })}
+                    >
+                      <VideoIcon className="mr-2 h-3.5 w-3.5" /> Manage Video
+                    </Button>
+                  )}
+
+                  {module.type === 'WORKSHOP' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="font-bold border-green-500/20 hover:border-green-500/50 hover:bg-green-500/5"
+                      onClick={() => setWorkshopModalState({
+                        isOpen: true,
+                        moduleId: module.id
+                      })}
+                    >
+                      <BookOpen className="mr-2 h-3.5 w-3.5" /> Manage Activity
+                    </Button>
+                  )}
+
+                  {module.type === 'EVALUATION' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="font-bold border-blue-500/20 hover:border-blue-500/50 hover:bg-blue-500/5"
+                      onClick={() => setEvaluationModalState({
+                        isOpen: true,
+                        moduleId: module.id,
+                        category: TemplateCategory.COURSE_QUALITY
+                      })}
+                    >
+                      <ClipboardCheck className="mr-2 h-3.5 w-3.5" /> Manage Evaluation
+                    </Button>
+                  )}
+
+                  {module.type === 'ONLINE_EVALUATION' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="font-bold border-purple-500/20 hover:border-purple-500/50 hover:bg-purple-500/5"
+                      onClick={() => setEvaluationModalState({
+                        isOpen: true,
+                        moduleId: module.id,
+                        category: TemplateCategory.KASH_EVALUATION
+                      })}
+                    >
+                      <Award className="mr-2 h-3.5 w-3.5" /> Manage K.A.S.H.
+                    </Button>
+                  )}
+
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-muted-foreground hover:text-primary"
+                    onClick={() => setEditingModule(module)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={() => handleDeleteModule(module.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : (
+                <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/10">Read Only Mode</Badge>
               )}
-              
-              {module.type === 'VIDEO' && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="font-bold border-secondary/20 hover:border-secondary/50 hover:bg-secondary/5"
-                  onClick={() => setVideoModalState({
-                    isOpen: true,
-                    moduleId: module.id
-                  })}
-                >
-                  <VideoIcon className="mr-2 h-3.5 w-3.5" /> Manage Video
-                </Button>
-              )}
-
-              {module.type === 'WORKSHOP' && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="font-bold border-green-500/20 hover:border-green-500/50 hover:bg-green-500/5"
-                  onClick={() => setWorkshopModalState({
-                    isOpen: true,
-                    moduleId: module.id
-                  })}
-                >
-                  <BookOpen className="mr-2 h-3.5 w-3.5" /> Manage Activity
-                </Button>
-              )}
-
-              {module.type === 'EVALUATION' && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="font-bold border-blue-500/20 hover:border-blue-500/50 hover:bg-blue-500/5"
-                  onClick={() => setEvaluationModalState({
-                    isOpen: true,
-                    moduleId: module.id,
-                    category: TemplateCategory.COURSE_QUALITY
-                  })}
-                >
-                  <ClipboardCheck className="mr-2 h-3.5 w-3.5" /> Manage Evaluation
-                </Button>
-              )}
-
-              {module.type === 'ONLINE_EVALUATION' && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="font-bold border-purple-500/20 hover:border-purple-500/50 hover:bg-purple-500/5"
-                  onClick={() => setEvaluationModalState({
-                    isOpen: true,
-                    moduleId: module.id,
-                    category: TemplateCategory.KASH_EVALUATION
-                  })}
-                >
-                  <Award className="mr-2 h-3.5 w-3.5" /> Manage K.A.S.H.
-                </Button>
-              )}
-
-
-
-              
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-muted-foreground hover:text-primary"
-                onClick={() => setEditingModule(module)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-muted-foreground hover:text-destructive"
-                onClick={() => handleDeleteModule(module.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </CardContent>
@@ -253,6 +252,60 @@ export const CourseBuilder: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const isReadonly = course?.status === 'PUBLISHED' || course?.status === 'ARCHIVED' || course?.status === 'RETIRED';
+
+  const [identityForm, setIdentityForm] = useState({
+    title: '',
+    description: '',
+    passingGrade: 70,
+    targetAudience: 'GENERAL',
+    targetDepartments: [] as string[]
+  });
+
+  const [isSavingIdentity, setIsSavingIdentity] = useState(false);
+  const [editingModule, setEditingModule] = useState<any>(null);
+  const [isProcessingModule, setIsProcessingModule] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  useEffect(() => {
+    fetchCourse();
+    fetchDepartments();
+  }, [courseId]);
+
+  const fetchCourse = async () => {
+    if (!courseId) return;
+    try {
+      const data = await coursesApi.getById(courseId);
+      setCourse(data);
+      setIdentityForm({
+        title: data.title,
+        description: data.description || '',
+        passingGrade: data.passingGrade,
+        targetAudience: data.targetAudience,
+        targetDepartments: data.targetDepartments
+      });
+    } catch (error) {
+      toast.error('Failed to load course details');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const data = await departmentsApi.getAll();
+      setDepartments(data);
+    } catch (error) {
+      console.error('Failed to fetch departments');
+    }
+  };
+
   const handleUpdateStatus = async (status: string) => {
     if (!courseId) return;
     try {
@@ -264,8 +317,6 @@ export const CourseBuilder: React.FC = () => {
     }
   };
 
-  
-  // New Module State
   const [isAddingModule, setIsAddingModule] = useState(false);
   const [newModule, setNewModule] = useState<{title: string, type: string, facilitators: string[]}>({
     title: '',
@@ -273,26 +324,21 @@ export const CourseBuilder: React.FC = () => {
     facilitators: []
   });
 
-  // Quiz Builder State
   const [quizBuilderState, setQuizBuilderState] = useState<{ isOpen: boolean, moduleId: string, moduleTitle: string }>({
     isOpen: false,
     moduleId: '',
     moduleTitle: ''
   });
-  // Video Management State
+
   const [videoModalState, setVideoModalState] = useState<{ isOpen: boolean, moduleId: string }>({
     isOpen: false,
     moduleId: ''
   });
 
-
-  // Workshop Activity State
   const [workshopModalState, setWorkshopModalState] = useState<{ isOpen: boolean, moduleId: string }>({
     isOpen: false,
     moduleId: ''
   });
-
-  // Evaluation Template Picker State
 
   const [evaluationModalState, setEvaluationModalState] = useState<{ isOpen: boolean, moduleId: string, category: TemplateCategory }>({
     isOpen: false,
@@ -300,80 +346,16 @@ export const CourseBuilder: React.FC = () => {
     category: TemplateCategory.COURSE_QUALITY
   });
 
-
-
-
-  // Module Management State
-  const [editingModule, setEditingModule] = useState<any>(null);
-  const [isProcessingModule, setIsProcessingModule] = useState(false);
-
-  // Course Identity State
-  const [identityForm, setIdentityForm] = useState({
-    title: '',
-    description: '',
-    targetAudience: '',
-    targetDepartments: [] as string[],
-    passingGrade: 80
-  });
-  const [isSavingIdentity, setIsSavingIdentity] = useState(false);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const fetchCourse = async () => {
-    if (!courseId) return;
-    setIsLoading(true);
-    try {
-      const [courseData, deptsData] = await Promise.all([
-        coursesApi.getById(courseId),
-        departmentsApi.getAll()
-      ]);
-      
-      setDepartments(deptsData);
-
-      // Sort modules by sequenceOrder
-      if (courseData.modules) {
-        courseData.modules.sort((a, b) => a.sequenceOrder - b.sequenceOrder);
-      }
-      setCourse(courseData);
-      setIdentityForm({
-        title: courseData.title,
-        description: courseData.description || '',
-        targetAudience: courseData.targetAudience,
-        targetDepartments: courseData.targetDepartments || [],
-        passingGrade: courseData.passingGrade || 80
-      });
-    } catch (error) {
-      toast.error('Failed to load course details');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCourse();
-  }, [courseId]);
-
   const handleAddModule = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!courseId || !course) return;
-
+    if (!courseId) return;
     setIsAddingModule(true);
     try {
-      const nextOrder = course.modules && course.modules.length > 0 
-        ? Math.max(...course.modules.map(m => m.sequenceOrder)) + 1 
-        : 1;
-
       await coursesApi.addModule(courseId, {
         ...newModule,
-        sequenceOrder: nextOrder
+        sequenceOrder: (course?.modules?.length || 0) + 1
       });
-      
-      toast.success('Module added successfully');
+      toast.success('Module added to curriculum loop');
       setNewModule({ title: '', type: 'VIDEO', facilitators: [] });
       fetchCourse();
     } catch (error: any) {
@@ -416,14 +398,9 @@ export const CourseBuilder: React.FC = () => {
     const newIndex = course.modules.findIndex((m) => m.id === over.id);
 
     const newModules = arrayMove(course.modules, oldIndex, newIndex);
-    
-    // Optimistic update
     setCourse({ ...course, modules: newModules });
 
     try {
-      // Update all modules in the new order (or just the ones that changed)
-      // For simplicity, let's update them one by one or create a bulk reorder API
-      // I'll update sequenceOrder for all affected modules
       await Promise.all(
         newModules.map((m, idx) => 
           coursesApi.updateModule(courseId!, m.id, { sequenceOrder: idx + 1 })
@@ -432,7 +409,7 @@ export const CourseBuilder: React.FC = () => {
       toast.success('Sequence updated');
     } catch (err) {
       toast.error('Failed to update sequence');
-      fetchCourse(); // Revert on failure
+      fetchCourse();
     }
   };
 
@@ -456,45 +433,45 @@ export const CourseBuilder: React.FC = () => {
   };
 
   const handleDeleteModule = async (moduleId: string) => {
-    if (!courseId || !window.confirm('Are you sure you want to remove this component from the loop?')) return;
+    if (!courseId || !window.confirm('Retire this module from the curriculum?')) return;
     try {
       await coursesApi.deleteModule(courseId, moduleId);
-      toast.success('Module removed');
+      toast.success('Module retired');
       fetchCourse();
     } catch (error) {
-      toast.error('Failed to delete module');
+      toast.error('Failed to retire module');
     }
   };
 
-  const handleVideoUploadSuccess = async (videoUrl: string) => {
+  const handleVideoUploadSuccess = async (url: string) => {
     if (!courseId || !videoModalState.moduleId) return;
     try {
-      await coursesApi.updateModule(courseId, videoModalState.moduleId, {
-        contentUrlOrText: videoUrl
-      });
+      await coursesApi.updateModule(courseId, videoModalState.moduleId, { contentUrlOrText: url });
+      toast.success('Video content production complete');
+      setVideoModalState({ isOpen: false, moduleId: '' });
       fetchCourse();
     } catch (error) {
-      toast.error('Failed to save video reference');
+      toast.error('Failed to link video content');
     }
   };
-
 
   const getModuleIcon = (type: string) => {
     switch (type) {
-      case 'PRE_QUIZ': return <div className="p-2 rounded-lg bg-primary/10 text-primary"><HelpCircle className="h-5 w-5" /></div>;
-      case 'POST_QUIZ': return <div className="p-2 rounded-lg bg-primary/20 text-primary"><HelpCircle className="h-5 w-5" /></div>;
-      case 'VIDEO': return <div className="p-2 rounded-lg bg-secondary/10 text-secondary-foreground"><Play className="h-5 w-5" /></div>;
-      case 'WORKSHOP': return <div className="p-2 rounded-lg bg-primary/10 text-primary"><FileText className="h-5 w-5" /></div>;
-      case 'EVALUATION': return <div className="p-2 rounded-lg bg-secondary/20 text-secondary-foreground"><ClipboardCheck className="h-5 w-5" /></div>;
-      case 'ONLINE_EVALUATION': return <div className="p-2 rounded-lg bg-secondary/20 text-secondary-foreground"><ClipboardCheck className="h-5 w-5" /></div>;
-      default: return <div className="p-2 rounded-lg bg-muted text-muted-foreground"><MessageSquare className="h-5 w-5" /></div>;
+      case 'PRE_QUIZ': return <ClipboardCheck className="h-6 w-6 text-primary" />;
+      case 'VIDEO': return <Play className="h-6 w-6 text-secondary" />;
+      case 'WORKSHOP': return <BookOpen className="h-6 w-6 text-green-500" />;
+      case 'POST_QUIZ': return <Award className="h-6 w-6 text-primary" />;
+      case 'EVALUATION': return <FileText className="h-6 w-6 text-blue-500" />;
+      case 'ONLINE_EVALUATION': return <Award className="h-6 w-6 text-purple-500" />;
+      default: return <FileText className="h-6 w-6 text-muted-foreground" />;
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      <div className="flex flex-col items-center justify-center min-h-[600px] gap-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" />
+        <p className="text-muted-foreground font-medium animate-pulse">Syncing with Digital Twin...</p>
       </div>
     );
   }
@@ -520,6 +497,7 @@ export const CourseBuilder: React.FC = () => {
               {course.status === 'PENDING_APPROVAL' && <Badge variant="warning" className="text-[10px] font-black uppercase px-2 py-0 animate-pulse">PENDING</Badge>}
               {course.status === 'DRAFT' && <Badge variant="outline" className="text-[10px] font-black uppercase px-2 py-0 text-muted-foreground border-dashed">DRAFT</Badge>}
               {course.status === 'ARCHIVED' && <Badge variant="outline" className="text-[10px] font-black uppercase px-2 py-0 bg-muted text-muted-foreground border-none">ARCHIVED</Badge>}
+              {course.status === 'RETIRED' && <Badge variant="destructive" className="text-[10px] font-black uppercase px-2 py-0">RETIRED</Badge>}
             </div>
 
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -532,44 +510,48 @@ export const CourseBuilder: React.FC = () => {
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="h-10 px-4">
-            <Settings className="mr-2 h-4 w-4" /> Course Config
-          </Button>
-          {course.status === 'DRAFT' && (
-            <Button 
-              size="sm" 
-              className="h-10 px-4 shadow-lg shadow-primary/20"
-              onClick={() => handleUpdateStatus('PENDING_APPROVAL')}
-            >
-              <Clock className="mr-2 h-4 w-4" /> Request Approval
-            </Button>
-          )}
-
-          {course.status === 'PENDING_APPROVAL' && (
-            <div className="flex gap-2">
-              <Badge variant="secondary" className="h-10 px-4 flex items-center bg-yellow-500/10 text-yellow-600 border-none animate-pulse">
-                <Clock className="mr-2 h-4 w-4" /> Pending Approval
-              </Badge>
-              {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
-                <>
-                  <Button 
-                    size="sm" 
-                    variant="destructive"
-                    className="h-10 px-4 shadow-lg shadow-destructive/20"
-                    onClick={() => handleUpdateStatus('DRAFT')}
-                  >
-                    <XCircle className="mr-2 h-4 w-4" /> Reject
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    className="h-10 px-4 shadow-lg shadow-success/20 bg-success hover:bg-success/90"
-                    onClick={() => handleUpdateStatus('PUBLISHED')}
-                  >
-                    <CheckCircle className="mr-2 h-4 w-4" /> Approve & Publish
-                  </Button>
-                </>
+          {!isReadonly && (
+            <>
+              <Button variant="outline" size="sm" className="h-10 px-4">
+                <Settings className="mr-2 h-4 w-4" /> Course Config
+              </Button>
+              {course.status === 'DRAFT' && (
+                <Button 
+                  size="sm" 
+                  className="h-10 px-4 shadow-lg shadow-primary/20"
+                  onClick={() => handleUpdateStatus('PENDING_APPROVAL')}
+                >
+                  <Clock className="mr-2 h-4 w-4" /> Request Approval
+                </Button>
               )}
-            </div>
+
+              {course.status === 'PENDING_APPROVAL' && (
+                <div className="flex gap-2">
+                  <Badge variant="secondary" className="h-10 px-4 flex items-center bg-yellow-500/10 text-yellow-600 border-none animate-pulse">
+                    <Clock className="mr-2 h-4 w-4" /> Pending Approval
+                  </Badge>
+                  {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
+                    <>
+                      <Button 
+                        size="sm" 
+                        variant="destructive"
+                        className="h-10 px-4 shadow-lg shadow-destructive/20"
+                        onClick={() => handleUpdateStatus('DRAFT')}
+                      >
+                        <XCircle className="mr-2 h-4 w-4" /> Reject
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        className="h-10 px-4 shadow-lg shadow-success/20 bg-success hover:bg-success/90"
+                        onClick={() => handleUpdateStatus('PUBLISHED')}
+                      >
+                        <CheckCircle className="mr-2 h-4 w-4" /> Approve & Publish
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           {course.status === 'PUBLISHED' && (
@@ -577,8 +559,12 @@ export const CourseBuilder: React.FC = () => {
               <CheckCircle2 className="h-4 w-4" /> Published & Live
             </Badge>
           )}
+          {isReadonly && course.status !== 'PUBLISHED' && (
+             <Badge variant="outline" className="h-10 px-4 flex items-center gap-2 text-sm bg-muted text-muted-foreground border-none">
+                <Eye className="h-4 w-4" /> Read Only Mode
+             </Badge>
+          )}
         </div>
-
       </div>
 
       <Tabs defaultValue="curriculum" className="w-full">
@@ -596,29 +582,29 @@ export const CourseBuilder: React.FC = () => {
 
         <TabsContent value="curriculum" className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Left Column: Visual Timeline */}
             <div className="lg:col-span-3 space-y-6">
               <div className="relative pl-8 space-y-8 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-primary before:via-primary/50 before:to-transparent">
                 {course.modules?.length === 0 ? (
                   <div className="ml-4 p-12 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center text-muted-foreground bg-muted/5">
                     <Layers className="h-12 w-12 mb-4 opacity-20" />
-                    <p className="text-lg font-medium italic">No modules in the loop yet.</p>
-                    <p className="text-sm opacity-60">Begin by adding your first module from the right panel.</p>
-                  </div>                ) : (
+                    <p className="text-xl font-bold">No modules added yet.</p>
+                    <p className="text-sm">Start building your curriculum loop by adding your first component.</p>
+                  </div>
+                ) : (
                   <DndContext 
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
+                    sensors={sensors} 
+                    collisionDetection={closestCenter} 
                     onDragEnd={handleDragEnd}
                   >
                     <SortableContext 
-                      items={(course.modules || []).map(m => m.id)}
+                      items={(course.modules || []).map(m => m.id)} 
                       strategy={verticalListSortingStrategy}
+                      disabled={isReadonly}
                     >
                       {(course.modules || []).map((module, index) => (
-
                         <SortableModuleItem 
-                          key={module.id}
-                          module={module}
+                          key={module.id} 
+                          module={module} 
                           index={index}
                           getModuleIcon={getModuleIcon}
                           setQuizBuilderState={setQuizBuilderState}
@@ -626,120 +612,65 @@ export const CourseBuilder: React.FC = () => {
                           setWorkshopModalState={setWorkshopModalState}
                           setEvaluationModalState={setEvaluationModalState}
                           setEditingModule={setEditingModule}
-
                           handleDeleteModule={handleDeleteModule}
+                          readonly={isReadonly}
                         />
-
-
                       ))}
                     </SortableContext>
                   </DndContext>
                 )}
-                
-                {/* Visual End Indicator */}
-                {course.modules && course.modules.length > 0 && (
-                  <div className="ml-4 pt-4 flex items-center gap-4 opacity-50">
-                    <div className="absolute -left-[33px] h-4 w-4 rounded-full border-2 border-muted-foreground/30 bg-muted" />
-                    <div className="font-bold text-xs uppercase tracking-[0.2em] text-muted-foreground italic flex items-center gap-2">
-                      <ChevronDown className="h-3 w-3" /> End of Learning Loop
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* Right Column: Component Adder */}
-            <div className="space-y-6">
-              <Card className="border-none shadow-xl bg-primary/5 sticky top-24">
-                <CardHeader>
-                  <CardTitle className="text-lg">Add Module</CardTitle>
-                  <CardDescription>Expand the sequence.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleAddModule} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="m-title" className="text-xs font-bold uppercase tracking-wider">Identity</Label>
-                      <Input 
-                        id="m-title" 
-                        required 
-                        value={newModule.title}
-                        onChange={(e) => setNewModule({...newModule, title: e.target.value})}
-                        placeholder="Module Title"
-                        className="bg-background border-none shadow-inner h-11"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold uppercase tracking-wider">Type</Label>
-                      <Select 
-                        value={newModule.type} 
-                        onValueChange={(val) => setNewModule({...newModule, type: val})}
-                      >
-                        <SelectTrigger className="bg-background border-none shadow-inner h-11">
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="PRE_QUIZ">Pre-Quiz</SelectItem>
-                          <SelectItem value="VIDEO">Video Production</SelectItem>
-                          <SelectItem value="WORKSHOP">Workshop / Activity</SelectItem>
-                          <SelectItem value="POST_QUIZ">Post-Quiz Assessment</SelectItem>
-                          <SelectItem value="EVALUATION">Quality Evaluation</SelectItem>
-                          <SelectItem value="ONLINE_EVALUATION">Online Evaluation (K.A.S.H.)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {newModule.type === 'ONLINE_EVALUATION' && (
-                      <div className="space-y-3 p-4 border rounded-xl bg-background/50 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <Label className="text-xs font-bold uppercase tracking-wider text-primary">Facilitators / Speakers</Label>
-                        <div className="space-y-2">
-                          {newModule.facilitators.map((f, i) => (
-                            <div key={i} className="flex gap-2">
-                              <Input 
-                                value={f} 
-                                onChange={(e) => {
-                                  const updated = [...newModule.facilitators];
-                                  updated[i] = e.target.value;
-                                  setNewModule({...newModule, facilitators: updated});
-                                }}
-                                placeholder="Facilitator Name"
-                                className="h-9 text-sm"
-                              />
-                              <Button 
-                                type="button" 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-9 w-9 text-destructive"
-                                onClick={() => {
-                                  const updated = newModule.facilitators.filter((_, idx) => idx !== i);
-                                  setNewModule({...newModule, facilitators: updated});
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="sm" 
-                            className="w-full h-9 border-dashed"
-                            onClick={() => setNewModule({...newModule, facilitators: [...newModule.facilitators, '']})}
-                          >
-                            <Plus className="mr-2 h-3 w-3" /> Add Speaker
-                          </Button>
-                        </div>
+            {!isReadonly && (
+              <div className="space-y-6">
+                <Card className="border-none shadow-xl bg-primary/5 sticky top-24">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Add Module</CardTitle>
+                    <CardDescription>Expand the sequence.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleAddModule} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="m-title" className="text-xs font-bold uppercase tracking-wider">Identity</Label>
+                        <Input 
+                          id="m-title" 
+                          required 
+                          value={newModule.title}
+                          onChange={(e) => setNewModule({...newModule, title: e.target.value})}
+                          placeholder="e.g. Introduction to Policy"
+                          className="h-10 bg-background/50"
+                        />
                       </div>
-                    )}
-
-                    <Button type="submit" className="w-full h-11 shadow-lg shadow-primary/10 font-bold" disabled={isAddingModule}>
-                      {isAddingModule ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                      Add Module
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Component Type</Label>
+                        <Select value={newModule.type} onValueChange={(val) => setNewModule({...newModule, type: val})}>
+                          <SelectTrigger className="h-10 bg-background/50 font-bold">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="VIDEO" className="font-bold">Interactive Video</SelectItem>
+                            <SelectItem value="PRE_QUIZ" className="font-bold">Assessment: Pre-Quiz</SelectItem>
+                            <SelectItem value="POST_QUIZ" className="font-bold">Assessment: Post-Quiz</SelectItem>
+                            <SelectItem value="WORKSHOP" className="font-bold">Workshop/Activity</SelectItem>
+                            <SelectItem value="EVALUATION" className="font-bold">Quality Survey</SelectItem>
+                            <SelectItem value="ONLINE_EVALUATION" className="font-bold">K.A.S.H. Assessment</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button 
+                        type="submit" 
+                        className="w-full h-10 font-bold shadow-lg shadow-primary/20"
+                        disabled={isAddingModule}
+                      >
+                        {isAddingModule ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                        Inject Module
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         </TabsContent>
 
@@ -749,10 +680,10 @@ export const CourseBuilder: React.FC = () => {
             initialData={{
               backgroundUrl: (course as any).certificateBackgroundUrl,
               designConfig: (course as any).certificateDesignConfig
-          }}
+            }}
+          />
+        </TabsContent>
 
-        />
-      </TabsContent>
         <TabsContent value="settings">
           <div className="space-y-8">
             <Card className="border-none shadow-lg">
@@ -766,6 +697,7 @@ export const CourseBuilder: React.FC = () => {
                     <Label htmlFor="c-title">Course Title</Label>
                     <Input 
                       id="c-title" 
+                      disabled={isReadonly}
                       value={identityForm.title}
                       onChange={(e) => setIdentityForm({...identityForm, title: e.target.value})}
                     />
@@ -773,6 +705,7 @@ export const CourseBuilder: React.FC = () => {
                   <div className="space-y-2">
                     <Label>Target Audience</Label>
                     <Select 
+                      disabled={isReadonly}
                       value={identityForm.targetAudience} 
                       onValueChange={(val) => setIdentityForm({...identityForm, targetAudience: val})}
                     >
@@ -797,21 +730,25 @@ export const CourseBuilder: React.FC = () => {
                     selected={identityForm.targetDepartments}
                     onChange={(selected) => setIdentityForm({ ...identityForm, targetDepartments: selected })}
                   />
+
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="c-desc">Executive Summary / Description</Label>
                   <Textarea 
                     id="c-desc" 
+                    disabled={isReadonly}
                     value={identityForm.description}
                     onChange={(e) => setIdentityForm({...identityForm, description: e.target.value})}
                     className="min-h-[100px]"
                   />
                 </div>
-                <Button onClick={handleUpdateIdentity} disabled={isSavingIdentity} className="h-11 shadow-lg shadow-primary/10 font-bold">
-                  {isSavingIdentity ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                  Save Configuration
-                </Button>
+                {!isReadonly && (
+                  <Button onClick={handleUpdateIdentity} disabled={isSavingIdentity} className="h-11 shadow-lg shadow-primary/10 font-bold">
+                    {isSavingIdentity ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Save Configuration
+                  </Button>
+                )}
               </CardContent>
             </Card>
 
@@ -829,6 +766,7 @@ export const CourseBuilder: React.FC = () => {
                     </p>
                   </div>
                   <Switch 
+                    disabled={isReadonly}
                     checked={course.requires180DayEval} 
                     onCheckedChange={handleToggleEval}
                   />
@@ -846,6 +784,7 @@ export const CourseBuilder: React.FC = () => {
                       type="number" 
                       min="0" 
                       max="100" 
+                      disabled={isReadonly}
                       value={identityForm.passingGrade}
                       onChange={(e) => setIdentityForm({...identityForm, passingGrade: parseInt(e.target.value) || 0})}
                       className="bg-background font-bold text-center h-11"
@@ -936,7 +875,6 @@ export const CourseBuilder: React.FC = () => {
         onClose={() => setEvaluationModalState({ ...evaluationModalState, isOpen: false })}
         onUpdate={fetchCourse}
       />
-
     </div>
   );
 };

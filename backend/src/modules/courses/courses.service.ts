@@ -4,17 +4,20 @@ import { Role, CourseStatus } from '@prisma/client';
 
 
 export class CoursesService {
-  static async getAll(userId: string, role: string) {
+  static async getAll(userId: string, role: string, tab: string = 'active') {
+    const isRetired = tab === 'retired';
+    
     if (role === Role.EMPLOYEE) {
-      // Employees: Show courses they are enrolled in or that are published
+      // Employees: Show latest active published courses or enrolled ones
       return prisma.course.findMany({
         where: {
+          isLatest: true,
+          status: CourseStatus.PUBLISHED,
           OR: [
             { status: CourseStatus.PUBLISHED },
             { enrollments: { some: { userId } } }
           ]
         },
-
         include: {
           lecturer: { select: { firstName: true, lastName: true } },
           _count: { select: { modules: true } }
@@ -22,16 +25,24 @@ export class CoursesService {
       });
     }
 
+    const baseWhere: any = {
+      isLatest: true,
+      status: isRetired ? CourseStatus.RETIRED : { not: CourseStatus.RETIRED }
+    };
+
     if (role === Role.COURSE_CREATOR) {
-      // COURSE_CREATORs: Show courses they created
       return prisma.course.findMany({
-        where: { lecturerId: userId },
+        where: { 
+          ...baseWhere,
+          lecturerId: userId 
+        },
         include: { _count: { select: { modules: true } } }
       });
     }
 
-    // Admin/HR: See everything
+    // Admin/HR: See everything filtered by isLatest
     return prisma.course.findMany({
+      where: baseWhere,
       include: {
         lecturer: { select: { firstName: true, lastName: true } },
         _count: { select: { modules: true } }
@@ -53,7 +64,9 @@ export class CoursesService {
     return prisma.course.create({
       data: {
         ...data,
-        lecturerId
+        lecturerId,
+        isLatest: true,
+        version: 1
       }
     });
   }
@@ -226,14 +239,14 @@ export class CoursesService {
     const pId = current.parentId || current.id;
 
     return prisma.$transaction(async (tx) => {
-      // 1. Archive previous published version
+      // 1. Archive previous active version (Published or Retired)
       await tx.course.updateMany({
         where: {
           OR: [
             { id: pId },
             { parentId: pId }
           ],
-          status: CourseStatus.PUBLISHED,
+          status: { in: [CourseStatus.PUBLISHED, CourseStatus.RETIRED] },
           id: { not: courseId }
         },
         data: {
@@ -252,6 +265,119 @@ export class CoursesService {
       });
     });
   }
+
+  static async getVersions(parentId: string) {
+    return prisma.course.findMany({
+      where: {
+        OR: [
+          { id: parentId },
+          { parentId: parentId }
+        ]
+      },
+      orderBy: { version: 'desc' },
+      include: {
+        lecturer: { select: { firstName: true, lastName: true } }
+      }
+    });
+  }
+
+  static async restoreVersion(versionId: string) {
+    const versionToRestore = await prisma.course.findUnique({
+      where: { id: versionId },
+      include: {
+        modules: {
+          include: {
+            quizQuestions: {
+              include: {
+                options: true
+              }
+            }
+          }
+        },
+        certificateTemplate: true
+      }
+    });
+
+    if (!versionToRestore) throw new Error('Version not found');
+
+    const pId = versionToRestore.parentId || versionToRestore.id;
+    const latestVersion = await prisma.course.findFirst({
+      where: {
+        OR: [
+          { id: pId },
+          { parentId: pId }
+        ]
+      },
+      orderBy: { version: 'desc' }
+    });
+
+    const newVersionNum = (latestVersion?.version || 0) + 1;
+
+    return prisma.$transaction(async (tx) => {
+      return tx.course.create({
+        data: {
+          title: `${versionToRestore.title} (Restored v${versionToRestore.version})`,
+          description: versionToRestore.description,
+          thumbnailUrl: versionToRestore.thumbnailUrl,
+          passingGrade: versionToRestore.passingGrade,
+          targetAudience: versionToRestore.targetAudience,
+          targetDepartments: versionToRestore.targetDepartments,
+          requires180DayEval: versionToRestore.requires180DayEval,
+          lecturerId: versionToRestore.lecturerId,
+          evaluationFormId: versionToRestore.evaluationFormId,
+          status: CourseStatus.DRAFT,
+          version: newVersionNum,
+          parentId: pId,
+          isLatest: false,
+          modules: {
+            create: versionToRestore.modules.map(module => ({
+              title: module.title,
+              type: module.type,
+              sequenceOrder: module.sequenceOrder,
+              contentUrlOrText: module.contentUrlOrText,
+              durationSeconds: module.durationSeconds,
+              facilitators: module.facilitators,
+              shuffleQuestions: module.shuffleQuestions,
+              shuffleOptions: module.shuffleOptions,
+              activityInstructions: module.activityInstructions,
+              activityTemplateUrl: module.activityTemplateUrl,
+              checkerType: module.checkerType,
+              specificCheckerId: module.specificCheckerId,
+              evaluationTemplateId: module.evaluationTemplateId,
+              quizQuestions: {
+                create: module.quizQuestions.map(q => ({
+                  questionText: q.questionText,
+                  sequenceOrder: q.sequenceOrder,
+                  options: {
+                    create: q.options.map(opt => ({
+                      optionText: opt.optionText,
+                      isCorrect: opt.isCorrect
+                    }))
+                  }
+                }))
+              }
+            }))
+          },
+          ...(versionToRestore.certificateTemplate && {
+            certificateTemplate: {
+              create: {
+                backgroundImageUrl: versionToRestore.certificateTemplate.backgroundImageUrl,
+                designConfig: versionToRestore.certificateTemplate.designConfig as any
+              }
+            }
+          })
+        }
+      });
+    });
+  }
+
+  static async unretire(id: string) {
+    return prisma.course.update({
+      where: { id },
+      data: { status: CourseStatus.DRAFT }
+    });
+  }
 }
+
 
 

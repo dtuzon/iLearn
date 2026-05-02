@@ -6,7 +6,8 @@ export interface Course {
   description: string | null;
   thumbnailUrl: string | null;
   isPublished: boolean; // Keep for compatibility if needed, but we should use status
-  status: 'DRAFT' | 'PENDING_APPROVAL' | 'PUBLISHED' | 'ARCHIVED';
+  status: 'DRAFT' | 'PENDING_APPROVAL' | 'PUBLISHED' | 'ARCHIVED' | 'RETIRED';
+
   version: number;
   parentId: string | null;
   isLatest: boolean;
@@ -42,10 +43,11 @@ export interface CourseModule {
 
 
 export const coursesApi = {
-  getAll: async () => {
-    const response = await apiClient.get('/courses');
+  getAll: async (tab: string = 'active') => {
+    const response = await apiClient.get(`/courses?tab=${tab}`);
     return response.data as Course[];
   },
+
   getById: async (id: string) => {
     const response = await apiClient.get(`/courses/${id}`);
     return response.data as Course;
@@ -84,7 +86,20 @@ export const coursesApi = {
   createDraftVersion: async (courseId: string) => {
     const response = await apiClient.post(`/courses/${courseId}/create-draft-version`);
     return response.data as Course;
+  },
+  getVersions: async (parentId: string) => {
+    const response = await apiClient.get(`/courses/${parentId}/versions`);
+    return response.data as Course[];
+  },
+  restoreVersion: async (versionId: string) => {
+    const response = await apiClient.post(`/courses/${versionId}/restore-version`);
+    return response.data as Course;
+  },
+  unretire: async (courseId: string) => {
+    const response = await apiClient.put(`/courses/${courseId}/unretire`);
+    return response.data as Course;
   }
 };
+
 
 
