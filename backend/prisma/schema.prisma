@@ -182,18 +182,20 @@ model SystemSettings {
 }
 
 model Notification {
-  id          String   @id @default(cuid())
-  userId      String   // The user receiving the notification
-  title       String
-  message     String
-  isRead      Boolean  @default(false)
-  actionUrl   String?  // The URL to route to when clicked (e.g., the specific course/module)
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String   // The user receiving the notification
+  title     String
+  message   String
+  type      String   @default("INFO") // e.g., "INFO", "ACTION_REQUIRED", "SUCCESS"
+  link      String?  // Optional URL to route to when clicked
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }
+
 
 
 // ─────────────────────────────────────────────
@@ -422,8 +424,10 @@ model Enrollment {
 
   moduleProgress     ModuleProgress[]
 
+  evaluation180DayTriggered Boolean @default(false)
 
   @@unique([userId, courseId])
+
   @@map("enrollments")
 }
 
