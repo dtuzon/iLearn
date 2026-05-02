@@ -144,7 +144,11 @@ export const ManageBulletinDialog: React.FC<ManageBulletinDialogProps> = ({ isOp
               />
               {file && <span className="text-xs text-muted-foreground truncate max-w-[200px]">{file.name}</span>}
             </div>
+            <p className="text-[10px] text-muted-foreground italic mt-1 pl-1">
+              Recommended resolution: 1200 x 400 pixels (3:1 aspect ratio). Images will be automatically cropped to fit.
+            </p>
           </div>
+
 
           <Button type="submit" disabled={isSubmitting} className="w-full">
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
