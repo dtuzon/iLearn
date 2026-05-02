@@ -38,7 +38,18 @@ import { departmentsApi } from '../../api/departments.api';
 import type { Department } from '../../api/departments.api';
 import { Checkbox } from '../../components/ui/checkbox';
 import { useAuth } from '../../context/AuthContext';
-import { CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertCircle, CopyPlus } from 'lucide-react';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle 
+} from '../../components/ui/alert-dialog';
+
 
 
 export const CourseManagement: React.FC = () => {
@@ -46,6 +57,11 @@ export const CourseManagement: React.FC = () => {
   const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Versioning State
+  const [courseToVersion, setCourseToVersion] = useState<Course | null>(null);
+  const [isVersioning, setIsVersioning] = useState(false);
+
 
   
   // Create Dialog State
@@ -124,12 +140,38 @@ export const CourseManagement: React.FC = () => {
     }
   };
 
+  const handleEdit = (course: Course) => {
+    if (course.status === 'PUBLISHED') {
+      setCourseToVersion(course);
+    } else {
+      navigate(`/creator/courses/${course.id}`);
+    }
+  };
+
+  const handleCreateDraftVersion = async () => {
+    if (!courseToVersion) return;
+    setIsVersioning(true);
+    try {
+      const newDraft = await coursesApi.createDraftVersion(courseToVersion.id);
+      toast.success('Deep clone successful. Redirecting to new draft...');
+      navigate(`/creator/courses/${newDraft.id}`);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to create new version');
+    } finally {
+      setIsVersioning(false);
+      setCourseToVersion(null);
+    }
+  };
+
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'PUBLISHED': return <Badge className="bg-success/10 text-success border-none px-3 py-1">LIVE</Badge>;
       case 'PENDING_APPROVAL': return <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 border-none px-3 py-1 animate-pulse">PENDING</Badge>;
       case 'DRAFT': return <Badge variant="outline" className="text-muted-foreground border-dashed px-3 py-1">DRAFT</Badge>;
+      case 'ARCHIVED': return <Badge variant="outline" className="bg-muted text-muted-foreground border-none px-3 py-1">ARCHIVED</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
+
     }
   };
 
@@ -401,12 +443,18 @@ export const CourseManagement: React.FC = () => {
                       key={course.id} 
                       className={cn(
                         "hover:bg-primary/5 transition-colors cursor-pointer group",
-                        index % 2 === 0 ? "bg-background" : "bg-muted/10"
+                        index % 2 === 0 ? "bg-background" : "bg-muted/10",
+                        course.status === 'ARCHIVED' && "opacity-60"
                       )}
-                      onClick={() => navigate(`/creator/courses/${course.id}`)}
+                      onClick={() => handleEdit(course)}
+
                     >
                       <TableCell>
-                        <div className="font-semibold text-base group-hover:text-primary transition-colors">{course.title}</div>
+                        <div className="font-semibold text-base group-hover:text-primary transition-colors flex items-center gap-2">
+                          {course.title}
+                          <Badge variant="outline" className="text-[10px] h-4 px-1 font-mono opacity-60">v{course.version}</Badge>
+                        </div>
+
                         <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{course.description || 'No description provided.'}</div>
                       </TableCell>
                       <TableCell>
@@ -441,9 +489,10 @@ export const CourseManagement: React.FC = () => {
                             <DropdownMenuContent align="end" className="w-48">
                               <DropdownMenuLabel>Course Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => navigate(`/creator/courses/${course.id}`)}>
+                              <DropdownMenuItem onClick={() => handleEdit(course)}>
                                 <Edit3 className="mr-2 h-4 w-4" /> Edit Blueprint
                               </DropdownMenuItem>
+
                               <DropdownMenuItem className="text-destructive">
                                 <Trash2 className="mr-2 h-4 w-4" /> Retire Course
                               </DropdownMenuItem>
@@ -459,7 +508,35 @@ export const CourseManagement: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!courseToVersion} onOpenChange={(open) => !open && setCourseToVersion(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <CopyPlus className="h-5 w-5 text-primary" />
+              Edit Published Course?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This course is currently live. To protect active learner progress, we will create a new **Draft version (v{(courseToVersion?.version || 0) + 1})** for you to edit. 
+              <br /><br />
+              The live version will remain unchanged until your new draft is approved and published.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleCreateDraftVersion}
+              disabled={isVersioning}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {isVersioning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              Create Draft Version
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
+
 

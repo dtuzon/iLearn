@@ -6,8 +6,12 @@ export interface Course {
   description: string | null;
   thumbnailUrl: string | null;
   isPublished: boolean; // Keep for compatibility if needed, but we should use status
-  status: 'DRAFT' | 'PENDING_APPROVAL' | 'PUBLISHED';
+  status: 'DRAFT' | 'PENDING_APPROVAL' | 'PUBLISHED' | 'ARCHIVED';
+  version: number;
+  parentId: string | null;
+  isLatest: boolean;
   passingGrade: number;
+
 
   targetAudience: string;
   targetDepartments: string[];
@@ -76,6 +80,11 @@ export const coursesApi = {
   updateStatus: async (courseId: string, status: string) => {
     const response = await apiClient.patch(`/courses/${courseId}/status`, { status });
     return response.data;
+  },
+  createDraftVersion: async (courseId: string) => {
+    const response = await apiClient.post(`/courses/${courseId}/create-draft-version`);
+    return response.data as Course;
   }
 };
+
 

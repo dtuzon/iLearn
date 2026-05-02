@@ -86,6 +86,12 @@ router.post(
   CoursesController.uploadVideo
 );
 
+router.post(
+  '/:id/create-draft-version',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  auditLog('CREATE_COURSE_VERSION'),
+  CoursesController.createDraftVersion
+);
 
 export default router;
-

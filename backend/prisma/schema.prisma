@@ -44,7 +44,9 @@ enum CourseStatus {
   DRAFT
   PENDING_APPROVAL
   PUBLISHED
+  ARCHIVED
 }
+
 
 enum SubmissionStatus {
   PENDING
@@ -250,6 +252,13 @@ model Course {
   description  String?
   thumbnailUrl String?
   status       CourseStatus @default(DRAFT)
+  version      Int          @default(1)
+  parentId     String?      // Links new versions to the original course
+  isLatest     Boolean      @default(true) // Helper to quickly query the active version
+
+  parent       Course?      @relation("CourseVersions", fields: [parentId], references: [id])
+  versions     Course[]     @relation("CourseVersions")
+
 
   passingGrade Int      @default(80)
   createdAt    DateTime @default(now())

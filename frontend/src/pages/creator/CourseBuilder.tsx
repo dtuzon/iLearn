@@ -512,12 +512,16 @@ export const CourseBuilder: React.FC = () => {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-extrabold tracking-tight text-primary">{course.title}</h1>
+              <h1 className="text-3xl font-extrabold tracking-tight text-primary">
+                {course.title}
+                <span className="ml-2 text-sm font-mono opacity-40">v{course.version}</span>
+              </h1>
               {course.status === 'PUBLISHED' && <Badge variant="success" className="text-[10px] font-black uppercase px-2 py-0">PUBLISHED</Badge>}
               {course.status === 'PENDING_APPROVAL' && <Badge variant="warning" className="text-[10px] font-black uppercase px-2 py-0 animate-pulse">PENDING</Badge>}
               {course.status === 'DRAFT' && <Badge variant="outline" className="text-[10px] font-black uppercase px-2 py-0 text-muted-foreground border-dashed">DRAFT</Badge>}
-
+              {course.status === 'ARCHIVED' && <Badge variant="outline" className="text-[10px] font-black uppercase px-2 py-0 bg-muted text-muted-foreground border-none">ARCHIVED</Badge>}
             </div>
+
             <div className="flex items-center gap-2 text-muted-foreground">
               <Layers className="h-4 w-4" />
               <span className="text-sm font-medium">Authoring Studio</span>

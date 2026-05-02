@@ -127,10 +127,131 @@ export class CoursesService {
   }
 
   static async updateStatus(id: string, status: CourseStatus) {
+    if (status === CourseStatus.PUBLISHED) {
+      return this.publishCourse(id);
+    }
     return prisma.course.update({
       where: { id },
       data: { status }
     });
   }
+
+  static async createDraftVersion(originalId: string) {
+    const original = await prisma.course.findUnique({
+      where: { id: originalId },
+      include: {
+        modules: {
+          include: {
+            quizQuestions: {
+              include: {
+                options: true
+              }
+            }
+          }
+        },
+        certificateTemplate: true
+      }
+    });
+
+    if (!original) throw new Error('Course not found');
+
+    return prisma.$transaction(async (tx) => {
+      // Create new course draft
+      const clonedCourse = await tx.course.create({
+        data: {
+          title: `${original.title} (Draft)`,
+          description: original.description,
+          thumbnailUrl: original.thumbnailUrl,
+          passingGrade: original.passingGrade,
+          targetAudience: original.targetAudience,
+          targetDepartments: original.targetDepartments,
+          requires180DayEval: original.requires180DayEval,
+          lecturerId: original.lecturerId,
+          evaluationFormId: original.evaluationFormId,
+          status: CourseStatus.DRAFT,
+          version: original.version + 1,
+          parentId: original.parentId || original.id,
+          isLatest: false,
+          modules: {
+            create: original.modules.map(module => ({
+              title: module.title,
+              type: module.type,
+              sequenceOrder: module.sequenceOrder,
+              contentUrlOrText: module.contentUrlOrText,
+              durationSeconds: module.durationSeconds,
+              facilitators: module.facilitators,
+              shuffleQuestions: module.shuffleQuestions,
+              shuffleOptions: module.shuffleOptions,
+              activityInstructions: module.activityInstructions,
+              activityTemplateUrl: module.activityTemplateUrl,
+              checkerType: module.checkerType,
+              specificCheckerId: module.specificCheckerId,
+              evaluationTemplateId: module.evaluationTemplateId,
+              quizQuestions: {
+                create: module.quizQuestions.map(q => ({
+                  questionText: q.questionText,
+                  sequenceOrder: q.sequenceOrder,
+                  options: {
+                    create: q.options.map(opt => ({
+                      optionText: opt.optionText,
+                      isCorrect: opt.isCorrect
+                    }))
+                  }
+                }))
+              }
+            }))
+          },
+          ...(original.certificateTemplate && {
+            certificateTemplate: {
+              create: {
+                backgroundImageUrl: original.certificateTemplate.backgroundImageUrl,
+                designConfig: original.certificateTemplate.designConfig as any
+              }
+            }
+          })
+        }
+      });
+
+      return clonedCourse;
+    });
+  }
+
+  static async publishCourse(courseId: string) {
+    const current = await prisma.course.findUnique({
+      where: { id: courseId }
+    });
+
+    if (!current) throw new Error('Course not found');
+
+    const pId = current.parentId || current.id;
+
+    return prisma.$transaction(async (tx) => {
+      // 1. Archive previous published version
+      await tx.course.updateMany({
+        where: {
+          OR: [
+            { id: pId },
+            { parentId: pId }
+          ],
+          status: CourseStatus.PUBLISHED,
+          id: { not: courseId }
+        },
+        data: {
+          status: CourseStatus.ARCHIVED,
+          isLatest: false
+        }
+      });
+
+      // 2. Publish current draft
+      return tx.course.update({
+        where: { id: courseId },
+        data: {
+          status: CourseStatus.PUBLISHED,
+          isLatest: true
+        }
+      });
+    });
+  }
 }
+
 

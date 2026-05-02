@@ -128,6 +128,7 @@ export class CoursesController {
       res.status(400).json({ message: error.message });
     }
   }
+
   static async uploadVideo(req: Request, res: Response) {
     try {
       if (!req.file) {
@@ -140,6 +141,14 @@ export class CoursesController {
       res.status(400).json({ message: error.message });
     }
   }
+
+  static async createDraftVersion(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const newDraft = await CoursesService.createDraftVersion(id as string);
+      res.status(201).json(newDraft);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
-
-
