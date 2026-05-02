@@ -123,8 +123,10 @@ export class CoursesController {
         return res.status(403).json({ message: 'Only Learning Managers or Administrators can publish courses.' });
       }
 
-      const course = await CoursesService.updateStatus(id as string, status);
+      const course = await CoursesService.updateStatus(id as string, status, req.user!.userId);
+
       res.json(course);
+
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

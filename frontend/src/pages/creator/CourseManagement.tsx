@@ -133,13 +133,10 @@ export const CourseManagement: React.FC = () => {
     }
   };
 
-  const handleEdit = (course: Course) => {
-    if (course.status === 'PUBLISHED') {
-      setCourseToVersion(course);
-    } else {
-      navigate(`/creator/courses/${course.id}`);
-    }
+  const triggerDraftCreation = (course: Course) => {
+    setCourseToVersion(course);
   };
+
 
   const handleCreateDraftVersion = async () => {
     if (!courseToVersion) return;
@@ -471,8 +468,9 @@ export const CourseManagement: React.FC = () => {
                         index % 2 === 0 ? "bg-background" : "bg-muted/10",
                         course.status === 'ARCHIVED' && "opacity-60"
                       )}
-                      onClick={() => handleEdit(course)}
+                      onClick={() => navigate(`/creator/courses/${course.id}`)}
                     >
+
                       <TableCell>
                         <div className="font-semibold text-base group-hover:text-primary transition-colors flex items-center gap-2">
                           {course.title}
@@ -513,25 +511,38 @@ export const CourseManagement: React.FC = () => {
                               <DropdownMenuSeparator />
                               
                               {course.status === 'PUBLISHED' && (
-                                <DropdownMenuItem onClick={() => navigate(`/creator/courses/${course.id}`)}>
+                                <DropdownMenuItem onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/creator/courses/${course.id}`);
+                                }}>
                                   <Eye className="mr-2 h-4 w-4" /> View Blueprint (Live)
                                 </DropdownMenuItem>
                               )}
 
                               {(course.status === 'DRAFT' || course.status === 'PENDING_APPROVAL') && (
-                                <DropdownMenuItem onClick={() => handleEdit(course)}>
+                                <DropdownMenuItem onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/creator/courses/${course.id}`);
+                                }}>
                                   <Edit3 className="mr-2 h-4 w-4" /> Author/Edit Blueprint
                                 </DropdownMenuItem>
                               )}
 
                               {course.status === 'PUBLISHED' && (
-                                <DropdownMenuItem onClick={() => handleEdit(course)}>
+                                <DropdownMenuItem onClick={(e) => {
+                                  e.stopPropagation();
+                                  triggerDraftCreation(course);
+                                }}>
                                   <CopyPlus className="mr-2 h-4 w-4" /> Create New Draft Version
                                 </DropdownMenuItem>
                               )}
 
-                              {course.status !== 'RETIRED' && (
-                                <DropdownMenuItem onClick={() => handleFetchVersions(course)}>
+
+                              {course.status !== 'RETIRED' && course.version > 1 && (
+                                <DropdownMenuItem onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFetchVersions(course);
+                                }}>
                                   <History className="mr-2 h-4 w-4" /> Version History
                                 </DropdownMenuItem>
                               )}
@@ -539,16 +550,23 @@ export const CourseManagement: React.FC = () => {
                               <DropdownMenuSeparator />
 
                               {course.status !== 'RETIRED' && (
-                                <DropdownMenuItem className="text-destructive" onClick={() => handleRetire(course.id)}>
+                                <DropdownMenuItem className="text-destructive" onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRetire(course.id);
+                                }}>
                                   <Trash2 className="mr-2 h-4 w-4" /> Retire Course
                                 </DropdownMenuItem>
                               )}
 
                               {course.status === 'RETIRED' && (
-                                <DropdownMenuItem className="text-primary font-bold" onClick={() => handleUnretire(course.id)}>
+                                <DropdownMenuItem className="text-primary font-bold" onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUnretire(course.id);
+                                }}>
                                   <RefreshCw className="mr-2 h-4 w-4" /> Unretire / Restore to Draft
                                 </DropdownMenuItem>
                               )}
+
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -615,18 +633,28 @@ export const CourseManagement: React.FC = () => {
                     <TableRow>
                       <TableHead>Version</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Edited By</TableHead>
+                      <TableHead>Approved By</TableHead>
                       <TableHead>Last Modified</TableHead>
                       <TableHead className="text-right px-6">Actions</TableHead>
                     </TableRow>
+
                   </TableHeader>
                   <TableBody>
                     {versions.map((v) => (
                       <TableRow key={v.id} className={cn(v.status === 'PUBLISHED' && "bg-success/5 font-bold")}>
                         <TableCell className="font-mono">v{v.version}</TableCell>
                         <TableCell>{getStatusBadge(v.status)}</TableCell>
+                        <TableCell className="text-xs">
+                          {v.lecturer ? `${v.lecturer.firstName} ${v.lecturer.lastName}` : 'System'}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {v.approvedBy ? `${v.approvedBy.firstName} ${v.approvedBy.lastName}` : (v.status === 'PUBLISHED' || v.status === 'ARCHIVED' ? 'System' : '---')}
+                        </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {new Date(v.updatedAt).toLocaleDateString()}
                         </TableCell>
+
                         <TableCell className="text-right px-6">
                           {v.status === 'ARCHIVED' && (
                             <Button 

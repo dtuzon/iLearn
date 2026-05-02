@@ -21,8 +21,10 @@ export interface Course {
   createdAt: string;
   updatedAt: string;
   lecturer?: { firstName: string | null; lastName: string | null };
+  approvedBy?: { firstName: string | null; lastName: string | null };
   modules?: CourseModule[];
 }
+
 
 export interface CourseModule {
   id: string;

@@ -139,10 +139,11 @@ export class CoursesService {
     });
   }
 
-  static async updateStatus(id: string, status: CourseStatus) {
+  static async updateStatus(id: string, status: CourseStatus, approverId?: string) {
     if (status === CourseStatus.PUBLISHED) {
-      return this.publishCourse(id);
+      return this.publishCourse(id, approverId);
     }
+
     return prisma.course.update({
       where: { id },
       data: { status }
@@ -229,7 +230,8 @@ export class CoursesService {
     });
   }
 
-  static async publishCourse(courseId: string) {
+  static async publishCourse(courseId: string, approverId?: string) {
+
     const current = await prisma.course.findUnique({
       where: { id: courseId }
     });
@@ -260,8 +262,10 @@ export class CoursesService {
         where: { id: courseId },
         data: {
           status: CourseStatus.PUBLISHED,
-          isLatest: true
+          isLatest: true,
+          approvedById: approverId
         }
+
       });
     });
   }
@@ -276,8 +280,10 @@ export class CoursesService {
       },
       orderBy: { version: 'desc' },
       include: {
-        lecturer: { select: { firstName: true, lastName: true } }
+        lecturer: { select: { firstName: true, lastName: true } },
+        approvedBy: { select: { firstName: true, lastName: true } }
       }
+
     });
   }
 
