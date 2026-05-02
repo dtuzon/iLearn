@@ -144,9 +144,27 @@ model User {
   supervisorEvaluations BehavioralEvaluation[] @relation("SupervisorEvaluations")
   employeeEvaluations BehavioralEvaluation[] @relation("EmployeeEvaluations")
   learningPathEnrollments LearningPathEnrollment[]
+  announcements       Announcement[]
 
   @@map("users")
 }
+
+model Announcement {
+  id          String    @id @default(cuid())
+  title       String
+  content     String    @db.Text
+  imageUrl    String?   // Optional URL for event flyers, quotes, etc.
+  expiresAt   DateTime? // Optional date for temporary seasonal posts
+  priority    String    @default("NORMAL")
+  authorId    String
+  createdAt   DateTime  @default(now())
+
+  author      User      @relation(fields: [authorId], references: [id])
+
+  @@map("announcements")
+}
+
+
 
 model SystemSettings {
   id                    String  @id @default(cuid())
