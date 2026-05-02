@@ -74,9 +74,10 @@ export class WorkshopsService {
         userId: checkerId,
         title: 'New Activity Submission',
         message: `${student?.firstName} ${student?.lastName} submitted an activity for ${module.course.title}`,
-        actionUrl: '/approvals/activities'
+        link: '/approvals/activities'
       });
     }
+
   }
 
 
@@ -141,13 +142,14 @@ export class WorkshopsService {
       ? `Your submission for "${submission.module.course.title}" has been approved.` 
       : `Your submission for "${submission.module.course.title}" requires changes. Feedback: ${data.feedback}`;
     const actionUrl = `/learning/course/${submission.module.courseId}`;
-
     await NotificationsService.createNotification({
+
       userId: submission.userId,
       title,
       message,
-      actionUrl
+      link: actionUrl
     });
+
 
     if (user?.email) {
       const fullActionUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'}${actionUrl}`;

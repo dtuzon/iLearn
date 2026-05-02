@@ -1,11 +1,19 @@
 import { prisma } from '../../lib/prisma';
 
+export interface CreateNotificationDto {
+  userId: string;
+  title: string;
+  message: string;
+  type?: string;
+  link?: string;
+}
+
 export class NotificationsService {
   static async getUserNotifications(userId: string) {
     return prisma.notification.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      take: 20
+      take: 50
     });
   }
 
@@ -16,9 +24,22 @@ export class NotificationsService {
     });
   }
 
-  static async createNotification(data: { userId: string, title: string, message: string, actionUrl?: string }) {
+  static async markAllAsRead(userId: string) {
+    return prisma.notification.updateMany({
+      where: { userId, isRead: false },
+      data: { isRead: true }
+    });
+  }
+
+  static async createNotification(data: CreateNotificationDto) {
     return prisma.notification.create({
-      data
+      data: {
+        userId: data.userId,
+        title: data.title,
+        message: data.message,
+        type: data.type || 'INFO',
+        link: data.link
+      }
     });
   }
 }

@@ -1,8 +1,13 @@
 import app from './app';
+import { initEvaluationWorker } from './workers/evaluation.worker';
 
 const PORT = process.env.PORT || 3001;
 
+// Initialize Background Workers
+initEvaluationWorker();
+
 const server = app.listen(PORT, () => {
+
   console.log(`🚀 iLearn API running on http://localhost:${PORT}`);
   console.log(`📡 CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
 });

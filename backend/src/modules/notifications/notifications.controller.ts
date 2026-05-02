@@ -12,12 +12,20 @@ export class NotificationsController {
     }
   }
 
-  static async markRead(req: AuthenticatedRequest, res: Response) {
+  static async markAsRead(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
       await NotificationsService.markAsRead(id as string, req.user!.userId);
+      res.json({ success: true, message: 'Marked as read' });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 
-      res.json({ message: 'Marked as read' });
+  static async markAllAsRead(req: AuthenticatedRequest, res: Response) {
+    try {
+      await NotificationsService.markAllAsRead(req.user!.userId);
+      res.json({ success: true, message: 'All notifications marked as read' });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

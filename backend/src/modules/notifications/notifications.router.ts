@@ -5,6 +5,7 @@ import { authenticate } from '../../middleware/auth.middleware';
 const router = Router();
 
 router.get('/', authenticate, NotificationsController.getMyNotifications);
-router.put('/:id/read', authenticate, NotificationsController.markRead);
+router.patch('/:id/read', authenticate, NotificationsController.markAsRead);
+router.patch('/mark-all-read', authenticate, NotificationsController.markAllAsRead);
 
 export default router;
