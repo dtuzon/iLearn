@@ -1,12 +1,15 @@
 import app from './app';
 import { initEvaluationWorker } from './workers/evaluation.worker';
 import { initDeadlineWorker } from './workers/deadline.worker';
+import { initEscalationWorker } from './workers/deadline-reminders.worker';
 
 const PORT = process.env.PORT || 3001;
 
 // Initialize Background Workers
 initEvaluationWorker();
 initDeadlineWorker();
+initEscalationWorker();
+
 
 
 const server = app.listen(PORT, () => {
