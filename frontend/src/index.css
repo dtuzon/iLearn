@@ -94,3 +94,67 @@
     color: hsl(var(--foreground));
   }
 }
+
+/* React Quill Custom Styling */
+.quill-editor-container .quill {
+  @apply bg-background rounded-xl overflow-hidden border border-border;
+}
+
+.quill-editor-container .ql-toolbar.ql-snow {
+  @apply border-none border-b border-border bg-muted/30 py-3 px-4;
+}
+
+.quill-editor-container .ql-container.ql-snow {
+  @apply border-none text-sm font-medium leading-relaxed min-h-[300px];
+}
+
+.quill-editor-container .ql-editor {
+  @apply p-6;
+}
+
+.quill-editor-container .ql-editor.ql-blank::before {
+  @apply text-muted-foreground/50 italic left-6;
+}
+
+.quill-editor-container .ql-snow .ql-stroke {
+  stroke: hsl(var(--foreground));
+}
+
+.quill-editor-container .ql-snow .ql-fill {
+  fill: hsl(var(--foreground));
+}
+
+.quill-editor-container .ql-snow .ql-picker {
+  color: hsl(var(--foreground));
+}
+
+/* Rendered Quill Content Styling */
+.quill-content {
+  @apply text-foreground;
+}
+
+.quill-content p {
+  @apply mb-4;
+}
+
+.quill-content ul {
+  @apply list-disc pl-6 mb-4 space-y-1;
+}
+
+.quill-content ol {
+  @apply list-decimal pl-6 mb-4 space-y-1;
+}
+
+.quill-content h1, .quill-content h2, .quill-content h3 {
+  @apply font-bold mt-6 mb-3;
+}
+
+.quill-content h1 { @apply text-2xl; }
+.quill-content h2 { @apply text-xl; }
+.quill-content h3 { @apply text-lg; }
+
+.quill-content a {
+  @apply text-primary underline underline-offset-4 hover:opacity-80;
+}
+
+

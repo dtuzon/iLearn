@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
+
 
 export class StorageService {
   private static uploadDir = path.join(process.cwd(), 'public', 'uploads');
@@ -18,7 +19,8 @@ export class StorageService {
     }
 
     const fileExtension = path.extname(file.originalname);
-    const fileName = `${uuidv4()}${fileExtension}`;
+    const fileName = `${randomUUID()}${fileExtension}`;
+
     const filePath = path.join(targetDir, fileName);
 
     // Save the file to local storage

@@ -57,38 +57,31 @@ export const CoursePlayer: React.FC = () => {
       modules.sort((a, b) => a.sequenceOrder - b.sequenceOrder);
       
       const currentOrder = progressData.currentModuleOrder;
+      
+      setIsAtIntro(false);
+      setIsAtClosing(false);
 
-      // Logic: Order 0 is reserved for Intro (if it exists)
-      if (currentOrder === 0 && courseData.introContent) {
-        setIsAtIntro(true);
-        setIsAtClosing(false);
-        setCurrentModule(null);
-      } 
-      // Logic: Order > totalModules is for Closing (if it exists)
-      else if (currentOrder > modules.length && courseData.closingContent) {
-        setIsAtIntro(false);
-        setIsAtClosing(true);
-        setCurrentModule(null);
-      }
-      else {
-        setIsAtIntro(false);
-        setIsAtClosing(false);
-
-        // If at order 0 but no intro, target module 1
-        const targetOrder = (currentOrder === 0) ? 1 : currentOrder;
-        const current = modules.find(m => m.sequenceOrder === targetOrder);
+      // Target the current module based on progress order
+      // If at order 0, we start at step 1
+      const targetOrder = (currentOrder === 0) ? 1 : currentOrder;
+      const current = modules.find(m => m.sequenceOrder === targetOrder);
+      
+      if (current) {
+        setCurrentModule(current);
         
-        if (current) {
-          setCurrentModule(current);
-          if (current.type === 'PRE_QUIZ' || current.type === 'POST_QUIZ') {
-            const questions = await quizzesApi.getModuleQuestions(current.id);
-            setQuizQuestions(questions);
-          }
-        } else {
-          // No current module found, likely finished
-          setCurrentModule(null);
+        // Update helper flags for special styling if needed
+        if (current.type === 'INTRODUCTION') setIsAtIntro(true);
+        if (current.type === 'CLOSING') setIsAtClosing(true);
+
+        if (current.type === 'PRE_QUIZ' || current.type === 'POST_QUIZ') {
+          const questions = await quizzesApi.getModuleQuestions(current.id);
+          setQuizQuestions(questions);
         }
+      } else {
+        // No current module found, likely finished
+        setCurrentModule(null);
       }
+
     } catch (error: any) {
       toast.error('Failed to load course content');
       console.error(error);
@@ -256,34 +249,34 @@ export const CoursePlayer: React.FC = () => {
         </div>
       </div>
 
-      {isAtIntro ? (
+      {isAtIntro && currentModule ? (
         <Card className="shadow-2xl border-none overflow-hidden">
           <CardHeader className="bg-primary text-primary-foreground p-10">
             <CardTitle className="text-3xl font-black uppercase tracking-tight italic">Welcome to {course.title}</CardTitle>
             <CardDescription className="text-primary-foreground/70 text-lg">Foundation & Orientation</CardDescription>
           </CardHeader>
-          <CardContent className="p-10 prose prose-lg max-w-none dark:prose-invert">
-            <div dangerouslySetInnerHTML={{ __html: course.introContent || '' }} />
+          <CardContent className="p-10 quill-content">
+            <div dangerouslySetInnerHTML={{ __html: currentModule.contentUrlOrText || '' }} />
           </CardContent>
           <CardFooter className="bg-muted/50 p-8 flex justify-end border-t">
-            <Button onClick={handleAdvance} disabled={isSubmitting} size="lg" className="h-14 px-10 font-black uppercase tracking-widest shadow-xl shadow-primary/20">
+            <Button onClick={handleCompleteModule} disabled={isSubmitting} size="lg" className="h-14 px-10 font-black uppercase tracking-widest shadow-xl shadow-primary/20">
                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Initiate Learning Sequence"}
             </Button>
           </CardFooter>
         </Card>
-      ) : isAtClosing ? (
+      ) : isAtClosing && currentModule ? (
         <div className="space-y-8">
           <Card className="shadow-2xl border-none overflow-hidden">
             <CardHeader className="bg-success text-success-foreground p-10">
               <CardTitle className="text-3xl font-black uppercase tracking-tight italic">Course Concluded</CardTitle>
               <CardDescription className="text-success-foreground/70 text-lg">Final Summary & Resources</CardDescription>
             </CardHeader>
-            <CardContent className="p-10 prose prose-lg max-w-none dark:prose-invert">
-              <div dangerouslySetInnerHTML={{ __html: course.closingContent || '' }} />
+            <CardContent className="p-10 quill-content">
+              <div dangerouslySetInnerHTML={{ __html: currentModule.contentUrlOrText || '' }} />
             </CardContent>
             <CardFooter className="bg-muted/50 p-8 flex justify-between border-t items-center">
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">End of Learning Path</p>
-              <Button onClick={handleAdvance} disabled={isSubmitting} size="lg" className="h-14 px-10 font-black uppercase tracking-widest bg-success hover:bg-success/90 text-white shadow-xl shadow-success/20">
+              <Button onClick={handleCompleteModule} disabled={isSubmitting} size="lg" className="h-14 px-10 font-black uppercase tracking-widest bg-success hover:bg-success/90 text-white shadow-xl shadow-success/20">
                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Finalize & Exit"}
               </Button>
             </CardFooter>

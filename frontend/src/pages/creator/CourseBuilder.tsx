@@ -34,6 +34,11 @@ import {
   File as FileIcon
 } from 'lucide-react';
 
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
+
+
+
 
 
 
@@ -80,6 +85,8 @@ import { VideoUploadModal } from '../../components/creator/VideoUploadModal';
 import { WorkshopActivityBuilder } from '../../components/creator/WorkshopActivityBuilder';
 import { EvaluationTemplatePicker } from '../../components/creator/EvaluationTemplatePicker';
 import { TemplateCategory } from '../../api/evaluations.api';
+import { RichTextModuleBuilder } from '../../components/creator/RichTextModuleBuilder';
+
 
 interface SortableModuleItemProps {
   module: any;
@@ -89,10 +96,12 @@ interface SortableModuleItemProps {
   setVideoModalState: (state: { isOpen: boolean, moduleId: string }) => void;
   setWorkshopModalState: (state: { isOpen: boolean, moduleId: string }) => void;
   setEvaluationModalState: (state: { isOpen: boolean, moduleId: string, category: TemplateCategory }) => void;
+  setRichTextModalState: (state: { isOpen: boolean, moduleId: string }) => void;
   setEditingModule: (module: any) => void;
   handleDeleteModule: (moduleId: string) => void;
   readonly?: boolean;
 }
+
 
 const SortableModuleItem: React.FC<SortableModuleItemProps> = ({ 
   module, 
@@ -102,8 +111,10 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
   setVideoModalState,
   setWorkshopModalState,
   setEvaluationModalState,
+  setRichTextModalState,
   setEditingModule, 
   handleDeleteModule,
+
   readonly
 }) => {
   const {
@@ -223,6 +234,21 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
                       <Award className="mr-2 h-3.5 w-3.5" /> Manage K.A.S.H.
                     </Button>
                   )}
+
+                  {(module.type === 'INTRODUCTION' || module.type === 'CLOSING') && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="font-bold border-primary/20 hover:border-primary/50 hover:bg-primary/5"
+                      onClick={() => setRichTextModalState({
+                        isOpen: true,
+                        moduleId: module.id
+                      })}
+                    >
+                      <FileText className="mr-2 h-3.5 w-3.5" /> Manage Content
+                    </Button>
+                  )}
+
 
                   <Button 
                     variant="ghost" 
@@ -387,6 +413,10 @@ export const CourseBuilder: React.FC = () => {
     moduleId: '',
     category: TemplateCategory.COURSE_QUALITY
   });
+  const [richTextModalState, setRichTextModalState] = useState<{ isOpen: boolean, moduleId: string }>({
+    isOpen: false,
+    moduleId: ''
+  });
 
   const handleAddModule = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -550,6 +580,8 @@ export const CourseBuilder: React.FC = () => {
       case 'POST_QUIZ': return <Award className="h-6 w-6 text-primary" />;
       case 'EVALUATION': return <FileText className="h-6 w-6 text-blue-500" />;
       case 'ONLINE_EVALUATION': return <Award className="h-6 w-6 text-purple-500" />;
+      case 'INTRODUCTION': return <Play className="h-6 w-6 text-primary" />;
+      case 'CLOSING': return <CheckCircle2 className="h-6 w-6 text-success" />;
       default: return <FileText className="h-6 w-6 text-muted-foreground" />;
     }
   };
@@ -681,9 +713,6 @@ export const CourseBuilder: React.FC = () => {
           <TabsTrigger value="curriculum" className="h-10 px-8 font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">
             Curriculum Loop
           </TabsTrigger>
-          <TabsTrigger value="structure" className="h-10 px-8 font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Layers className="mr-2 h-4 w-4" /> Structure & Flow
-          </TabsTrigger>
 
           <TabsTrigger value="certificate" className="h-10 px-8 font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Award className="mr-2 h-4 w-4" /> Certificate Builder
@@ -724,6 +753,7 @@ export const CourseBuilder: React.FC = () => {
                           setVideoModalState={setVideoModalState}
                           setWorkshopModalState={setWorkshopModalState}
                           setEvaluationModalState={setEvaluationModalState}
+                          setRichTextModalState={setRichTextModalState}
                           setEditingModule={setEditingModule}
                           handleDeleteModule={handleDeleteModule}
                           readonly={isReadonly}
@@ -763,6 +793,8 @@ export const CourseBuilder: React.FC = () => {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="VIDEO" className="font-bold">Interactive Video</SelectItem>
+                            <SelectItem value="INTRODUCTION" className="font-bold">Course Introduction</SelectItem>
+                            <SelectItem value="CLOSING" className="font-bold">Course Wrap-up</SelectItem>
                             <SelectItem value="PRE_QUIZ" className="font-bold">Assessment: Pre-Quiz</SelectItem>
                             <SelectItem value="POST_QUIZ" className="font-bold">Assessment: Post-Quiz</SelectItem>
                             <SelectItem value="WORKSHOP" className="font-bold">Workshop/Activity</SelectItem>
@@ -787,129 +819,6 @@ export const CourseBuilder: React.FC = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="structure" className="space-y-8 animate-in fade-in duration-500">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
-              <Card className="border-none shadow-lg">
-                <CardHeader className="border-b border-border/50 bg-muted/5">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Play className="h-4 w-4 text-primary" />
-                    </div>
-                    <CardTitle className="text-lg">Course Introduction</CardTitle>
-                  </div>
-                  <CardDescription>This content will be shown to the learner before they start the first module.</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <Textarea 
-                    placeholder="Welcome your students! Explain the goals and what they will achieve..."
-                    className="min-h-[250px] font-medium leading-relaxed"
-                    value={identityForm.introContent}
-                    onChange={(e) => setIdentityForm({...identityForm, introContent: e.target.value})}
-                    disabled={isReadonly}
-                  />
-                  <p className="text-[10px] font-bold text-muted-foreground mt-4 uppercase tracking-widest opacity-40">HTML supported for advanced formatting</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-lg">
-                <CardHeader className="border-b border-border/50 bg-muted/5">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
-                      <CheckCircle2 className="h-4 w-4 text-success" />
-                    </div>
-                    <CardTitle className="text-lg">Course Closing</CardTitle>
-                  </div>
-                  <CardDescription>This content will be shown after the final component is completed.</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <Textarea 
-                    placeholder="Congratulations message, next steps, or key takeaways..."
-                    className="min-h-[250px] font-medium leading-relaxed"
-                    value={identityForm.closingContent}
-                    onChange={(e) => setIdentityForm({...identityForm, closingContent: e.target.value})}
-                    disabled={isReadonly}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="space-y-6">
-              <Card className="border-none shadow-lg overflow-hidden">
-                <CardHeader className="bg-primary/5 border-b border-primary/10">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <UploadCloud className="h-4 w-4 text-primary" />
-                      <CardTitle className="text-lg">Attachments</CardTitle>
-                    </div>
-                    {isUploadingAttachment && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
-                  </div>
-                  <CardDescription>Downloadable PDFs, PPTs, or Docs.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {!isReadonly && (
-                    <div className="p-4 border-b border-dashed border-border/50">
-                      <Label htmlFor="file-upload" className="flex flex-col items-center justify-center py-6 border-2 border-dashed rounded-xl cursor-pointer hover:bg-primary/5 transition-colors">
-                        <Plus className="h-6 w-6 text-primary mb-2" />
-                        <span className="text-xs font-bold text-primary uppercase tracking-widest">Add Attachment</span>
-                        <input 
-                          id="file-upload" 
-                          type="file" 
-                          className="hidden" 
-                          disabled={isUploadingAttachment}
-                          onChange={handleAttachmentUpload}
-                        />
-                      </Label>
-                    </div>
-                  )}
-
-                  <ScrollArea className="h-[400px]">
-                    <div className="flex flex-col divide-y divide-border/30">
-                      {attachments.length === 0 ? (
-                        <div className="p-8 text-center text-muted-foreground opacity-30 flex flex-col items-center">
-                          <FileIcon className="h-8 w-8 mb-2" />
-                          <p className="text-[10px] font-black uppercase">No materials attached</p>
-                        </div>
-                      ) : (
-                        attachments.map((file) => (
-                          <div key={file.id} className="p-4 flex items-center justify-between group hover:bg-muted/30 transition-colors">
-                            <div className="flex items-center gap-3 overflow-hidden">
-                              <div className="h-8 w-8 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                                <FileIcon className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                              <div className="overflow-hidden">
-                                <p className="text-xs font-bold truncate pr-2">{file.fileName}</p>
-                                <p className="text-[10px] text-muted-foreground font-mono">
-                                  {(file.fileSize / 1024 / 1024).toFixed(2)} MB
-                                </p>
-                              </div>
-                            </div>
-                            {!isReadonly && (
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => handleDeleteAttachment(file.id)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-              
-              {!isReadonly && (
-                 <Button onClick={handleUpdateIdentity} disabled={isSavingIdentity} className="w-full h-12 shadow-xl shadow-primary/20 font-black uppercase tracking-widest">
-                    {isSavingIdentity ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Sync Structure Changes
-                 </Button>
-              )}
-            </div>
-          </div>
         </TabsContent>
 
         <TabsContent value="certificate">
@@ -1083,7 +992,75 @@ export const CourseBuilder: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="border-none shadow-lg overflow-hidden">
+              <CardHeader className="bg-primary/5 border-b border-primary/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <UploadCloud className="h-4 w-4 text-primary" />
+                    <CardTitle className="text-lg">Attachments</CardTitle>
+                  </div>
+                  {isUploadingAttachment && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                </div>
+                <CardDescription>Downloadable PDFs, PPTs, or Docs.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                {!isReadonly && (
+                  <div className="p-4 border-b border-dashed border-border/50">
+                    <Label htmlFor="file-upload" className="flex flex-col items-center justify-center py-6 border-2 border-dashed rounded-xl cursor-pointer hover:bg-primary/5 transition-colors">
+                      <Plus className="h-6 w-6 text-primary mb-2" />
+                      <span className="text-xs font-bold text-primary uppercase tracking-widest">Add Attachment</span>
+                      <input 
+                        id="file-upload" 
+                        type="file" 
+                        className="hidden" 
+                        disabled={isUploadingAttachment}
+                        onChange={handleAttachmentUpload}
+                      />
+                    </Label>
+                  </div>
+                )}
+
+                <ScrollArea className="h-[300px]">
+                  <div className="flex flex-col divide-y divide-border/30">
+                    {attachments.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground opacity-30 flex flex-col items-center">
+                        <FileIcon className="h-8 w-8 mb-2" />
+                        <p className="text-[10px] font-black uppercase">No materials attached</p>
+                      </div>
+                    ) : (
+                      attachments.map((file) => (
+                        <div key={file.id} className="p-4 flex items-center justify-between group hover:bg-muted/30 transition-colors">
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="h-8 w-8 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                              <FileIcon className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="overflow-hidden">
+                              <p className="text-xs font-bold truncate pr-2">{file.fileName}</p>
+                              <p className="text-[10px] text-muted-foreground font-mono">
+                                {(file.fileSize / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
+                          </div>
+                          {!isReadonly && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleDeleteAttachment(file.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
           </div>
+
         </TabsContent>
       </Tabs>
 
@@ -1122,13 +1099,16 @@ export const CourseBuilder: React.FC = () => {
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="PRE_QUIZ">Pre-Quiz</SelectItem>
                     <SelectItem value="VIDEO">Video Production</SelectItem>
+                    <SelectItem value="INTRODUCTION">Course Introduction</SelectItem>
+                    <SelectItem value="CLOSING">Course Wrap-up</SelectItem>
+                    <SelectItem value="PRE_QUIZ">Pre-Quiz</SelectItem>
                     <SelectItem value="WORKSHOP">Workshop / Activity</SelectItem>
                     <SelectItem value="POST_QUIZ">Post-Quiz Assessment</SelectItem>
                     <SelectItem value="EVALUATION">Quality Evaluation</SelectItem>
                     <SelectItem value="ONLINE_EVALUATION">Online Evaluation (K.A.S.H.)</SelectItem>
                   </SelectContent>
+
                 </Select>
               </div>
             </div>
@@ -1163,6 +1143,14 @@ export const CourseBuilder: React.FC = () => {
         category={evaluationModalState.category}
         isOpen={evaluationModalState.isOpen}
         onClose={() => setEvaluationModalState({ ...evaluationModalState, isOpen: false })}
+        onUpdate={fetchCourse}
+      />
+
+      <RichTextModuleBuilder 
+        courseId={courseId!}
+        moduleId={richTextModalState.moduleId}
+        isOpen={richTextModalState.isOpen}
+        onClose={() => setRichTextModalState({ ...richTextModalState, isOpen: false })}
         onUpdate={fetchCourse}
       />
     </div>
