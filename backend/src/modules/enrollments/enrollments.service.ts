@@ -1,6 +1,9 @@
 import { prisma } from '../../lib/prisma';
-import { EnrollmentStatus } from '@prisma/client';
+import { EnrollmentStatus, Role } from '@prisma/client';
 import { CertificatesService } from '../certificates/certificates.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { sendEmail } from '../../lib/email';
+
 
 
 export class EnrollmentsService {
@@ -114,20 +117,24 @@ export class EnrollmentsService {
 
       const isFinished = nextOrder >= totalModules;
 
-        await prisma.enrollment.update({
+        const updatedEnrollment = await prisma.enrollment.update({
           where: { id: enrollment.id },
           data: {
             currentModuleOrder: nextOrder,
             status: isFinished ? EnrollmentStatus.COMPLETED : EnrollmentStatus.IN_PROGRESS,
             completedAt: isFinished ? new Date() : undefined
-          }
+          },
+          include: { user: true, course: true }
         });
 
         // NEW: Learning Path Completion Logic
         if (isFinished) {
           await this.checkLearningPathCompletion(userId, module.courseId);
+          // NEW: Strict Accountability Hook
+          await this.notifyLeadershipOnLateCompletion(updatedEnrollment, 'COURSE');
         }
       }
+
 
 
     return { message: 'Module completed' };
@@ -179,13 +186,18 @@ export class EnrollmentsService {
 
         if (completedCount === courseIdsInPath.length) {
           // 4. Mark Learning Path as completed
-          await prisma.learningPathEnrollment.update({
+          const updatedPe = await prisma.learningPathEnrollment.update({
             where: { id: pe.id },
             data: {
               status: EnrollmentStatus.COMPLETED,
               completedAt: new Date()
-            }
+            },
+            include: { user: true, learningPath: true }
           });
+
+          // NEW: Strict Accountability Hook
+          await this.notifyLeadershipOnLateCompletion(updatedPe, 'PATH');
+
 
           // 5. Issue Certificate if enabled
           if (pe.learningPath.hasCertificate) {
@@ -231,16 +243,91 @@ export class EnrollmentsService {
     // We allow progress to reach totalModules + 1 to account for the Closing page
     const isFinished = nextOrder > totalModules;
 
-    return prisma.enrollment.update({
+    const updatedEnrollment = await prisma.enrollment.update({
       where: { id: enrollment.id },
       data: {
         currentModuleOrder: nextOrder,
         status: isFinished ? EnrollmentStatus.COMPLETED : EnrollmentStatus.IN_PROGRESS,
         completedAt: isFinished ? new Date() : undefined
-      }
+      },
+      include: { user: true, course: true }
     });
+
+    if (isFinished) {
+      await this.notifyLeadershipOnLateCompletion(updatedEnrollment, 'COURSE');
+    }
+
+    return updatedEnrollment;
+
+  }
+
+  }
+
+  private static async notifyLeadershipOnLateCompletion(enrollment: any, type: 'COURSE' | 'PATH') {
+    if (!enrollment.dueDate || !enrollment.completedAt) return;
+
+    if (new Date(enrollment.completedAt) > new Date(enrollment.dueDate)) {
+      try {
+        const user = enrollment.user;
+        const title = type === 'COURSE' ? enrollment.course.title : enrollment.learningPath.title;
+        const employeeName = `${user.firstName} ${user.lastName}`;
+
+        // 1. Fetch Supervisor
+        const supervisor = await prisma.user.findUnique({
+          where: { id: user.immediateSuperiorId || '' }
+        });
+
+        // 2. Fetch Learning Managers
+        const learningManagers = await prisma.user.findMany({
+          where: { role: Role.LEARNING_MANAGER, isActive: true }
+        });
+
+        const notifyIds = new Set<string>();
+        if (supervisor) notifyIds.add(supervisor.id);
+        learningManagers.forEach(lm => notifyIds.add(lm.id));
+
+        const message = `Late Completion: ${employeeName} just completed ${title} after the deadline.`;
+
+        for (const targetId of notifyIds) {
+          // In-app Notification
+          await NotificationsService.createNotification({
+            userId: targetId,
+            title: 'Strict Accountability: Late Completion',
+            message,
+            type: 'WARNING',
+            link: `/admin/user-management?search=${user.username}`
+          });
+
+          // Email Notification
+          const targetUser = (targetId === supervisor?.id) ? supervisor : learningManagers.find(lm => lm.id === targetId);
+          if (targetUser?.email) {
+            await sendEmail({
+              to: targetUser.email,
+              subject: `Strict Accountability Record: Late Completion - ${employeeName}`,
+              html: `
+                <div style="font-family: sans-serif; max-width: 600px; padding: 20px; border: 1px solid #fee2e2; border-radius: 12px; background: #fff5f5;">
+                  <h2 style="color: #DC2626;">Late Assignment Completion</h2>
+                  <p>Hello <strong>${targetUser.firstName}</strong>,</p>
+                  <p>This is an automated accountability record. An employee under your supervision or management scope has completed an assignment after the target deadline.</p>
+                  <hr style="border: none; border-top: 1px solid #fecaca; margin: 20px 0;" />
+                  <p><strong>Employee:</strong> ${employeeName}</p>
+                  <p><strong>Assignment:</strong> ${title}</p>
+                  <p><strong>Deadline:</strong> ${new Date(enrollment.dueDate).toLocaleDateString()}</p>
+                  <p><strong>Completion Date:</strong> ${new Date(enrollment.completedAt).toLocaleDateString()}</p>
+                  <hr style="border: none; border-top: 1px solid #fecaca; margin: 20px 0;" />
+                  <p>Please log in to the iLearn Portal to review this record and take appropriate action if necessary.</p>
+                </div>
+              `
+            }).catch(e => console.error('Late completion email failed:', e));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to process late completion notifications:', error);
+      }
+    }
   }
 
 }
+
 
 

@@ -12,8 +12,10 @@ import {
   Route,
   Calendar as CalendarIcon,
   BookOpen,
-  CheckCircle2
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
+
 import { Calendar } from '../../components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 import { format } from 'date-fns';
@@ -141,11 +143,19 @@ export const TeamManagement: React.FC = () => {
                       {member.enrollments?.length === 0 ? (
                         <span className="text-xs text-muted-foreground italic">No courses</span>
                       ) : (
-                        member.enrollments.slice(0, 2).map((e: any) => (
-                          <Badge key={e.id} variant="secondary" className="text-[10px] bg-purple-500/5 text-purple-600 border-none">
-                            {e.course.title}
-                          </Badge>
-                        ))
+                        member.enrollments.slice(0, 2).map((e: any) => {
+                          const isLate = e.dueDate && e.completedAt && new Date(e.completedAt) > new Date(e.dueDate);
+                          return (
+                            <Badge key={e.id} variant="secondary" className={cn(
+                              "text-[10px] border-none flex items-center gap-1",
+                              isLate ? "bg-red-500/10 text-red-600 animate-pulse" : "bg-purple-500/5 text-purple-600"
+                            )}>
+                              {e.course.title}
+                              {isLate && <AlertTriangle className="h-3 w-3" />}
+                            </Badge>
+                          );
+                        })
+
                       )}
                       {member.enrollments?.length > 2 && (
                         <Badge variant="outline" className="text-[10px]">+{member.enrollments.length - 2} more</Badge>
@@ -157,11 +167,19 @@ export const TeamManagement: React.FC = () => {
                       {member.learningPathEnrollments?.length === 0 ? (
                         <span className="text-xs text-muted-foreground italic">No paths</span>
                       ) : (
-                        member.learningPathEnrollments.map((e: any) => (
-                          <Badge key={e.id} variant="secondary" className="text-[10px] bg-primary/5 text-primary border-none">
-                            {e.learningPath.title}
-                          </Badge>
-                        ))
+                        member.learningPathEnrollments.map((e: any) => {
+                          const isLate = e.dueDate && e.completedAt && new Date(e.completedAt) > new Date(e.dueDate);
+                          return (
+                            <Badge key={e.id} variant="secondary" className={cn(
+                              "text-[10px] border-none flex items-center gap-1",
+                              isLate ? "bg-red-500/10 text-red-600 animate-pulse" : "bg-primary/5 text-primary"
+                            )}>
+                              {e.learningPath.title}
+                              {isLate && <AlertTriangle className="h-3 w-3" />}
+                            </Badge>
+                          );
+                        })
+
                       )}
                     </div>
                   </TableCell>
