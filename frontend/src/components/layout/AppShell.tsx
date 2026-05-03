@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
+
 import { 
   LogOut, 
   Menu, 
@@ -20,8 +20,10 @@ import {
   Search,
   LifeBuoy,
   User,
-  ShieldCheck
+  ShieldCheck,
+  UserPlus
 } from 'lucide-react';
+
 
 
 import { Button } from '../ui/button';
@@ -195,8 +197,10 @@ export const AppShell: React.FC = () => {
                   Administration
                 </div>
                 <NavLink to="/admin/users" icon={Users}>User Management</NavLink>
+                <NavLink to="/admin/enrollments" icon={UserPlus}>Manage Enrollments</NavLink>
                 <NavLink to="/admin/departments" icon={Building2}>Departments</NavLink>
                 <NavLink to="/admin/settings" icon={Settings}>System Settings</NavLink>
+
               </>
             )}
 

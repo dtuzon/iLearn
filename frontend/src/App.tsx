@@ -11,6 +11,8 @@ import { DepartmentManagement } from './pages/admin/DepartmentManagement';
 import { UserManagement } from './pages/admin/UserManagement';
 import { EvaluationTemplates } from './pages/admin/EvaluationTemplates';
 import { ManageBulletin } from './pages/admin/ManageBulletin';
+import { EnrollmentManager } from './pages/admin/EnrollmentManager';
+
 
 
 import { RoleGuard } from './components/auth/RoleGuard';
@@ -54,8 +56,10 @@ function App() {
                   <Route path="settings" element={<SystemSettings />} />
                   <Route path="departments" element={<DepartmentManagement />} />
                   <Route path="users" element={<UserManagement />} />
+                  <Route path="enrollments" element={<EnrollmentManager />} />
                   <Route path="evaluation-templates" element={<EvaluationTemplates />} />
                   <Route path="bulletin" element={<ManageBulletin />} />
+
 
                 </Route>
 

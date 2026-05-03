@@ -12,5 +12,7 @@ router.post('/complete-module/:moduleId', authenticate, auditLog('COMPLETE_MODUL
 router.post('/:courseId/advance-progress', authenticate, auditLog('ADVANCE_COURSE_PROGRESS'), EnrollmentsController.advanceProgress);
 router.post('/:id/online-evaluation', authenticate, auditLog('SUBMIT_ONLINE_EVALUATION'), EnrollmentsController.submitOnlineEvaluation);
 
+router.post('/bulk', authenticate, auditLog('BULK_ENROLL'), EnrollmentsController.bulkEnroll);
 
 export default router;
+

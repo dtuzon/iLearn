@@ -34,7 +34,12 @@ export const enrollmentsApi = {
   advanceProgress: async (courseId: string) => {
     const response = await apiClient.post(`/enrollments/${courseId}/advance-progress`);
     return response.data;
+  },
+  bulkEnroll: async (data: { contentType: 'COURSE' | 'PATH', contentId: string, targetUserIds: string[], dueDate?: Date }) => {
+    const response = await apiClient.post('/enrollments/bulk', data);
+    return response.data;
   }
 };
+
 
 

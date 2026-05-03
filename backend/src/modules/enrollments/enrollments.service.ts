@@ -325,6 +325,75 @@ export class EnrollmentsService {
     }
   }
 
+  static async bulkEnroll(data: { contentType: 'COURSE' | 'PATH', contentId: string, targetUserIds: string[], dueDate?: string }) {
+    const { contentType, contentId, targetUserIds, dueDate } = data;
+    const parsedDueDate = dueDate ? new Date(dueDate) : undefined;
+
+    return prisma.$transaction(async (tx) => {
+      let enrollCount = 0;
+
+      for (const userId of targetUserIds) {
+        if (contentType === 'COURSE') {
+          // Check if already enrolled
+          const existing = await tx.enrollment.findUnique({
+            where: { userId_courseId: { userId, courseId: contentId } }
+          });
+
+          if (!existing) {
+            const enrollment = await tx.enrollment.create({
+              data: {
+                userId,
+                courseId: contentId,
+                dueDate: parsedDueDate,
+                status: EnrollmentStatus.NOT_STARTED
+              },
+              include: { course: true, user: true }
+            });
+            enrollCount++;
+
+            // Trigger notification
+            await NotificationsService.createNotification({
+              userId,
+              title: 'New Course Assigned',
+              message: `You have been assigned to: ${enrollment.course.title}. Target deadline: ${parsedDueDate ? parsedDueDate.toLocaleDateString() : 'None'}`,
+              type: 'INFO',
+              link: `/learning/course/${contentId}`
+            });
+          }
+        } else {
+          // Learning Path
+          const existing = await tx.learningPathEnrollment.findUnique({
+            where: { userId_learningPathId: { userId, learningPathId: contentId } }
+          });
+
+          if (!existing) {
+            const assignment = await tx.learningPathEnrollment.create({
+              data: {
+                userId,
+                learningPathId: contentId,
+                dueDate: parsedDueDate,
+                status: EnrollmentStatus.NOT_STARTED
+              },
+              include: { learningPath: true, user: true }
+            });
+            enrollCount++;
+
+            // Trigger notification
+            await NotificationsService.createNotification({
+              userId,
+              title: 'New Learning Path Assigned',
+              message: `You have been assigned to: ${assignment.learningPath.title}. Target deadline: ${parsedDueDate ? parsedDueDate.toLocaleDateString() : 'None'}`,
+              type: 'INFO',
+              link: `/learning/paths/${contentId}`
+            });
+          }
+        }
+      }
+
+      return { count: enrollCount };
+    });
+  }
+
 }
 
 

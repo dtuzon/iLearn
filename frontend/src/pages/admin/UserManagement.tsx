@@ -806,13 +806,8 @@ export const UserManagement: React.FC = () => {
                         <DropdownMenuItem onClick={() => openEdit(user)} className="rounded-lg">
                           <Shield className="mr-2 h-4 w-4" /> Edit Profile
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openAssign(user, 'PATH')} className="rounded-lg text-primary font-bold">
-                          <Route className="mr-2 h-4 w-4" /> Assign Path
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openAssign(user, 'COURSE')} className="rounded-lg text-purple-600 font-bold">
-                          <BookOpen className="mr-2 h-4 w-4" /> Assign Course
-                        </DropdownMenuItem>
                       </DropdownMenuContent>
+
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
