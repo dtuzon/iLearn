@@ -18,7 +18,7 @@ export class EnrollmentsService {
     });
   }
 
-  static async enroll(userId: string, courseId: string) {
+  static async enroll(userId: string, courseId: string, dueDate?: Date) {
     return prisma.enrollment.upsert({
       where: {
         userId_courseId: {
@@ -26,12 +26,15 @@ export class EnrollmentsService {
           courseId
         }
       },
-      update: {}, // Don't reset if already enrolled
+      update: {
+        dueDate: dueDate ? new Date(dueDate) : undefined
+      }, // Update due date if re-enrolling/updating
       create: {
         userId,
         courseId,
         status: EnrollmentStatus.NOT_STARTED,
-        currentModuleOrder: 0
+        currentModuleOrder: 0,
+        dueDate: dueDate ? new Date(dueDate) : undefined
       }
     });
   }

@@ -103,7 +103,7 @@ export class LearningPathsService {
     });
   }
 
-  static async enroll(userId: string, learningPathId: string) {
+  static async enroll(userId: string, learningPathId: string, dueDate?: Date) {
     return prisma.learningPathEnrollment.upsert({
       where: {
         userId_learningPathId: {
@@ -111,10 +111,13 @@ export class LearningPathsService {
           learningPathId
         }
       },
-      update: {},
+      update: {
+        dueDate: dueDate ? new Date(dueDate) : undefined
+      },
       create: {
         userId,
-        learningPathId
+        learningPathId,
+        dueDate: dueDate ? new Date(dueDate) : undefined
       }
     });
   }

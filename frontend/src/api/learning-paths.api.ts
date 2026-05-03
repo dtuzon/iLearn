@@ -52,10 +52,11 @@ export const learningPathsApi = {
     return response.data;
   },
   
-  enroll: async (id: string, userId?: string): Promise<any> => {
-    const response = await apiClient.post(`/learning-paths/${id}/enroll`, { userId });
+  enroll: async (id: string, userId?: string, dueDate?: Date): Promise<any> => {
+    const response = await apiClient.post(`/learning-paths/${id}/enroll`, { userId, dueDate });
     return response.data;
   },
+
 
   getUserEnrollments: async (userId: string): Promise<any[]> => {
     const response = await apiClient.get(`/users/${userId}/learning-paths`);

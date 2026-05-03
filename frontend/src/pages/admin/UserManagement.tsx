@@ -13,6 +13,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Badge } from '../../components/ui/badge';
+import { Calendar } from '../../components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
+import { format } from 'date-fns';
+
 
 import { 
   DropdownMenu, 
@@ -35,11 +39,12 @@ import {
   Upload,
   Search,
   Filter,
-  MoreHorizontal,
-  UserX,
   UserCheck,
-  Shield
+  Shield,
+  Calendar as CalendarIcon,
+  BookOpen
 } from 'lucide-react';
+
 
 import { generateSecurePassword } from '../../lib/password-utils';
 
@@ -255,7 +260,9 @@ export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
   
   // Filtering State
   const [search, setSearch] = useState('');
@@ -273,6 +280,10 @@ export const UserManagement: React.FC = () => {
   
   const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null);
   const [selectedPathId, setSelectedPathId] = useState<string>("");
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [assignType, setAssignType] = useState<'PATH' | 'COURSE'>('PATH');
+
   
   const [formData, setFormData] = useState({
     username: '', 
@@ -298,11 +309,14 @@ export const UserManagement: React.FC = () => {
           departmentId: deptFilter === 'all' ? undefined : deptFilter
         }),
         departmentsApi.getAll(),
-        learningPathsApi.getAll()
+        learningPathsApi.getAll(),
+        import('../../api/courses.api').then(m => m.coursesApi.getAll('active'))
       ]);
       setUsers(userData);
       setDepartments(deptData);
       setLearningPaths(pathData.filter(p => p.isPublished));
+      setCourses(courseData);
+
     } catch (error) {
       toast.error('Failed to load data');
     } finally {
@@ -358,16 +372,24 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  const handleAssignPath = async () => {
-    if (!selectedUser || !selectedPathId) return;
+  const handleAssign = async () => {
+    if (!selectedUser || (assignType === 'PATH' && !selectedPathId) || (assignType === 'COURSE' && !selectedCourseId)) return;
     setIsProcessing(true);
     try {
-      await learningPathsApi.enroll(selectedPathId, selectedUser.id);
-      toast.success(`Path assigned to ${selectedUser.firstName}`);
+      if (assignType === 'PATH') {
+        await learningPathsApi.enroll(selectedPathId, selectedUser.id, dueDate);
+        toast.success(`Path assigned to ${selectedUser.firstName}`);
+      } else {
+        const { enrollmentsApi } = await import('../../api/enrollments.api');
+        await enrollmentsApi.enroll(selectedCourseId, selectedUser.id, dueDate);
+        toast.success(`Course assigned to ${selectedUser.firstName}`);
+      }
       setIsAssignOpen(false);
       setSelectedPathId("");
+      setSelectedCourseId("");
+      setDueDate(undefined);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to assign path');
+      toast.error(error.response?.data?.message || 'Assignment failed');
     } finally {
       setIsProcessing(false);
     }
@@ -395,9 +417,12 @@ export const UserManagement: React.FC = () => {
     setIsEditOpen(true);
   };
 
-  const openAssign = (user: UserResponse) => {
+  const openAssign = (user: UserResponse, type: 'PATH' | 'COURSE' = 'PATH') => {
     setSelectedUser(user);
+    setAssignType(type);
     setSelectedPathId("");
+    setSelectedCourseId("");
+    setDueDate(undefined);
     setIsAssignOpen(true);
   };
 
@@ -523,48 +548,86 @@ export const UserManagement: React.FC = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Assign Learning Path Dialog */}
+          {/* Assign Dialog */}
           <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
             <DialogContent className="max-w-md rounded-3xl">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
-                  <Route className="h-6 w-6 text-primary" />
-                  Assign Learning Path
+                  {assignType === 'PATH' ? <Route className="h-6 w-6 text-primary" /> : <BookOpen className="h-6 w-6 text-primary" />}
+                  {assignType === 'PATH' ? 'Assign Learning Path' : 'Assign Individual Course'}
                 </DialogTitle>
                 <DialogDescription>
-                  Enroll <strong>{selectedUser?.firstName} {selectedUser?.lastName}</strong> in a sequenced path.
+                  Enroll <strong>{selectedUser?.firstName} {selectedUser?.lastName}</strong> in a {assignType === 'PATH' ? 'sequenced path' : 'specific course'}.
                 </DialogDescription>
               </DialogHeader>
-              <div className="py-6 space-y-4">
+              <div className="py-6 space-y-6">
                 <div className="space-y-2">
-                  <Label>Select Learning Path</Label>
-                  <Select value={selectedPathId} onValueChange={setSelectedPathId}>
-                    <SelectTrigger className="rounded-xl h-12 bg-muted/30">
-                      <SelectValue placeholder="Choose a published path..." />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      {learningPaths.length === 0 ? (
-                        <div className="p-4 text-center text-xs text-muted-foreground italic">No published paths available</div>
-                      ) : (
-                        learningPaths.map(path => (
-                          <SelectItem key={path.id} value={path.id} className="rounded-lg">
-                            <div className="flex flex-col">
-                              <span className="font-bold">{path.title}</span>
-                              <span className="text-[10px] opacity-70">{path.pathCourses.length} Courses</span>
-                            </div>
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <Label>Target Content</Label>
+                  {assignType === 'PATH' ? (
+                    <Select value={selectedPathId} onValueChange={setSelectedPathId}>
+                      <SelectTrigger className="rounded-xl h-12 bg-muted/30">
+                        <SelectValue placeholder="Choose a path..." />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        {learningPaths.map(path => (
+                          <SelectItem key={path.id} value={path.id}>{path.title}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+                      <SelectTrigger className="rounded-xl h-12 bg-muted/30">
+                        <SelectValue placeholder="Choose a course..." />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        {courses.map(course => (
+                          <SelectItem key={course.id} value={course.id}>{course.title}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4 text-primary" />
+                    Target Completion Date (Optional)
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full h-12 justify-start text-left font-normal rounded-xl bg-muted/30 border-none",
+                          !dueDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dueDate ? format(dueDate, "PPP") : <span>Set a strict deadline</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 rounded-2xl shadow-2xl border-primary/10" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dueDate}
+                        onSelect={setDueDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <p className="text-[10px] text-muted-foreground italic px-1">Learners will receive reminders before this date.</p>
                 </div>
                 
-                {selectedPathId && (
-                  <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-start gap-3">
+                {((assignType === 'PATH' && selectedPathId) || (assignType === 'COURSE' && selectedCourseId)) && (
+                  <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-start gap-3 animate-in fade-in zoom-in-95 duration-300">
                     <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
                     <div className="text-sm">
-                      <p className="font-bold text-primary">Confirmed Action</p>
-                      <p className="text-muted-foreground">The user will receive a notification and see this path in their "My Learning" dashboard immediately.</p>
+                      <p className="font-bold text-primary">Ready to Assign</p>
+                      <p className="text-muted-foreground">
+                        {dueDate 
+                          ? `Due by ${format(dueDate, "MMMM d, yyyy")}.` 
+                          : "No specific deadline set."}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -573,8 +636,8 @@ export const UserManagement: React.FC = () => {
                 <Button variant="outline" className="rounded-xl" onClick={() => setIsAssignOpen(false)}>Cancel</Button>
                 <Button 
                   className="rounded-xl shadow-lg shadow-primary/20"
-                  disabled={!selectedPathId || isProcessing}
-                  onClick={handleAssignPath}
+                  disabled={isProcessing || (assignType === 'PATH' ? !selectedPathId : !selectedCourseId)}
+                  onClick={handleAssign}
                 >
                   {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Assign Now
@@ -582,6 +645,7 @@ export const UserManagement: React.FC = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
         </div>
       </div>
 
@@ -740,8 +804,11 @@ export const UserManagement: React.FC = () => {
                         <DropdownMenuItem onClick={() => openEdit(user)} className="rounded-lg">
                           <Shield className="mr-2 h-4 w-4" /> Edit Profile
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openAssign(user)} className="rounded-lg text-primary font-bold">
+                        <DropdownMenuItem onClick={() => openAssign(user, 'PATH')} className="rounded-lg text-primary font-bold">
                           <Route className="mr-2 h-4 w-4" /> Assign Path
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openAssign(user, 'COURSE')} className="rounded-lg text-purple-600 font-bold">
+                          <BookOpen className="mr-2 h-4 w-4" /> Assign Course
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

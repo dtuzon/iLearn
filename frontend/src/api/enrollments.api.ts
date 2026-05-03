@@ -6,6 +6,7 @@ export interface Enrollment {
   status: 'NOT_STARTED' | 'IN_PROGRESS' | 'PENDING_GRADING' | 'COMPLETED';
   currentModuleOrder: number;
   enrolledAt: string;
+  dueDate?: string;
   course: Course & { _count: { modules: number } };
   user?: {
     activitySubmissions: any[];
@@ -26,8 +27,8 @@ export const enrollmentsApi = {
     const response = await apiClient.post(`/enrollments/complete-module/${moduleId}`);
     return response.data;
   },
-  enroll: async (courseId: string) => {
-    const response = await apiClient.post(`/enrollments/${courseId}`);
+  enroll: async (courseId: string, userId?: string, dueDate?: Date) => {
+    const response = await apiClient.post(`/enrollments/${courseId}`, { userId, dueDate });
     return response.data;
   },
   advanceProgress: async (courseId: string) => {
@@ -35,4 +36,5 @@ export const enrollmentsApi = {
     return response.data;
   }
 };
+
 

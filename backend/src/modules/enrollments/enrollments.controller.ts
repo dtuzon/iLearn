@@ -15,7 +15,9 @@ export class EnrollmentsController {
   static async enroll(req: AuthenticatedRequest, res: Response) {
     try {
       const { courseId } = req.params;
-      const enrollment = await EnrollmentsService.enroll(req.user!.userId, courseId as string);
+      const { userId, dueDate } = req.body;
+      const targetUserId = userId || req.user!.userId;
+      const enrollment = await EnrollmentsService.enroll(targetUserId, courseId as string, dueDate);
       res.status(201).json(enrollment);
     } catch (error: any) {
       res.status(400).json({ message: error.message });

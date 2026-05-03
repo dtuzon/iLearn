@@ -64,10 +64,10 @@ export class LearningPathsController {
   static async enroll(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { userId } = req.body;
-      const effectiveUserId = (userId || (req as any).user.id) as string;
+      const { userId, dueDate } = req.body;
+      const effectiveUserId = (userId || (req as any).user.userId) as string;
       
-      const enrollment = await LearningPathsService.enroll(effectiveUserId, id as string);
+      const enrollment = await LearningPathsService.enroll(effectiveUserId, id as string, dueDate);
       res.status(201).json(enrollment);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
