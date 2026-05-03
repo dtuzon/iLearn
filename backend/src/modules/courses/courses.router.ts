@@ -122,10 +122,32 @@ router.put(
   '/:id/unretire',
   authenticate,
   authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
-
-
   auditLog('UNRETIRE_COURSE'),
   CoursesController.unretire
 );
 
+router.post(
+  '/:id/thumbnail',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+  upload.single('thumbnail'),
+  CoursesController.uploadThumbnail
+);
+
+router.post(
+  '/:id/attachments',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+  upload.single('file'),
+  CoursesController.uploadAttachment
+);
+
+router.delete(
+  '/attachments/:id',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+  CoursesController.deleteAttachment
+);
+
 export default router;
+

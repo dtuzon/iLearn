@@ -184,8 +184,10 @@ export class CoursesService {
             }
           }
         },
-        certificateTemplate: true
+        certificateTemplate: true,
+        attachments: true
       }
+
     });
 
     if (!original) throw new Error('Course not found');
@@ -211,6 +213,17 @@ export class CoursesService {
           version: original.version + 1,
           parentId: original.parentId || original.id,
           isLatest: false,
+          introContent: original.introContent,
+          closingContent: original.closingContent,
+          attachments: {
+            create: original.attachments.map(att => ({
+              fileName: att.fileName,
+              fileUrl: att.fileUrl,
+              fileSize: att.fileSize,
+              fileType: att.fileType
+            }))
+          },
+
           modules: {
             create: original.modules.map(module => ({
               title: module.title,
@@ -338,9 +351,11 @@ export class CoursesService {
             }
           }
         },
-        certificateTemplate: true
+        certificateTemplate: true,
+        attachments: true
       }
     });
+
 
     if (!versionToRestore) throw new Error('Version not found');
 
@@ -378,6 +393,17 @@ export class CoursesService {
           version: newVersionNum,
           parentId: pId,
           isLatest: true,
+          introContent: versionToRestore.introContent,
+          closingContent: versionToRestore.closingContent,
+          attachments: {
+            create: versionToRestore.attachments.map(att => ({
+              fileName: att.fileName,
+              fileUrl: att.fileUrl,
+              fileSize: att.fileSize,
+              fileType: att.fileType
+            }))
+          },
+
           modules: {
 
             create: versionToRestore.modules.map(module => ({
@@ -446,7 +472,29 @@ export class CoursesService {
     });
   }
 
+  static async addAttachment(courseId: string, data: { fileName: string, fileUrl: string, fileSize: number, fileType: string }) {
+    return prisma.courseAttachment.create({
+      data: {
+        ...data,
+        courseId
+      }
+    });
+  }
+
+  static async deleteAttachment(id: string) {
+    return prisma.courseAttachment.delete({
+      where: { id }
+    });
+  }
+
+  static async getAttachmentById(id: string) {
+    return prisma.courseAttachment.findUnique({
+      where: { id }
+    });
+  }
+
 }
+
 
 
 

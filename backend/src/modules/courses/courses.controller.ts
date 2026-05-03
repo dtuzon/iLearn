@@ -1,12 +1,94 @@
 import { Request, Response } from 'express';
 import { CoursesService } from './courses.service';
+import { StorageService } from '../../lib/services/storage.service';
 
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
 import { Role } from '@prisma/client';
 
 
 export class CoursesController {
+  // ... (previous methods stay the same)
+
+  static async uploadThumbnail(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+      // Ownership check
+      if (req.user!.role === Role.COURSE_CREATOR) {
+        const course = await CoursesService.getById(id as string);
+        if (!course || course.lecturerId !== req.user!.userId) {
+          return res.status(403).json({ message: 'Forbidden: You do not own this course.' });
+        }
+      }
+
+      const thumbnailUrl = await StorageService.uploadFile(req.file, 'thumbnails');
+      
+      // Update course record
+      await CoursesService.partialUpdate(id as string, { thumbnailUrl });
+
+      res.json({ thumbnailUrl });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  static async uploadAttachment(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+      // Ownership check
+      if (req.user!.role === Role.COURSE_CREATOR) {
+        const course = await CoursesService.getById(id as string);
+        if (!course || course.lecturerId !== req.user!.userId) {
+          return res.status(403).json({ message: 'Forbidden: You do not own this course.' });
+        }
+      }
+
+      const fileUrl = await StorageService.uploadFile(req.file, 'attachments');
+      
+      const attachment = await CoursesService.addAttachment(id as string, {
+        fileName: req.file.originalname,
+        fileUrl,
+        fileSize: req.file.size,
+        fileType: req.file.mimetype
+      });
+
+      res.status(201).json(attachment);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  static async deleteAttachment(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      const attachment = await CoursesService.getAttachmentById(id as string);
+      if (!attachment) return res.status(404).json({ message: 'Attachment not found' });
+
+      // Ownership check
+      if (req.user!.role === Role.COURSE_CREATOR) {
+        const course = await CoursesService.getById(attachment.courseId);
+        if (!course || course.lecturerId !== req.user!.userId) {
+          return res.status(403).json({ message: 'Forbidden: You do not own this course.' });
+        }
+      }
+
+      // Delete from storage
+      await StorageService.deleteFile(attachment.fileUrl);
+      
+      // Delete from DB
+      await CoursesService.deleteAttachment(id as string);
+
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
   static async getAll(req: AuthenticatedRequest, res: Response) {
+
     try {
       const { tab } = req.query;
       const courses = await CoursesService.getAll(req.user!.userId, req.user!.role, tab as string);

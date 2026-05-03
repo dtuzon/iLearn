@@ -262,6 +262,10 @@ model Course {
   version      Int          @default(1)
   parentId     String?      // Links new versions to the original course
   isLatest     Boolean      @default(true) // Helper to quickly query the active version
+  
+  introContent   String? @db.Text
+  closingContent String? @db.Text
+
 
   parent       Course?      @relation("CourseVersions", fields: [parentId], references: [id])
   versions     Course[]     @relation("CourseVersions")
@@ -293,9 +297,26 @@ model Course {
   certificateTemplate CertificateTemplate?
   behavioralEvaluations BehavioralEvaluation[]
   learningPathCourses LearningPathCourse[]
+  attachments         CourseAttachment[]
+
 
   @@map("courses")
 }
+
+model CourseAttachment {
+  id        String   @id @default(cuid())
+  fileName  String
+  fileUrl   String
+  fileSize  Int?     // In bytes
+  fileType  String?  // e.g., 'application/pdf'
+  courseId  String
+  createdAt DateTime @default(now())
+
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("course_attachments")
+}
+
 
 model CourseModule {
   id               String     @id @default(cuid())

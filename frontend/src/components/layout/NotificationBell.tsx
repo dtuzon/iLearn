@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Bell, Clock, Inbox } from 'lucide-react';
 import { 
   Popover, 
   PopoverContent, 
@@ -6,132 +7,147 @@ import {
 } from '../ui/popover';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Bell, Clock, ExternalLink, Inbox } from 'lucide-react';
-
+import { ScrollArea } from '../ui/scroll-area';
 import { notificationsApi } from '../../api/notifications.api';
 import type { Notification } from '../../api/notifications.api';
 import { formatDistanceToNow } from 'date-fns';
-
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 
-
 export const NotificationBell: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    fetchNotifications();
-    // Poll every 60 seconds
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
-  }, []);
 
   const fetchNotifications = async () => {
     try {
       const data = await notificationsApi.getAll();
       setNotifications(data);
-      setUnreadCount(data.filter(n => !n.isRead).length);
     } catch (error) {
-      console.error('Failed to fetch notifications');
+      console.error('Failed to fetch notifications', error);
     }
   };
 
-  const handleMarkRead = async (id: string, actionUrl: string | null) => {
+  useEffect(() => {
+    fetchNotifications();
+    // Refresh every minute
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  const handleMarkAsRead = async (id: string, link: string | null) => {
     try {
-      await notificationsApi.markRead(id);
-      fetchNotifications();
-      if (actionUrl) {
-        navigate(actionUrl);
+      await notificationsApi.markAsRead(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      
+      if (link) {
+        setIsOpen(false);
+        navigate(link);
       }
     } catch (error) {
-      console.error('Failed to mark as read');
+      console.error('Failed to mark notification as read', error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationsApi.markAllAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch (error) {
+      console.error('Failed to mark all as read', error);
     }
   };
 
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full hover:bg-primary/10 transition-colors">
-          <Bell className="h-5 w-5" />
+        <Button variant="ghost" size="icon" className="relative hover:bg-primary/5 transition-colors group">
+          <Bell className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
           {unreadCount > 0 && (
             <Badge 
               variant="destructive" 
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] font-bold rounded-full border-2 border-background animate-in zoom-in"
+              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] font-black border-2 border-background animate-in zoom-in duration-300"
             >
-              {unreadCount}
+              {unreadCount > 9 ? '9+' : unreadCount}
             </Badge>
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0 shadow-2xl border-none rounded-2xl overflow-hidden" align="end">
-        <div className="flex items-center justify-between p-4 bg-primary text-primary-foreground">
+      <PopoverContent className="w-80 sm:w-96 p-0 mr-4 shadow-2xl border-none bg-background/95 backdrop-blur-md overflow-hidden" align="end">
+        <div className="flex items-center justify-between p-4 border-b border-border/50">
           <div className="flex items-center gap-2">
-            <Inbox className="h-4 w-4" />
-            <span className="font-black uppercase tracking-widest text-xs">Notifications</span>
+            <h3 className="font-black text-sm uppercase tracking-widest">Notifications</h3>
+            {unreadCount > 0 && <Badge variant="secondary" className="text-[10px] font-bold">{unreadCount} New</Badge>}
           </div>
-          {unreadCount > 0 && (
-            <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full">
-              {unreadCount} NEW
-            </span>
-          )}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 text-[10px] font-black uppercase tracking-tighter hover:text-primary hover:bg-primary/5"
+            onClick={handleMarkAllAsRead}
+            disabled={unreadCount === 0}
+          >
+            Mark all as read
+          </Button>
         </div>
-        
-        <div className="max-h-[400px] overflow-y-auto bg-background">
+
+        <ScrollArea className="h-[400px]">
           {notifications.length === 0 ? (
-            <div className="p-8 text-center space-y-2">
-              <Clock className="h-10 w-10 text-muted-foreground/20 mx-auto" />
-              <p className="text-sm font-bold text-muted-foreground">All caught up!</p>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60">No new alerts found</p>
+            <div className="flex flex-col items-center justify-center py-20 px-8 text-center space-y-3">
+              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                <Inbox className="h-6 w-6 text-muted-foreground opacity-20" />
+              </div>
+              <p className="text-sm font-bold text-muted-foreground">You're all caught up!</p>
+              <p className="text-xs text-muted-foreground/60">We'll notify you when something important happens.</p>
             </div>
           ) : (
-            <div className="divide-y">
-              {notifications.map((n) => (
+            <div className="flex flex-col divide-y divide-border/30">
+              {notifications.map((notification) => (
                 <div 
-                  key={n.id}
-                  onClick={() => handleMarkRead(n.id, n.actionUrl)}
+                  key={notification.id}
+                  onClick={() => handleMarkAsRead(notification.id, notification.link)}
                   className={cn(
-                    "p-4 cursor-pointer transition-all hover:bg-muted/50 group relative",
-                    !n.isRead ? "bg-primary/5" : "opacity-80"
+                    "relative flex flex-col gap-1 p-4 cursor-pointer transition-all hover:bg-primary/5 group",
+                    !notification.isRead && "bg-primary/[0.02]"
                   )}
                 >
-                  {!n.isRead && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
+                  {!notification.isRead && (
+                    <div className="absolute left-2 top-5 w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(var(--primary),0.6)]" />
                   )}
-                  <div className="space-y-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className={cn(
-                        "text-xs font-black uppercase tracking-tight",
-                        !n.isRead ? "text-primary" : "text-muted-foreground"
-                      )}>
-                        {n.title}
-                      </p>
-                      <span className="text-[9px] font-medium text-muted-foreground whitespace-nowrap">
-                        {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
-                      </span>
-                    </div>
-                    <p className="text-xs leading-relaxed font-medium text-foreground/80 line-clamp-2">
-                      {n.message}
+                  
+                  <div className="flex justify-between items-start gap-2">
+                    <p className={cn(
+                      "text-sm leading-tight",
+                      notification.isRead ? "font-medium text-foreground/80" : "font-black text-foreground"
+                    )}>
+                      {notification.title}
                     </p>
-                    {n.actionUrl && (
-                      <div className="flex items-center gap-1 mt-2 text-[9px] font-black uppercase text-primary tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-                        View Action <ExternalLink className="h-2 w-2" />
-                      </div>
-                    )}
+                    <span className="text-[10px] font-bold text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                       <Clock className="h-3 w-3" />
+                       {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                    </span>
                   </div>
+                  
+                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed font-medium">
+                    {notification.message}
+                  </p>
+                  
+                  {notification.link && (
+                    <div className="mt-2 flex items-center text-[10px] font-black text-primary uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">
+                      Take Action →
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </ScrollArea>
         
         {notifications.length > 0 && (
-          <div className="p-2 bg-muted/30 border-t flex justify-center">
-             <Button variant="ghost" size="sm" className="text-[10px] font-black uppercase tracking-widest h-8" onClick={fetchNotifications}>
-               Refresh Feed
-             </Button>
-          </div>
+           <div className="p-3 border-t border-border/30 bg-muted/20 text-center">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">End of line</p>
+           </div>
         )}
       </PopoverContent>
     </Popover>

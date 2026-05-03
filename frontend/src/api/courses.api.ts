@@ -1,19 +1,27 @@
 import apiClient from './client';
 
+export interface CourseAttachment {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize: number | null;
+  fileType: string | null;
+  courseId: string;
+  createdAt: string;
+}
+
 export interface Course {
   id: string;
   title: string;
   description: string | null;
   thumbnailUrl: string | null;
-  isPublished: boolean; // Keep for compatibility if needed, but we should use status
+  introContent: string | null;
+  closingContent: string | null;
   status: 'DRAFT' | 'PENDING_APPROVAL' | 'PUBLISHED' | 'ARCHIVED' | 'RETIRED';
-
   version: number;
   parentId: string | null;
   isLatest: boolean;
   passingGrade: number;
-
-
   targetAudience: string;
   targetDepartments: string[];
   requires180DayEval: boolean;
@@ -24,9 +32,8 @@ export interface Course {
   approvedBy?: { firstName: string | null; lastName: string | null };
   _count?: { modules: number };
   modules?: CourseModule[];
+  attachments?: CourseAttachment[];
 }
-
-
 
 export interface CourseModule {
   id: string;
@@ -44,14 +51,11 @@ export interface CourseModule {
   evaluationTemplateId?: string;
 }
 
-
-
 export const coursesApi = {
   getAll: async (tab: string = 'active') => {
     const response = await apiClient.get(`/courses?tab=${tab}`);
     return response.data as Course[];
   },
-
   getById: async (id: string) => {
     const response = await apiClient.get(`/courses/${id}`);
     return response.data as Course;
@@ -73,9 +77,7 @@ export const coursesApi = {
   },
   updateCertificateTemplate: async (courseId: string, formData: FormData) => {
     const response = await apiClient.put(`/courses/${courseId}/certificate-template`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
   },
@@ -102,8 +104,28 @@ export const coursesApi = {
   unretire: async (courseId: string) => {
     const response = await apiClient.put(`/courses/${courseId}/unretire`);
     return response.data as Course;
+  },
+  uploadThumbnail: async (courseId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('thumbnail', file);
+    const response = await apiClient.post(`/courses/${courseId}/thumbnail`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  },
+  uploadAttachment: async (courseId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post(`/courses/${courseId}/attachments`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data as CourseAttachment;
+  },
+  deleteAttachment: async (attachmentId: string) => {
+    await apiClient.delete(`/courses/attachments/${attachmentId}`);
   }
 };
+
 
 
 

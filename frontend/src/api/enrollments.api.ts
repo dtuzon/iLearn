@@ -29,5 +29,10 @@ export const enrollmentsApi = {
   enroll: async (courseId: string) => {
     const response = await apiClient.post(`/enrollments/${courseId}`);
     return response.data;
+  },
+  advanceProgress: async (courseId: string) => {
+    const response = await apiClient.post(`/enrollments/${courseId}/advance-progress`);
+    return response.data;
   }
 };
+

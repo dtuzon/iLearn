@@ -51,4 +51,14 @@ export class EnrollmentsController {
       res.status(400).json({ message: error.message });
     }
   }
+  static async advanceProgress(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { courseId } = req.params;
+      const result = await EnrollmentsService.advanceProgress(req.user!.userId, courseId as string);
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
+

@@ -167,19 +167,37 @@ export const MyLearning: React.FC = () => {
                 return (
                   <Card key={enrollment.id} className="group border-none shadow-lg hover:shadow-xl transition-all duration-300 bg-background/50 backdrop-blur-sm overflow-hidden flex flex-col">
                     <div className="h-1.5 w-full bg-purple-500/10 group-hover:bg-purple-500 transition-colors" />
-                    <CardHeader>
-                      <div className="flex justify-between items-start mb-1">
-                        <Badge variant="secondary" className="bg-purple-500/5 text-purple-500 border-none text-[10px] font-bold">
+                    
+                    <div className="h-40 w-full relative overflow-hidden bg-muted/20">
+                      {enrollment.course.thumbnailUrl ? (
+                        <img 
+                          src={enrollment.course.thumbnailUrl} 
+                          alt={enrollment.course.title} 
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-purple-500/20 via-background to-primary/20 flex items-center justify-center">
+                           <BookOpen className="h-12 w-12 text-purple-500/20" />
+                        </div>
+                      )}
+                      <div className="absolute top-3 left-3">
+                        <Badge variant="secondary" className="bg-black/40 text-white backdrop-blur-sm border-none text-[10px] font-black uppercase tracking-tighter">
                           {totalModules} MODULES
                         </Badge>
-                        {enrollment.status === 'COMPLETED' && (
-                          <CheckCircle2 className="h-5 w-5 text-success" />
-                        )}
                       </div>
-                      <CardTitle className="line-clamp-2 leading-tight group-hover:text-purple-500 transition-colors">
+                      {enrollment.status === 'COMPLETED' && (
+                         <div className="absolute top-3 right-3 bg-success rounded-full p-1 shadow-lg">
+                           <CheckCircle2 className="h-4 w-4 text-white" />
+                         </div>
+                      )}
+                    </div>
+
+                    <CardHeader>
+                      <CardTitle className="line-clamp-2 leading-tight group-hover:text-purple-500 transition-colors min-h-[3rem]">
                         {enrollment.course.title}
                       </CardTitle>
                     </CardHeader>
+
                     <CardContent className="flex-1 space-y-4">
                       <div className="space-y-2">
                         <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">

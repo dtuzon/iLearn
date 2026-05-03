@@ -9,6 +9,8 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { ScrollArea } from '../../components/ui/scroll-area';
+
 import { 
   ArrowLeft, 
   Loader2, 
@@ -26,8 +28,12 @@ import {
   Save,
   Video as VideoIcon,
   Eye,
-  CopyPlus
+  CopyPlus,
+  Image as ImageIcon,
+  UploadCloud,
+  File as FileIcon
 } from 'lucide-react';
+
 
 
 
@@ -267,8 +273,14 @@ export const CourseBuilder: React.FC = () => {
     description: '',
     passingGrade: 70,
     targetAudience: 'GENERAL',
-    targetDepartments: [] as string[]
+    targetDepartments: [] as string[],
+    introContent: '',
+    closingContent: '',
+    thumbnailUrl: ''
   });
+
+  const [attachments, setAttachments] = useState<any[]>([]);
+
 
   const [isSavingIdentity, setIsSavingIdentity] = useState(false);
   const [editingModule, setEditingModule] = useState<any>(null);
@@ -296,8 +308,13 @@ export const CourseBuilder: React.FC = () => {
         description: data.description || '',
         passingGrade: data.passingGrade,
         targetAudience: data.targetAudience,
-        targetDepartments: data.targetDepartments
+        targetDepartments: data.targetDepartments,
+        introContent: data.introContent || '',
+        closingContent: data.closingContent || '',
+        thumbnailUrl: data.thumbnailUrl || ''
       });
+      setAttachments(data.attachments || []);
+
     } catch (error) {
       toast.error('Failed to load course details');
     } finally {
@@ -480,7 +497,52 @@ export const CourseBuilder: React.FC = () => {
     }
   };
 
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !courseId) return;
+    setIsUploadingThumbnail(true);
+    try {
+      const { thumbnailUrl } = await coursesApi.uploadThumbnail(courseId, file);
+      setIdentityForm(prev => ({ ...prev, thumbnailUrl }));
+      toast.success('Thumbnail uploaded successfully');
+    } catch (error) {
+      toast.error('Failed to upload thumbnail');
+    } finally {
+      setIsUploadingThumbnail(false);
+    }
+  };
+
+  const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !courseId) return;
+    setIsUploadingAttachment(true);
+    try {
+      const attachment = await coursesApi.uploadAttachment(courseId, file);
+      setAttachments(prev => [...prev, attachment]);
+      toast.success('Attachment uploaded');
+    } catch (error) {
+      toast.error('Failed to upload attachment');
+    } finally {
+      setIsUploadingAttachment(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (id: string) => {
+    if (!window.confirm('Delete this attachment?')) return;
+    try {
+      await coursesApi.deleteAttachment(id);
+      setAttachments(prev => prev.filter(a => a.id !== id));
+      toast.success('Attachment deleted');
+    } catch (error) {
+      toast.error('Failed to delete attachment');
+    }
+  };
+
   const getModuleIcon = (type: string) => {
+
     switch (type) {
       case 'PRE_QUIZ': return <ClipboardCheck className="h-6 w-6 text-primary" />;
       case 'VIDEO': return <Play className="h-6 w-6 text-secondary" />;
@@ -619,6 +681,10 @@ export const CourseBuilder: React.FC = () => {
           <TabsTrigger value="curriculum" className="h-10 px-8 font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">
             Curriculum Loop
           </TabsTrigger>
+          <TabsTrigger value="structure" className="h-10 px-8 font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Layers className="mr-2 h-4 w-4" /> Structure & Flow
+          </TabsTrigger>
+
           <TabsTrigger value="certificate" className="h-10 px-8 font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Award className="mr-2 h-4 w-4" /> Certificate Builder
           </TabsTrigger>
@@ -721,7 +787,133 @@ export const CourseBuilder: React.FC = () => {
           </div>
         </TabsContent>
 
+        <TabsContent value="structure" className="space-y-8 animate-in fade-in duration-500">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-6">
+              <Card className="border-none shadow-lg">
+                <CardHeader className="border-b border-border/50 bg-muted/5">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Play className="h-4 w-4 text-primary" />
+                    </div>
+                    <CardTitle className="text-lg">Course Introduction</CardTitle>
+                  </div>
+                  <CardDescription>This content will be shown to the learner before they start the first module.</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <Textarea 
+                    placeholder="Welcome your students! Explain the goals and what they will achieve..."
+                    className="min-h-[250px] font-medium leading-relaxed"
+                    value={identityForm.introContent}
+                    onChange={(e) => setIdentityForm({...identityForm, introContent: e.target.value})}
+                    disabled={isReadonly}
+                  />
+                  <p className="text-[10px] font-bold text-muted-foreground mt-4 uppercase tracking-widest opacity-40">HTML supported for advanced formatting</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-lg">
+                <CardHeader className="border-b border-border/50 bg-muted/5">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
+                      <CheckCircle2 className="h-4 w-4 text-success" />
+                    </div>
+                    <CardTitle className="text-lg">Course Closing</CardTitle>
+                  </div>
+                  <CardDescription>This content will be shown after the final component is completed.</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <Textarea 
+                    placeholder="Congratulations message, next steps, or key takeaways..."
+                    className="min-h-[250px] font-medium leading-relaxed"
+                    value={identityForm.closingContent}
+                    onChange={(e) => setIdentityForm({...identityForm, closingContent: e.target.value})}
+                    disabled={isReadonly}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-6">
+              <Card className="border-none shadow-lg overflow-hidden">
+                <CardHeader className="bg-primary/5 border-b border-primary/10">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <UploadCloud className="h-4 w-4 text-primary" />
+                      <CardTitle className="text-lg">Attachments</CardTitle>
+                    </div>
+                    {isUploadingAttachment && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                  </div>
+                  <CardDescription>Downloadable PDFs, PPTs, or Docs.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {!isReadonly && (
+                    <div className="p-4 border-b border-dashed border-border/50">
+                      <Label htmlFor="file-upload" className="flex flex-col items-center justify-center py-6 border-2 border-dashed rounded-xl cursor-pointer hover:bg-primary/5 transition-colors">
+                        <Plus className="h-6 w-6 text-primary mb-2" />
+                        <span className="text-xs font-bold text-primary uppercase tracking-widest">Add Attachment</span>
+                        <input 
+                          id="file-upload" 
+                          type="file" 
+                          className="hidden" 
+                          disabled={isUploadingAttachment}
+                          onChange={handleAttachmentUpload}
+                        />
+                      </Label>
+                    </div>
+                  )}
+
+                  <ScrollArea className="h-[400px]">
+                    <div className="flex flex-col divide-y divide-border/30">
+                      {attachments.length === 0 ? (
+                        <div className="p-8 text-center text-muted-foreground opacity-30 flex flex-col items-center">
+                          <FileIcon className="h-8 w-8 mb-2" />
+                          <p className="text-[10px] font-black uppercase">No materials attached</p>
+                        </div>
+                      ) : (
+                        attachments.map((file) => (
+                          <div key={file.id} className="p-4 flex items-center justify-between group hover:bg-muted/30 transition-colors">
+                            <div className="flex items-center gap-3 overflow-hidden">
+                              <div className="h-8 w-8 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                                <FileIcon className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                              <div className="overflow-hidden">
+                                <p className="text-xs font-bold truncate pr-2">{file.fileName}</p>
+                                <p className="text-[10px] text-muted-foreground font-mono">
+                                  {(file.fileSize / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                              </div>
+                            </div>
+                            {!isReadonly && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => handleDeleteAttachment(file.id)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+              
+              {!isReadonly && (
+                 <Button onClick={handleUpdateIdentity} disabled={isSavingIdentity} className="w-full h-12 shadow-xl shadow-primary/20 font-black uppercase tracking-widest">
+                    {isSavingIdentity ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Sync Structure Changes
+                 </Button>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
         <TabsContent value="certificate">
+
           <CertificateBuilder 
             courseId={courseId!} 
             initialData={{
@@ -735,11 +927,60 @@ export const CourseBuilder: React.FC = () => {
           <div className="space-y-8">
             <Card className="border-none shadow-lg">
               <CardHeader>
-                <CardTitle>Course Configuration</CardTitle>
-                <CardDescription>Update the primary metadata for this learning experience.</CardDescription>
+                <CardTitle>Course Branding & Config</CardTitle>
+                <CardDescription>Update the visual identity and metadata for this learning experience.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className="space-y-6">
+                {/* Thumbnail Section */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-bold uppercase tracking-widest text-primary">Course Thumbnail</Label>
+                  <div className="flex flex-col md:flex-row gap-6 items-start">
+                    <div className="w-full md:w-64 h-36 rounded-xl border-2 border-dashed border-muted-foreground/20 flex items-center justify-center bg-muted/5 overflow-hidden relative group">
+                      {identityForm.thumbnailUrl ? (
+                        <>
+                          <img src={identityForm.thumbnailUrl} alt="Thumbnail" className="w-full h-full object-cover" />
+                          {!isReadonly && (
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Label htmlFor="thumb-upload" className="cursor-pointer text-white text-xs font-bold uppercase tracking-widest bg-primary/80 px-4 py-2 rounded-full">Change Image</Label>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground/40">
+                          <ImageIcon className="h-8 w-8" />
+                          <span className="text-[10px] font-black uppercase">No Image</span>
+                        </div>
+                      )}
+                      {!isReadonly && !identityForm.thumbnailUrl && (
+                        <Label htmlFor="thumb-upload" className="absolute inset-0 cursor-pointer" />
+                      )}
+                      <input 
+                        id="thumb-upload" 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        disabled={isReadonly || isUploadingThumbnail}
+                        onChange={handleThumbnailUpload} 
+                      />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <p className="text-sm font-bold text-muted-foreground">Recommendation</p>
+                      <ul className="text-xs text-muted-foreground/60 space-y-1 list-disc pl-4">
+                        <li>16:9 Aspect Ratio (e.g., 1280x720)</li>
+                        <li>High contrast imagery works best</li>
+                        <li>Max file size: 2MB</li>
+                      </ul>
+                      {isUploadingThumbnail && (
+                        <div className="flex items-center gap-2 text-primary font-bold text-xs animate-pulse">
+                          <Loader2 className="h-3 w-3 animate-spin" /> Uploading branding assets...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
                   <div className="space-y-2">
                     <Label htmlFor="c-title">Course Title</Label>
                     <Input 

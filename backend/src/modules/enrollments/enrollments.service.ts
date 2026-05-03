@@ -185,5 +185,36 @@ export class EnrollmentsService {
       }
     }
   }
+  static async advanceProgress(userId: string, courseId: string) {
+    const enrollment = await prisma.enrollment.findUnique({
+      where: { userId_courseId: { userId, courseId } },
+      include: { 
+        course: { 
+          include: { 
+            _count: { select: { modules: true } } 
+          } 
+        } 
+      }
+    });
+
+    if (!enrollment) throw new Error('Enrollment not found');
+
+    const totalModules = enrollment.course._count.modules;
+    const nextOrder = enrollment.currentModuleOrder + 1;
+    
+    // We allow progress to reach totalModules + 1 to account for the Closing page
+    const isFinished = nextOrder > totalModules;
+
+    return prisma.enrollment.update({
+      where: { id: enrollment.id },
+      data: {
+        currentModuleOrder: nextOrder,
+        status: isFinished ? EnrollmentStatus.COMPLETED : EnrollmentStatus.IN_PROGRESS,
+        completedAt: isFinished ? new Date() : undefined
+      }
+    });
+  }
+
 }
+
 

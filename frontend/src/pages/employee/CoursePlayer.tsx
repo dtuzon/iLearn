@@ -35,18 +35,16 @@ export const CoursePlayer: React.FC = () => {
   const [currentModule, setCurrentModule] = useState<CourseModule | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAtIntro, setIsAtIntro] = useState(false);
+  const [isAtClosing, setIsAtClosing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Quiz State
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
-
 
 
   const fetchData = async () => {
     if (!courseId) return;
     setIsLoading(true);
     try {
-      // 1. Get Course & Progress
       const [courseData, progressData] = await Promise.all([
         coursesApi.getById(courseId),
         enrollmentsApi.getProgress(courseId)
@@ -55,23 +53,41 @@ export const CoursePlayer: React.FC = () => {
       setCourse(courseData);
       setEnrollment(progressData);
 
-      // 2. Identify Current Module
       const modules = courseData.modules || [];
       modules.sort((a, b) => a.sequenceOrder - b.sequenceOrder);
       
-      const current = modules.find(m => m.sequenceOrder === progressData.currentModuleOrder);
-      
-      if (current) {
-        setCurrentModule(current);
-        
-        // 3. If Quiz, fetch questions
-        if (current.type === 'PRE_QUIZ' || current.type === 'POST_QUIZ') {
-          const questions = await quizzesApi.getModuleQuestions(current.id);
-          setQuizQuestions(questions);
-        }
-      } else if (progressData.currentModuleOrder >= modules.length && modules.length > 0) {
-        // Course Finished
+      const currentOrder = progressData.currentModuleOrder;
+
+      // Logic: Order 0 is reserved for Intro (if it exists)
+      if (currentOrder === 0 && courseData.introContent) {
+        setIsAtIntro(true);
+        setIsAtClosing(false);
         setCurrentModule(null);
+      } 
+      // Logic: Order > totalModules is for Closing (if it exists)
+      else if (currentOrder > modules.length && courseData.closingContent) {
+        setIsAtIntro(false);
+        setIsAtClosing(true);
+        setCurrentModule(null);
+      }
+      else {
+        setIsAtIntro(false);
+        setIsAtClosing(false);
+
+        // If at order 0 but no intro, target module 1
+        const targetOrder = (currentOrder === 0) ? 1 : currentOrder;
+        const current = modules.find(m => m.sequenceOrder === targetOrder);
+        
+        if (current) {
+          setCurrentModule(current);
+          if (current.type === 'PRE_QUIZ' || current.type === 'POST_QUIZ') {
+            const questions = await quizzesApi.getModuleQuestions(current.id);
+            setQuizQuestions(questions);
+          }
+        } else {
+          // No current module found, likely finished
+          setCurrentModule(null);
+        }
       }
     } catch (error: any) {
       toast.error('Failed to load course content');
@@ -80,6 +96,20 @@ export const CoursePlayer: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  const handleAdvance = async () => {
+    if (!courseId) return;
+    setIsSubmitting(true);
+    try {
+      await enrollmentsApi.advanceProgress(courseId);
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to advance progress');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
 
   useEffect(() => {
     fetchData();
@@ -216,7 +246,9 @@ export const CoursePlayer: React.FC = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Back
         </Button>
         <div className="text-right">
-          <div className="text-sm font-medium">Module {enrollment.currentModuleOrder + 1} of {totalModules}</div>
+          <div className="text-sm font-medium">
+            {isAtIntro ? 'Introduction' : isAtClosing ? 'Course Wrap-up' : `Module ${enrollment.currentModuleOrder} of ${totalModules}`}
+          </div>
           <div className="flex items-center gap-2 mt-1">
             <Progress value={progressPercent} className="w-32 h-2" />
             <span className="text-xs text-muted-foreground">{progressPercent}%</span>
@@ -224,7 +256,68 @@ export const CoursePlayer: React.FC = () => {
         </div>
       </div>
 
-      {!currentModule ? (
+      {isAtIntro ? (
+        <Card className="shadow-2xl border-none overflow-hidden">
+          <CardHeader className="bg-primary text-primary-foreground p-10">
+            <CardTitle className="text-3xl font-black uppercase tracking-tight italic">Welcome to {course.title}</CardTitle>
+            <CardDescription className="text-primary-foreground/70 text-lg">Foundation & Orientation</CardDescription>
+          </CardHeader>
+          <CardContent className="p-10 prose prose-lg max-w-none dark:prose-invert">
+            <div dangerouslySetInnerHTML={{ __html: course.introContent || '' }} />
+          </CardContent>
+          <CardFooter className="bg-muted/50 p-8 flex justify-end border-t">
+            <Button onClick={handleAdvance} disabled={isSubmitting} size="lg" className="h-14 px-10 font-black uppercase tracking-widest shadow-xl shadow-primary/20">
+               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Initiate Learning Sequence"}
+            </Button>
+          </CardFooter>
+        </Card>
+      ) : isAtClosing ? (
+        <div className="space-y-8">
+          <Card className="shadow-2xl border-none overflow-hidden">
+            <CardHeader className="bg-success text-success-foreground p-10">
+              <CardTitle className="text-3xl font-black uppercase tracking-tight italic">Course Concluded</CardTitle>
+              <CardDescription className="text-success-foreground/70 text-lg">Final Summary & Resources</CardDescription>
+            </CardHeader>
+            <CardContent className="p-10 prose prose-lg max-w-none dark:prose-invert">
+              <div dangerouslySetInnerHTML={{ __html: course.closingContent || '' }} />
+            </CardContent>
+            <CardFooter className="bg-muted/50 p-8 flex justify-between border-t items-center">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">End of Learning Path</p>
+              <Button onClick={handleAdvance} disabled={isSubmitting} size="lg" className="h-14 px-10 font-black uppercase tracking-widest bg-success hover:bg-success/90 text-white shadow-xl shadow-success/20">
+                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Finalize & Exit"}
+              </Button>
+            </CardFooter>
+          </Card>
+
+          {course.attachments && course.attachments.length > 0 && (
+            <Card className="border-none shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-lg">Supplementary Materials</CardTitle>
+                <CardDescription>Download these resources for your records.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {course.attachments.map(att => (
+                  <a 
+                    key={att.id} 
+                    href={att.fileUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-4 p-4 rounded-xl border hover:bg-primary/5 hover:border-primary/30 transition-all group"
+                  >
+                    <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-primary/10">
+                      <BookOpen className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+                    </div>
+                    <div className="overflow-hidden">
+                      <p className="text-sm font-bold truncate pr-2">{att.fileName}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase font-mono">{(att.fileSize / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                  </a>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      ) : !currentModule ? (
          <Card><CardContent className="p-8 text-center">No module available.</CardContent></Card>
       ) : (
         <Card className="shadow-lg border-primary/10">
@@ -322,9 +415,6 @@ export const CoursePlayer: React.FC = () => {
               Strict Learning Loop active: Skipping modules is disabled.
             </div>
             
-            {/* Button removed for Video - completion handled by player */}
-
-
             {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ') && quizQuestions.length > 0 && (
               <Button onClick={handleSubmitQuiz} disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -341,4 +431,5 @@ export const CoursePlayer: React.FC = () => {
       )}
     </div>
   );
+
 };
