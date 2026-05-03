@@ -11,6 +11,9 @@ import { Loader2, PlayCircle, CheckCircle2, Route, BookOpen, Compass } from 'luc
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { useAuth } from '../../context/AuthContext';
+import { format, differenceInDays } from 'date-fns';
+import { AlertCircle, Clock } from 'lucide-react';
+
 
 
 export const MyLearning: React.FC = () => {
@@ -39,6 +42,37 @@ export const MyLearning: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [user]);
+
+  const renderDeadlineBadge = (dueDate?: string) => {
+    if (!dueDate) return null;
+    const due = new Date(dueDate);
+    const now = new Date();
+    const diffDays = differenceInDays(due, now);
+
+    if (diffDays < 0) {
+      return (
+        <Badge variant="destructive" className="flex items-center gap-1 shadow-lg shadow-destructive/20 animate-pulse">
+          <AlertCircle className="h-3 w-3" />
+          OVERDUE
+        </Badge>
+      );
+    }
+    if (diffDays <= 3) {
+      return (
+        <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none flex items-center gap-1 shadow-lg shadow-orange-500/20">
+          <Clock className="h-3 w-3" />
+          DUE IN {diffDays === 0 ? 'TODAY' : `${diffDays}d`}
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30 flex items-center gap-1">
+        <Clock className="h-3 w-3 opacity-50" />
+        DUE {format(due, 'MMM d')}
+      </Badge>
+    );
+  };
+
 
   if (isLoading) {
     return (
@@ -102,9 +136,14 @@ export const MyLearning: React.FC = () => {
                         <Badge variant="secondary" className="bg-primary/5 text-primary border-none text-[10px] font-bold">
                           {path.pathCourses.length} COURSES
                         </Badge>
-                        {enrollment.status === 'COMPLETED' && (
-                          <CheckCircle2 className="h-5 w-5 text-success" />
-                        )}
+                        <div className="flex flex-col items-end gap-2">
+                          {enrollment.status === 'COMPLETED' ? (
+                            <CheckCircle2 className="h-5 w-5 text-success" />
+                          ) : (
+                            renderDeadlineBadge(enrollment.dueDate)
+                          )}
+                        </div>
+
                       </div>
                       <CardTitle className="line-clamp-2 leading-tight group-hover:text-primary transition-colors">
                         {path.title}
@@ -185,11 +224,16 @@ export const MyLearning: React.FC = () => {
                           {totalModules} MODULES
                         </Badge>
                       </div>
-                      {enrollment.status === 'COMPLETED' && (
+                      {enrollment.status === 'COMPLETED' ? (
                          <div className="absolute top-3 right-3 bg-success rounded-full p-1 shadow-lg">
                            <CheckCircle2 className="h-4 w-4 text-white" />
                          </div>
+                      ) : (
+                        <div className="absolute top-3 right-3">
+                          {renderDeadlineBadge(enrollment.dueDate)}
+                        </div>
                       )}
+
                     </div>
 
                     <CardHeader>

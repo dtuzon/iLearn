@@ -442,6 +442,9 @@ model Enrollment {
   updatedAt          DateTime         @updatedAt
   completedAt        DateTime?
   dueDate            DateTime?
+  deadlineReminderSentAt DateTime?
+  overdueAlertSentAt     DateTime?
+
 
 
 
@@ -602,6 +605,9 @@ model LearningPathEnrollment {
   enrolledAt     DateTime       @default(now())
   completedAt    DateTime?
   dueDate        DateTime?
+  deadlineReminderSentAt DateTime?
+  overdueAlertSentAt     DateTime?
+
 
 
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)

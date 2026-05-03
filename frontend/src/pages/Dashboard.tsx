@@ -16,7 +16,9 @@ import {
   ArrowRight,
   ShieldCheck,
   Zap,
-  Activity
+  Activity,
+  AlertCircle
+
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -27,6 +29,8 @@ import type { Announcement } from '../api/announcements.api';
 
 import { Skeleton } from '../components/ui/skeleton';
 import { WelcomeBanner } from '../components/dashboard/WelcomeBanner';
+import { cn } from '../lib/utils';
+
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -56,13 +60,23 @@ export const Dashboard: React.FC = () => {
   const latestBulletin = announcements.find(a => a.imageUrl);
 
   const getMetricIcon = (label: string) => {
+    if (label.includes('Overdue')) return AlertCircle;
     if (label.includes('Users') || label.includes('Learners')) return Users;
+
     if (label.includes('Courses') || label.includes('Content')) return BookOpen;
     if (label.includes('Completion') || label.includes('Compliance')) return CheckCircle2;
     if (label.includes('Approval')) return Clock;
     if (label.includes('Health')) return ShieldCheck;
     return Activity;
   };
+
+  const getMetricColor = (growth: string) => {
+    const g = growth.toUpperCase();
+    if (g.includes('ACTION') || g.includes('NEEDS') || g.includes('CRITICAL') || g.includes('OVERDUE')) return 'text-destructive animate-pulse';
+    if (g.includes('GOOD') || g.includes('TRACK') || g.startsWith('+')) return 'text-green-500';
+    return 'text-muted-foreground';
+  };
+
 
   const isAdminOrManager = user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER';
 
@@ -112,8 +126,10 @@ export const Dashboard: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-black tracking-tight">{stat.value}</div>
-                  <p className="text-xs font-bold text-green-500 mt-2 flex items-center gap-1">
-                    <TrendingUp className="h-3.5 w-3.5" />
+                  <p className={cn("text-xs font-bold mt-2 flex items-center gap-1", getMetricColor(stat.growth))}>
+
+                    {!stat.growth.toUpperCase().includes('GOOD') && !stat.growth.toUpperCase().includes('TRACK') && <TrendingUp className="h-3.5 w-3.5" />}
+
                     {stat.growth}
                   </p>
                 </CardContent>

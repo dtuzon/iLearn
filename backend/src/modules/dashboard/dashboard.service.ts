@@ -25,15 +25,25 @@ export class DashboardService {
     const enrolled = await prisma.enrollment.count({ where: { userId } });
     const certificates = await prisma.transcript.count({ where: { userId } });
     
-    const totalEnrollments = await prisma.enrollment.findMany({ where: { userId } });
-    const completedCount = totalEnrollments.filter(e => e.status === 'COMPLETED').length;
-    const completionRate = totalEnrollments.length > 0 ? (completedCount / totalEnrollments.length) * 100 : 0;
+    const overdueCount = await prisma.enrollment.count({
+      where: {
+        userId,
+        status: { not: 'COMPLETED' },
+        dueDate: { lt: new Date() }
+      }
+    }) + await prisma.learningPathEnrollment.count({
+      where: {
+        userId,
+        status: { not: 'COMPLETED' },
+        dueDate: { lt: new Date() }
+      }
+    });
 
     return {
       metrics: [
         { label: 'My Enrolled Courses', value: enrolled.toString(), growth: '+0%' },
         { label: 'My Certificates', value: certificates.toString(), growth: '+0%' },
-        { label: 'Overall Completion', value: `${completionRate.toFixed(1)}%`, growth: '+0%' }
+        { label: 'Overdue Assignments', value: overdueCount.toString(), growth: overdueCount > 0 ? 'ACTION REQUIRED' : 'ON TRACK' }
       ]
     };
   }
@@ -90,10 +100,24 @@ export class DashboardService {
     const completedCount = await prisma.enrollment.count({ where: { userId: { in: subIds }, status: 'COMPLETED' } });
     const complianceRate = totalEnrollments > 0 ? (completedCount / totalEnrollments) * 100 : 0;
 
+    const overdueTasks = await prisma.enrollment.count({
+      where: {
+        userId: { in: subIds },
+        status: { not: 'COMPLETED' },
+        dueDate: { lt: new Date() }
+      }
+    }) + await prisma.learningPathEnrollment.count({
+      where: {
+        userId: { in: subIds },
+        status: { not: 'COMPLETED' },
+        dueDate: { lt: new Date() }
+      }
+    });
+
     return {
       metrics: [
         { label: 'Team Compliance %', value: `${complianceRate.toFixed(1)}%`, growth: '+0%' },
-        { label: 'Overdue Team Tasks', value: '0', growth: '+0%' },
+        { label: 'Overdue Team Tasks', value: overdueTasks.toString(), growth: overdueTasks > 0 ? 'NEEDS ATTENTION' : 'GOOD' },
         { label: 'Overdue Team Evals', value: '0', growth: '+0%' }
       ]
     };
