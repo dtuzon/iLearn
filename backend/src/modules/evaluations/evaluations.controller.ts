@@ -65,4 +65,28 @@ export class EvaluationsController {
       res.status(500).json({ message: error.message });
     }
   }
+
+  static async getPendingTeam(req: Request, res: Response) {
+    try {
+      const supervisorId = (req as any).user.userId;
+      const pending = await EvaluationsService.getPendingTeam(supervisorId);
+      res.json(pending);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  static async submitBehavioralEvaluation(req: Request, res: Response) {
+    try {
+      const evaluatorId = (req as any).user.userId;
+      const evaluation = await EvaluationsService.submitBehavioralEvaluation({
+        ...req.body,
+        evaluatorId
+      });
+      res.status(201).json(evaluation);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
+

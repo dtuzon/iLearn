@@ -15,4 +15,9 @@ router.put('/templates/:id', authenticate, authorize('ADMINISTRATOR', 'LEARNING_
 router.post('/responses', authenticate, EvaluationsController.submitResponse);
 router.get('/responses/course/:courseId', authenticate, EvaluationsController.getResponsesByCourse);
 
+// Behavioral 180-Day Evaluations (Supervisor Only)
+router.get('/pending-team', authenticate, EvaluationsController.getPendingTeam);
+router.post('/behavioral', authenticate, EvaluationsController.submitBehavioralEvaluation);
+
 export default router;
+

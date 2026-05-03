@@ -284,8 +284,10 @@ model Course {
   targetAudience     String   @default("GENERAL") // GENERAL, PHASE_1_NEW_HIRE, PHASE_2_REGULARIZED
   targetDepartments  String[] @default([])
   requires180DayEval Boolean  @default(false)
+  hasCertificate     Boolean  @default(false)
 
   lecturerId String
+
   lecturer   User   @relation("LecturerCourses", fields: [lecturerId], references: [id])
 
   approvedById String?

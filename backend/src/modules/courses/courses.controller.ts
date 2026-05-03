@@ -268,10 +268,19 @@ export class CoursesController {
         return res.status(403).json({ message: 'Only Learning Managers or Administrators can publish courses.' });
       }
 
-      // Block Course Creator from retiring ANY course
+      // Block Course Creator from retiring or unpublishing ANY course
       if (status === 'RETIRED' && userRole === Role.COURSE_CREATOR) {
         return res.status(403).json({ message: 'Only Learning Managers or Administrators can retire courses.' });
       }
+
+      if (status === 'DRAFT' && userRole === Role.COURSE_CREATOR) {
+        // Find if it was already published
+        const currentCourse = await CoursesService.getById(id as string);
+        if (currentCourse && currentCourse.status === 'PUBLISHED') {
+          return res.status(403).json({ message: 'Only Learning Managers or Administrators can unpublish courses.' });
+        }
+      }
+
 
       // Ownership check
       if (userRole === Role.COURSE_CREATOR) {

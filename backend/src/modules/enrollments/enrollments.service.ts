@@ -258,12 +258,10 @@ export class EnrollmentsService {
     }
 
     return updatedEnrollment;
-
-  }
-
   }
 
   private static async notifyLeadershipOnLateCompletion(enrollment: any, type: 'COURSE' | 'PATH') {
+
     if (!enrollment.dueDate || !enrollment.completedAt) return;
 
     if (new Date(enrollment.completedAt) > new Date(enrollment.dueDate)) {

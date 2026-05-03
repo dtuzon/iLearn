@@ -42,8 +42,10 @@ import {
   UserCheck,
   Shield,
   Calendar as CalendarIcon,
-  BookOpen
+  BookOpen,
+  MoreHorizontal
 } from 'lucide-react';
+
 
 
 import { generateSecurePassword } from '../../lib/password-utils';

@@ -94,4 +94,71 @@ export class EvaluationsService {
       orderBy: { submittedAt: 'desc' }
     });
   }
+
+  static async getPendingTeam(supervisorId: string) {
+    // 1. Get all subordinates
+    const subordinates = await prisma.user.findMany({
+      where: { immediateSuperiorId: supervisorId },
+      select: { id: true, firstName: true, lastName: true }
+    });
+
+    const subordinateIds = subordinates.map(s => s.id);
+
+    // 2. Find completed enrollments for subordinates where course requires 180-day eval
+    const completedEnrollments = await prisma.enrollment.findMany({
+      where: {
+        userId: { in: subordinateIds },
+        status: 'COMPLETED',
+        course: { requires180DayEval: true }
+      },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true } },
+        course: { select: { id: true, title: true } }
+      }
+    });
+
+    // 3. Filter out those that already have a behavioral evaluation
+    const existingEvaluations = await prisma.behavioralEvaluation.findMany({
+      where: {
+        employeeId: { in: subordinateIds },
+        evaluatorId: supervisorId
+      },
+      select: { employeeId: true, courseId: true }
+    });
+
+    const pending = completedEnrollments.filter(enrollment => {
+      return !existingEvaluations.some(ev => 
+        ev.employeeId === enrollment.userId && ev.courseId === enrollment.courseId
+      );
+    });
+
+    // 4. Map to the format expected by the frontend
+    return pending.map(p => ({
+      id: `${p.userId}-${p.courseId}`, // Synthetic ID
+      employeeId: p.userId,
+      employeeName: `${p.user.firstName} ${p.user.lastName}`,
+      courseId: p.courseId,
+      courseName: p.course.title,
+      completionDate: p.completedAt
+    }));
+  }
+
+  static async submitBehavioralEvaluation(data: {
+    evaluatorId: string;
+    employeeId: string;
+    courseId: string;
+    moduleRatings: any;
+    overallImpact: string;
+  }) {
+    return prisma.behavioralEvaluation.create({
+      data: {
+        evaluatorId: data.evaluatorId,
+        employeeId: data.employeeId,
+        courseId: data.courseId,
+        moduleRatings: data.moduleRatings,
+        overallImpact: data.overallImpact
+      }
+    });
+  }
 }
+

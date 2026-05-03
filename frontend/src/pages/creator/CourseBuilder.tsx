@@ -21,16 +21,22 @@ import {
   Layers, 
   Play, 
   CheckCircle2,
+  CheckCircle,
+  XCircle,
+  Clock,
+  BookOpen,
   Trash2,
   GripVertical,
   Pencil,
   Save,
   Video as VideoIcon,
   Eye,
+  EyeOff,
   CopyPlus,
   Image as ImageIcon,
   Calendar as CalendarIcon
 } from 'lucide-react';
+
 
 
 
@@ -51,7 +57,6 @@ import { QuizBuilder } from '../../components/creator/QuizBuilder';
 import { CertificateBuilder } from '../../components/creator/CertificateBuilder';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useAuth } from '../../context/AuthContext';
-import { Clock, XCircle, CheckCircle, BookOpen } from 'lucide-react';
 
 
 import { 
@@ -473,6 +478,18 @@ export const CourseBuilder: React.FC = () => {
     }
   };
 
+  const handleToggleCertificate = async (enabled: boolean) => {
+    if (!courseId || !course) return;
+    try {
+      await coursesApi.partialUpdate(courseId, { hasCertificate: enabled });
+      setCourse({ ...course, hasCertificate: enabled });
+      toast.success(enabled ? 'Certificates enabled for this course' : 'Certificates disabled');
+    } catch (error) {
+      toast.error('Failed to update certificate settings');
+    }
+  };
+
+
   const handleUpdateIdentity = async () => {
     if (!courseId) return;
     setIsSavingIdentity(true);
@@ -667,7 +684,12 @@ export const CourseBuilder: React.FC = () => {
               </h1>
               {course.status === 'PUBLISHED' && <Badge variant="success" className="text-[10px] font-black uppercase px-2 py-0">PUBLISHED</Badge>}
               {course.status === 'PENDING_APPROVAL' && <Badge variant="warning" className="text-[10px] font-black uppercase px-2 py-0 animate-pulse">PENDING</Badge>}
-              {course.status === 'DRAFT' && <Badge variant="outline" className="text-[10px] font-black uppercase px-2 py-0 text-muted-foreground border-dashed">DRAFT</Badge>}
+              {course.status === 'DRAFT' && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-white border border-blue-100 rounded-full shadow-sm text-sm font-bold text-slate-700">
+                  <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                  Draft
+                </div>
+              )}
               {course.status === 'ARCHIVED' && <Badge variant="outline" className="text-[10px] font-black uppercase px-2 py-0 bg-muted text-muted-foreground border-none">ARCHIVED</Badge>}
               {course.status === 'RETIRED' && <Badge variant="destructive" className="text-[10px] font-black uppercase px-2 py-0">RETIRED</Badge>}
             </div>
@@ -686,14 +708,22 @@ export const CourseBuilder: React.FC = () => {
           {!isReadonly && (
             <>
               {course.status === 'DRAFT' && (
-
-                <Button 
-                  size="sm" 
-                  className="h-10 px-4 shadow-lg shadow-primary/20"
-                  onClick={() => handleUpdateStatus('PENDING_APPROVAL')}
-                >
-                  <Clock className="mr-2 h-4 w-4" /> Request Approval
-                </Button>
+                <div className="flex gap-2">
+                   <Button 
+                    variant="outline"
+                    className="h-10 px-4 bg-orange-500 text-white hover:bg-orange-600 border-none font-bold shadow-md shadow-orange-500/20"
+                    onClick={() => toast.info('Sequence saved to local memory.')}
+                  >
+                    <Save className="mr-2 h-4 w-4" /> Save Sequence
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    className="h-10 px-4 shadow-lg shadow-primary/20"
+                    onClick={() => handleUpdateStatus('PENDING_APPROVAL')}
+                  >
+                    <Clock className="mr-2 h-4 w-4" /> Request Approval
+                  </Button>
+                </div>
               )}
 
               {course.status === 'PENDING_APPROVAL' && (
@@ -726,9 +756,21 @@ export const CourseBuilder: React.FC = () => {
           )}
 
           {course.status === 'PUBLISHED' && (
-            <Badge variant="success" className="h-10 px-4 flex items-center gap-2 text-sm">
-              <CheckCircle2 className="h-4 w-4" /> Published & Live
-            </Badge>
+            <div className="flex gap-2">
+              <Badge variant="success" className="h-10 px-4 flex items-center gap-2 text-sm">
+                <CheckCircle2 className="h-4 w-4" /> Published & Live
+              </Badge>
+              {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  className="h-10 px-4 border-dashed border-muted-foreground/30 text-muted-foreground hover:text-destructive hover:border-destructive/50"
+                  onClick={() => handleUpdateStatus('DRAFT')}
+                >
+                  <EyeOff className="mr-2 h-4 w-4" /> Unpublish Course
+                </Button>
+              )}
+            </div>
           )}
           {isReadonly && course.status !== 'PUBLISHED' && (
              <Badge variant="outline" className="h-10 px-4 flex items-center gap-2 text-sm bg-muted text-muted-foreground border-none">
@@ -736,6 +778,7 @@ export const CourseBuilder: React.FC = () => {
              </Badge>
           )}
         </div>
+
       </div>
 
       {isReadonly && (
@@ -1018,6 +1061,20 @@ export const CourseBuilder: React.FC = () => {
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between p-4 border rounded-xl bg-muted/20">
                   <div className="space-y-1">
+                    <Label className="text-base font-bold text-primary">Enable Certificate</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Learners will receive a verifiable certificate upon successful completion of all modules.
+                    </p>
+                  </div>
+                  <Switch 
+                    disabled={isReadonly}
+                    checked={course.hasCertificate} 
+                    onCheckedChange={handleToggleCertificate}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 border rounded-xl bg-muted/20">
+                  <div className="space-y-1">
                     <Label className="text-base font-bold">180-Day Behavioral Change Evaluation</Label>
                     <p className="text-sm text-muted-foreground">
                       Automatically trigger a follow-up evaluation 6 months after course completion to measure K.A.S.H. impact.
@@ -1029,6 +1086,7 @@ export const CourseBuilder: React.FC = () => {
                     onCheckedChange={handleToggleEval}
                   />
                 </div>
+
 
                 <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-xl bg-muted/20 gap-4 mt-4">
                   <div className="space-y-1">
