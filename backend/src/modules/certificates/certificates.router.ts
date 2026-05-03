@@ -35,4 +35,12 @@ router.post(
   CertificatesController.generate
 );
 
+router.post(
+  '/lp/:learningPathId/generate',
+  authenticate,
+  auditLog('GENERATE_LP_CERTIFICATE'),
+  CertificatesController.generateLP
+);
+
+
 export default router;

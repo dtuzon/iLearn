@@ -1,5 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { EnrollmentStatus } from '@prisma/client';
+import { CertificatesService } from '../certificates/certificates.service';
+
 
 export class EnrollmentsService {
   static async getMyEnrollments(userId: string) {
@@ -181,7 +183,28 @@ export class EnrollmentsService {
               completedAt: new Date()
             }
           });
+
+          // 5. Issue Certificate if enabled
+          if (pe.learningPath.hasCertificate) {
+            try {
+              await CertificatesService.generateLearningPathCertificate(userId, pe.learningPathId);
+              
+              // 6. Notify user
+              await prisma.notification.create({
+                data: {
+                  userId,
+                  title: 'Macro-Credential Earned!',
+                  message: `Congratulations! You have earned a completion certificate for the Learning Path: ${pe.learningPath.title}.`,
+                  type: 'SUCCESS',
+                  link: '/certificates'
+                }
+              });
+            } catch (certError) {
+              console.error('Failed to issue LP certificate:', certError);
+            }
+          }
         }
+
       }
     }
   }

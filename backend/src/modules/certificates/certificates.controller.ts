@@ -27,4 +27,15 @@ export class CertificatesController {
       res.status(400).json({ message: error.message });
     }
   }
+
+  static async generateLP(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { learningPathId } = req.params;
+      const certificate = await CertificatesService.generateLearningPathCertificate(req.user!.userId, learningPathId as string);
+      res.json(certificate);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
 }

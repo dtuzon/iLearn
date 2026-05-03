@@ -9,7 +9,6 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { ScrollArea } from '../../components/ui/scroll-area';
 
 import { 
   ArrowLeft, 
@@ -29,9 +28,7 @@ import {
   Video as VideoIcon,
   Eye,
   CopyPlus,
-  Image as ImageIcon,
-  UploadCloud,
-  File as FileIcon
+  Image as ImageIcon
 } from 'lucide-react';
 
 
@@ -305,7 +302,6 @@ export const CourseBuilder: React.FC = () => {
     thumbnailUrl: ''
   });
 
-  const [attachments, setAttachments] = useState<any[]>([]);
 
 
   const [isSavingIdentity, setIsSavingIdentity] = useState(false);
@@ -324,8 +320,9 @@ export const CourseBuilder: React.FC = () => {
     fetchDepartments();
   }, [courseId]);
 
-  const fetchCourse = async () => {
+  const fetchCourse = async (silent = false) => {
     if (!courseId) return;
+    if (!silent) setIsLoading(true);
     try {
       const data = await coursesApi.getById(courseId);
       setCourse(data);
@@ -339,14 +336,14 @@ export const CourseBuilder: React.FC = () => {
         closingContent: data.closingContent || '',
         thumbnailUrl: data.thumbnailUrl || ''
       });
-      setAttachments(data.attachments || []);
 
     } catch (error) {
       toast.error('Failed to load course details');
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
+
 
   const [isVersioning, setIsVersioning] = useState(false);
 
@@ -528,7 +525,6 @@ export const CourseBuilder: React.FC = () => {
   };
 
   const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
-  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
 
   const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -542,32 +538,6 @@ export const CourseBuilder: React.FC = () => {
       toast.error('Failed to upload thumbnail');
     } finally {
       setIsUploadingThumbnail(false);
-    }
-  };
-
-  const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !courseId) return;
-    setIsUploadingAttachment(true);
-    try {
-      const attachment = await coursesApi.uploadAttachment(courseId, file);
-      setAttachments(prev => [...prev, attachment]);
-      toast.success('Attachment uploaded');
-    } catch (error) {
-      toast.error('Failed to upload attachment');
-    } finally {
-      setIsUploadingAttachment(false);
-    }
-  };
-
-  const handleDeleteAttachment = async (id: string) => {
-    if (!window.confirm('Delete this attachment?')) return;
-    try {
-      await coursesApi.deleteAttachment(id);
-      setAttachments(prev => prev.filter(a => a.id !== id));
-      toast.success('Attachment deleted');
-    } catch (error) {
-      toast.error('Failed to delete attachment');
     }
   };
 
@@ -1122,8 +1092,9 @@ export const CourseBuilder: React.FC = () => {
         moduleId={workshopModalState.moduleId}
         isOpen={workshopModalState.isOpen}
         onClose={() => setWorkshopModalState({ ...workshopModalState, isOpen: false })}
-        onUpdate={fetchCourse}
+        onUpdate={() => fetchCourse(true)}
       />
+
 
       <EvaluationTemplatePicker 
         courseId={courseId!}
@@ -1131,16 +1102,18 @@ export const CourseBuilder: React.FC = () => {
         category={evaluationModalState.category}
         isOpen={evaluationModalState.isOpen}
         onClose={() => setEvaluationModalState({ ...evaluationModalState, isOpen: false })}
-        onUpdate={fetchCourse}
+        onUpdate={() => fetchCourse(true)}
       />
+
 
       <RichTextModuleBuilder 
         courseId={courseId!}
         moduleId={richTextModalState.moduleId}
         isOpen={richTextModalState.isOpen}
         onClose={() => setRichTextModalState({ ...richTextModalState, isOpen: false })}
-        onUpdate={fetchCourse}
+        onUpdate={() => fetchCourse(true)}
       />
+
     </div>
   );
 };

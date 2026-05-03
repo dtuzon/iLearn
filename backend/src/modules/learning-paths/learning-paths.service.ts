@@ -27,9 +27,11 @@ export class LearningPathsService {
           orderBy: {
             order: 'asc'
           }
-        }
+        },
+        certificateTemplate: true
       }
     });
+
   }
 
   static async create(data: any) {
@@ -39,7 +41,9 @@ export class LearningPathsService {
         description: data.description,
         targetAudience: data.targetAudience,
         targetDepartments: data.targetDepartments,
-        isPublished: data.isPublished || false
+        isPublished: data.isPublished || false,
+        hasCertificate: data.hasCertificate || false
+
       }
     });
   }
@@ -52,7 +56,9 @@ export class LearningPathsService {
         description: data.description,
         targetAudience: data.targetAudience,
         targetDepartments: data.targetDepartments,
-        isPublished: data.isPublished
+        isPublished: data.isPublished,
+        hasCertificate: data.hasCertificate
+
       }
     });
   }
@@ -126,11 +132,31 @@ export class LearningPathsService {
               orderBy: {
                 order: 'asc'
               }
+            },
+            certificates: {
+              where: { userId }
             }
           }
         }
       }
     });
   }
+
+  static async upsertCertificateTemplate(id: string, data: any) {
+    const { backgroundImageUrl, designConfig } = data;
+    return prisma.certificateTemplate.upsert({
+      where: { learningPathId: id },
+      create: {
+        learningPathId: id,
+        backgroundImageUrl: backgroundImageUrl || '',
+        designConfig: designConfig as any
+      },
+      update: {
+        ...(backgroundImageUrl && { backgroundImageUrl }),
+        designConfig: designConfig as any
+      }
+    });
+  }
+
 }
 

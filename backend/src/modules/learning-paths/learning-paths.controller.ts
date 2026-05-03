@@ -84,5 +84,28 @@ export class LearningPathsController {
     }
   }
 
+  static async updateCertificateTemplate(req: any, res: Response) {
+    try {
+      const { id } = req.params;
+      const designConfig = req.body.designConfig ? JSON.parse(req.body.designConfig) : undefined;
+      
+      const { StorageService } = await import('../../lib/services/storage.service');
+      let backgroundImageUrl = undefined;
+      
+      if (req.file) {
+        backgroundImageUrl = await StorageService.uploadFile(req.file, 'lp-certificates');
+      }
+
+      const template = await LearningPathsService.upsertCertificateTemplate(id as string, {
+        backgroundImageUrl,
+        designConfig
+      });
+
+      res.json(template);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
+
 

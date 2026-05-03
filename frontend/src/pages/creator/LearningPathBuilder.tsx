@@ -8,6 +8,11 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Switch } from '../../components/ui/switch';
+import { Label } from '../../components/ui/label';
+import { CertificateBuilder } from '../../components/creator/CertificateBuilder';
+
 import { 
   Loader2, 
   ArrowLeft, 
@@ -20,8 +25,11 @@ import {
   ChevronUp,
   ChevronDown,
   CheckCircle2,
-  Route
+  Route,
+  Award,
+  Layers
 } from 'lucide-react';
+
 import { toast } from 'sonner';
 import { 
   DndContext, 
@@ -284,120 +292,186 @@ export const LearningPathBuilder: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 h-[calc(100vh-280px)] min-h-[500px]">
-        {/* Left Side: The Path Sequence */}
-        <div className="lg:col-span-3 flex flex-col gap-6">
-          <Card className="flex-1 flex flex-col border-none shadow-xl bg-background/50 backdrop-blur-sm overflow-hidden">
-            <CardHeader className="border-b bg-muted/10">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Route className="h-5 w-5 text-primary" />
-                    Path Sequence
-                  </CardTitle>
-                  <CardDescription>Drag and drop or use controls to define the learner's journey.</CardDescription>
-                </div>
-                <Badge variant="secondary" className="font-bold">{path.pathCourses.length} Courses</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-6">
-              {path.pathCourses.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-12 opacity-50 border-2 border-dashed rounded-3xl">
-                  <Plus className="h-12 w-12 mb-4" />
-                  <h3 className="text-lg font-medium italic">Your path is empty</h3>
-                  <p className="text-sm">Select courses from the library on the right to start building the sequence.</p>
-                </div>
-              ) : (
-                <div className="relative pl-8 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-primary before:via-primary/50 before:to-transparent">
-                  <DndContext 
-                    sensors={sensors} 
-                    collisionDetection={closestCenter} 
-                    onDragEnd={handleDragEnd}
-                  >
-                    <SortableContext 
-                      items={path.pathCourses.map(pc => pc.id)} 
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <div className="space-y-4">
-                        {path.pathCourses.map((pc, index) => (
-                          <div key={pc.id} className="relative">
-                            {/* Step Indicator Dot */}
-                            <div className="absolute -left-[30px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-primary border-4 border-background z-10" />
-                            <SortableCourseItem 
-                              item={pc} 
-                              index={index}
-                              onRemove={removeStep}
-                              onMoveUp={(idx) => moveStep(idx, 'up')}
-                              onMoveDown={(idx) => moveStep(idx, 'down')}
-                              isFirst={index === 0}
-                              isLast={index === path.pathCourses.length - 1}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+      <Tabs defaultValue="curriculum" className="w-full">
 
-        {/* Right Side: Course Library */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          <Card className="flex-1 flex flex-col border-none shadow-xl bg-background/50 backdrop-blur-sm overflow-hidden">
-            <CardHeader className="border-b bg-muted/10">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <BookOpen className="h-5 w-5 text-primary" />
-                Course Library
-              </CardTitle>
-              <CardDescription>Only published courses are available for paths.</CardDescription>
-              <div className="relative mt-4">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Filter published courses..." 
-                  className="pl-9 bg-background/50 border-primary/10 h-10"
-                  value={courseSearch}
-                  onChange={(e) => setCourseSearch(e.target.value)}
+        <TabsList className="bg-background/50 backdrop-blur-md p-1 rounded-2xl border mb-6">
+          <TabsTrigger value="curriculum" className="rounded-xl px-6 gap-2">
+            <Layers className="h-4 w-4" />
+            Curriculum Sequence
+          </TabsTrigger>
+          <TabsTrigger value="certificate" className="rounded-xl px-6 gap-2">
+            <Award className="h-4 w-4" />
+            Macro-Credential Settings
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="curriculum" className="space-y-6 animate-in slide-in-from-left-4 duration-500">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 h-[calc(100vh-360px)] min-h-[500px]">
+            {/* Left Side: The Path Sequence */}
+            <div className="lg:col-span-3 flex flex-col gap-6">
+              <Card className="flex-1 flex flex-col border-none shadow-xl bg-background/50 backdrop-blur-sm overflow-hidden">
+                <CardHeader className="border-b bg-muted/10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Route className="h-5 w-5 text-primary" />
+                        Path Sequence
+                      </CardTitle>
+                      <CardDescription>Drag and drop or use controls to define the learner's journey.</CardDescription>
+                    </div>
+                    <Badge variant="secondary" className="font-bold">{path.pathCourses.length} Courses</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-y-auto p-6">
+                  {path.pathCourses.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-12 opacity-50 border-2 border-dashed rounded-3xl">
+                      <Plus className="h-12 w-12 mb-4" />
+                      <h3 className="text-lg font-medium italic">Your path is empty</h3>
+                      <p className="text-sm">Select courses from the library on the right to start building the sequence.</p>
+                    </div>
+                  ) : (
+                    <div className="relative pl-8 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-primary before:via-primary/50 before:to-transparent">
+                      <DndContext 
+                        sensors={sensors} 
+                        collisionDetection={closestCenter} 
+                        onDragEnd={handleDragEnd}
+                      >
+                        <SortableContext 
+                          items={path.pathCourses.map(pc => pc.id)} 
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <div className="space-y-4">
+                            {path.pathCourses.map((pc, index) => (
+                              <div key={pc.id} className="relative">
+                                {/* Step Indicator Dot */}
+                                <div className="absolute -left-[30px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-primary border-4 border-background z-10" />
+                                <SortableCourseItem 
+                                  item={pc} 
+                                  index={index}
+                                  onRemove={removeStep}
+                                  onMoveUp={(idx) => moveStep(idx, 'up')}
+                                  onMoveDown={(idx) => moveStep(idx, 'down')}
+                                  isFirst={index === 0}
+                                  isLast={index === path.pathCourses.length - 1}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </DndContext>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Side: Course Library */}
+            <div className="lg:col-span-2 flex flex-col gap-6">
+              <Card className="flex-1 flex flex-col border-none shadow-xl bg-background/50 backdrop-blur-sm overflow-hidden">
+                <CardHeader className="border-b bg-muted/10">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <BookOpen className="h-5 w-5 text-primary" />
+                    Course Library
+                  </CardTitle>
+                  <CardDescription>Only published courses are available for paths.</CardDescription>
+                  <div className="relative mt-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Filter published courses..." 
+                      className="pl-9 bg-background/50 border-primary/10 h-10"
+                      value={courseSearch}
+                      onChange={(e) => setCourseSearch(e.target.value)}
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-y-auto p-4">
+                  <div className="space-y-3">
+                    {filteredCourses.length === 0 ? (
+                      <div className="text-center py-12 text-muted-foreground opacity-50 italic">
+                        {courseSearch ? 'No matching courses found.' : 'No available courses to add.'}
+                      </div>
+                    ) : (
+                      filteredCourses.map(course => (
+                        <div 
+                          key={course.id} 
+                          className="p-4 rounded-2xl border bg-background hover:border-primary/50 transition-all group flex items-center justify-between gap-4"
+                        >
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-sm truncate">{course.title}</h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline" className="text-[10px] px-1 h-4">{course.passingGrade}% Pass</Badge>
+                              <Badge variant="outline" className="text-[10px] px-1 h-4">{(course as any)._count?.modules || 0} Modules</Badge>
+                            </div>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => addToPath(course)}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add
+                          </Button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="certificate" className="animate-in slide-in-from-right-4 duration-500">
+          <Card className="border-none shadow-xl bg-background/50 backdrop-blur-sm p-8">
+            <div className="flex items-center justify-between mb-8 border-b pb-6">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Award className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Learning Path Certificate</h2>
+                  <p className="text-sm text-muted-foreground">Issue a unified certificate once all courses in this path are completed.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-4 py-2 bg-muted/20 rounded-2xl border">
+                <Label htmlFor="path-cert-toggle" className="font-bold text-sm">Enable Certificate</Label>
+                <Switch 
+                  id="path-cert-toggle"
+                  checked={path.hasCertificate}
+                  onCheckedChange={async (checked) => {
+                    try {
+                      await learningPathsApi.update(path.id, { hasCertificate: checked });
+                      setPath({ ...path, hasCertificate: checked });
+                      toast.success(checked ? 'Certificate enabled' : 'Certificate disabled');
+                    } catch (error) {
+                      toast.error('Failed to update certificate status');
+                    }
+                  }}
                 />
               </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-4">
-              <div className="space-y-3">
-                {filteredCourses.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground opacity-50 italic">
-                    {courseSearch ? 'No matching courses found.' : 'No available courses to add.'}
-                  </div>
-                ) : (
-                  filteredCourses.map(course => (
-                    <div 
-                      key={course.id} 
-                      className="p-4 rounded-2xl border bg-background hover:border-primary/50 transition-all group flex items-center justify-between gap-4"
-                    >
-                      <div className="min-w-0">
-                        <h4 className="font-bold text-sm truncate">{course.title}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="outline" className="text-[10px] px-1 h-4">{course.passingGrade}% Pass</Badge>
-                          <Badge variant="outline" className="text-[10px] px-1 h-4">{(course as any)._count?.modules || 0} Modules</Badge>
-                        </div>
-                      </div>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => addToPath(course)}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add
-                      </Button>
-                    </div>
-                  ))
-                )}
+            </div>
+
+            {path.hasCertificate && (
+              <CertificateBuilder 
+                learningPathId={path.id}
+                initialData={{
+                  backgroundUrl: path.certificateTemplate?.backgroundImageUrl,
+                  designConfig: path.certificateTemplate?.designConfig
+                }}
+              />
+            )}
+            {!path.hasCertificate && (
+              <div className="py-20 flex flex-col items-center justify-center text-center opacity-30 grayscale">
+                <Award className="h-20 w-20 mb-4" />
+                <h3 className="text-2xl font-bold italic">Certificate Disabled</h3>
+                <p className="max-w-md mt-2">Learners will not receive a unified certificate for this path. Enable the toggle above to start designing the macro-credential.</p>
               </div>
-            </CardContent>
+            )}
           </Card>
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
+
     </div>
   );
 };

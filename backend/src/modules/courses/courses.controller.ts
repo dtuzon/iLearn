@@ -173,12 +173,17 @@ export class CoursesController {
       }
 
       const designConfig = req.body.designConfig ? JSON.parse(req.body.designConfig) : undefined;
-      const backgroundImageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+      let backgroundImageUrl = undefined;
+      
+      if (req.file) {
+        backgroundImageUrl = await StorageService.uploadFile(req.file, 'certificates');
+      }
 
       const template = await CoursesService.upsertCertificateTemplate(id as string, {
         backgroundImageUrl,
         designConfig
       });
+
 
       res.json(template);
     } catch (error: any) {

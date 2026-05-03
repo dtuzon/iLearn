@@ -15,9 +15,11 @@ export type LearningPath = {
   targetAudience: string | null;
   targetDepartments: string[];
   isPublished: boolean;
+  hasCertificate: boolean;
   createdAt: string;
   updatedAt: string;
   pathCourses: LearningPathCourse[];
+  certificateTemplate?: any;
 };
 
 export const learningPathsApi = {
@@ -58,6 +60,14 @@ export const learningPathsApi = {
   getUserEnrollments: async (userId: string): Promise<any[]> => {
     const response = await apiClient.get(`/users/${userId}/learning-paths`);
     return response.data;
+  },
+
+  updateCertificateTemplate: async (id: string, formData: FormData): Promise<any> => {
+    const response = await apiClient.put(`/learning-paths/${id}/certificate-template`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
   }
 };
+
 

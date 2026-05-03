@@ -17,6 +17,18 @@ export class CertificatesService {
     });
   }
 
+  static async upsertLPTemplate(learningPathId: string, data: { designConfig: any; backgroundImageUrl?: string; signatureImageUrl?: string }) {
+    return prisma.certificateTemplate.upsert({
+      where: { learningPathId },
+      update: data,
+      create: {
+        ...data,
+        learningPathId
+      }
+    });
+  }
+
+
   static async generateCertificate(userId: string, courseId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     const course = await prisma.course.findUnique({
@@ -71,7 +83,8 @@ export class CertificatesService {
           </style>
         </head>
         <body>
-          <img class="background" src="file://${path.resolve(template.backgroundImageUrl || '')}" />
+          <img class="background" src="file://${path.join(process.cwd(), 'public', template.backgroundImageUrl || '')}" />
+
     `;
 
     for (const p of placeholders) {
@@ -130,4 +143,97 @@ export class CertificatesService {
       }
     });
   }
-}
+
+  static async generateLearningPathCertificate(userId: string, learningPathId: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const lp = await prisma.learningPath.findUnique({
+      where: { id: learningPathId },
+      include: { certificateTemplate: true }
+    });
+
+    if (!user || !lp || !lp.certificateTemplate) {
+      throw new Error('User, Learning Path, or Certificate Template not found');
+    }
+
+    const template = lp.certificateTemplate;
+    const config = template.designConfig as any;
+    const placeholders = config.placeholders || [];
+
+    const studentName = `${user.firstName} ${user.lastName}`;
+    const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    let html = `
+      <html>
+        <head>
+          <style>
+            body { margin: 0; padding: 0; width: 1123px; height: 794px; position: relative; font-family: sans-serif; }
+            .background { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: -1; }
+            .placeholder { position: absolute; transform: translate(-50%, -50%); text-align: center; white-space: nowrap; }
+          </style>
+        </head>
+        <body>
+          <img class="background" src="file://${path.join(process.cwd(), 'public', template.backgroundImageUrl || '')}" />
+
+    `;
+
+    for (const p of placeholders) {
+      let value = '';
+      if (p.key === '{{StudentName}}') value = studentName;
+      if (p.key === '{{CourseName}}') value = lp.title; // Learning Path name for Macro-Credentials
+      if (p.key === '{{Date}}') value = date;
+
+      html += `
+        <div class="placeholder" style="left: ${p.x}px; top: ${p.y}px; font-size: ${p.fontSize}px; color: ${p.color}; font-family: ${p.fontFamily}; font-weight: ${p.fontWeight};">
+          ${value}
+        </div>
+      `;
+    }
+
+    html += `</body></html>`;
+
+    const browser = await puppeteer.launch({ 
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'] 
+    });
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1123, height: 794 });
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+
+    const fileName = `lp-cert-${userId}-${learningPathId}-${Date.now()}.pdf`;
+    const outputPath = path.join('uploads/generated-pdfs', fileName);
+    
+    // Ensure dir exists
+    if (!fs.existsSync('uploads/generated-pdfs')) {
+      fs.mkdirSync('uploads/generated-pdfs', { recursive: true });
+    }
+
+    await page.pdf({
+      path: outputPath,
+      width: '1123px',
+      height: '794px',
+      printBackground: true
+    });
+
+    await browser.close();
+
+    return prisma.learningPathCertificate.upsert({
+      where: {
+        userId_learningPathId: {
+          userId,
+          learningPathId
+        }
+      },
+      update: {
+        certificateUrl: `/uploads/generated-pdfs/${fileName}`,
+        issuedAt: new Date()
+      },
+      create: {
+        userId,
+        learningPathId,
+        certificateUrl: `/uploads/generated-pdfs/${fileName}`,
+        issuedAt: new Date()
+      }
+    });
+  }
+
+

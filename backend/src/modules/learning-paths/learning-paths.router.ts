@@ -58,4 +58,16 @@ router.post(
 );
 
 
+import { upload } from '../../middleware/upload.middleware';
+
+router.put(
+  '/:id/certificate-template',
+  authenticate,
+  authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+  upload.single('certificateBackground'),
+  auditLog('UPDATE_LEARNING_PATH_CERTIFICATE'),
+  LearningPathsController.updateCertificateTemplate
+);
+
 export default router;
+

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Label } from '../ui/label';
+
 import { Button } from '../ui/button';
 import { Loader2, Save, FileText, Plus, Trash2, UploadCloud, File as FileIcon } from 'lucide-react';
 
@@ -44,10 +46,10 @@ export const RichTextModuleBuilder: React.FC<RichTextModuleBuilderProps> = ({
     } catch (error) {
       toast.error('Failed to save content');
     } finally {
-      setIsSaving(true);
-      setTimeout(() => setIsSaving(false), 500);
+      setIsSaving(false);
     }
   };
+
 
 
   useEffect(() => {
@@ -208,8 +210,10 @@ export const RichTextModuleBuilder: React.FC<RichTextModuleBuilderProps> = ({
           <Button variant="outline" onClick={onClose} className="font-bold">Discard</Button>
           <Button onClick={handleSave} disabled={isSaving || isLoading} className="font-bold min-w-[140px] shadow-lg shadow-primary/20">
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Sync Content
+            Save Changes
           </Button>
+
+
         </DialogFooter>
       </DialogContent>
     </Dialog>

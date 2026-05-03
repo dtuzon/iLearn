@@ -11,9 +11,11 @@ import { Switch } from '../ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { toast } from 'sonner';
 import { coursesApi } from '../../api/courses.api';
+import { learningPathsApi } from '../../api/learning-paths.api';
 
 interface CertificateBuilderProps {
-  courseId: string;
+  courseId?: string;
+  learningPathId?: string;
   initialData?: {
     backgroundUrl?: string;
     designConfig?: {
@@ -34,7 +36,7 @@ interface ElementConfig {
   color: string;
 }
 
-export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({ courseId, initialData }) => {
+export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({ courseId, learningPathId, initialData }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(initialData?.backgroundUrl || null);
@@ -72,7 +74,12 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({ courseId
       }
       formData.append('designConfig', JSON.stringify(config));
 
-      await coursesApi.updateCertificateTemplate(courseId, formData);
+      if (courseId) {
+        await coursesApi.updateCertificateTemplate(courseId, formData);
+      } else if (learningPathId) {
+        await learningPathsApi.updateCertificateTemplate(learningPathId, formData);
+      }
+
       toast.success('Certificate template updated successfully');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update certificate template');

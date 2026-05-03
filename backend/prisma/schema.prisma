@@ -147,7 +147,9 @@ model User {
   supervisorEvaluations BehavioralEvaluation[] @relation("SupervisorEvaluations")
   employeeEvaluations BehavioralEvaluation[] @relation("EmployeeEvaluations")
   learningPathEnrollments LearningPathEnrollment[]
+  learningPathCertificates LearningPathCertificate[]
   announcements           Announcement[]
+
 
   @@map("users")
 }
@@ -416,23 +418,17 @@ model CertificateTemplate {
   id                 String  @id @default(cuid())
   backgroundImageUrl String?
   signatureImageUrl  String?
-  // JSON structure example:
-  // {
-  //   "placeholders": [
-  //     { "key": "{{StudentName}}", "x": 400, "y": 300, "fontSize": 36, "color": "#000000", "fontFamily": "Georgia", "fontWeight": "bold" },
-  //     { "key": "{{CourseName}}",  "x": 400, "y": 380, "fontSize": 24, "color": "#333333", "fontFamily": "Georgia", "fontWeight": "normal" },
-  //     { "key": "{{Date}}",        "x": 400, "y": 450, "fontSize": 18, "color": "#555555", "fontFamily": "Arial",   "fontWeight": "normal" }
-  //   ],
-  //   "canvasWidth": 1123,
-  //   "canvasHeight": 794
-  // }
-  designConfig Json?
+  designConfig       Json?
 
-  courseId String @unique
-  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId String? @unique
+  course   Course? @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  learningPathId String? @unique
+  learningPath   LearningPath? @relation(fields: [learningPathId], references: [id], onDelete: Cascade)
 
   @@map("certificate_templates")
 }
+
 
 // ─────────────────────────────────────────────
 // ENROLLMENT & LEARNING LOOP PROGRESS
@@ -556,14 +552,32 @@ model LearningPath {
   targetAudience    String?  // e.g., "Phase 1: Newly Hired"
   targetDepartments String[] // Array of department names
   isPublished       Boolean  @default(false)
+  hasCertificate    Boolean  @default(false)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   pathCourses       LearningPathCourse[]
   enrollments       LearningPathEnrollment[]
+  certificates      LearningPathCertificate[]
+  certificateTemplate CertificateTemplate?
   
   @@map("learning_paths")
 }
+
+model LearningPathCertificate {
+  id             String       @id @default(cuid())
+  userId         String
+  learningPathId String
+  issuedAt       DateTime     @default(now())
+  certificateUrl String?      // Optional: For stored PDFs
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  learningPath   LearningPath @relation(fields: [learningPathId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, learningPathId])
+  @@map("learning_path_certificates")
+}
+
 
 model LearningPathCourse {
   id             String       @id @default(cuid())

@@ -76,10 +76,12 @@ export class CoursesService {
       where: { id },
       include: {
         modules: {
+          orderBy: { sequenceOrder: 'asc' },
           include: {
             attachments: true
           }
         },
+
         certificateTemplate: true,
         attachments: {
           where: { moduleId: null } // Only global ones here
