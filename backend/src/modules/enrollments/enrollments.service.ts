@@ -439,10 +439,9 @@ export class EnrollmentsService {
     }
 
     return { count: result.count };
-  },
-
-
+  }
 }
+
 
 
 

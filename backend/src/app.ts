@@ -21,6 +21,8 @@ import learningPathsRouter from './modules/learning-paths/learning-paths.router'
 import notificationsRouter from './modules/notifications/notifications.router';
 import announcementsRouter from './modules/announcements/announcements.router';
 import dashboardRouter from './modules/dashboard/dashboard.router';
+import catalogRouter from './modules/catalog/catalog.router';
+
 
 
 
@@ -62,6 +64,8 @@ app.use('/api/learning-paths', learningPathsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/announcements', announcementsRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/catalog', catalogRouter);
+
 
 
 

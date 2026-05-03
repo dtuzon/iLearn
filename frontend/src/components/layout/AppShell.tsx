@@ -190,19 +190,22 @@ export const AppShell: React.FC = () => {
 
 
 
-            {(user?.role === 'ADMINISTRATOR') && (
-
+            {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
               <>
                 <div className="mt-6 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest opacity-70">
                   Administration
                 </div>
-                <NavLink to="/admin/users" icon={Users}>User Management</NavLink>
+                {user?.role === 'ADMINISTRATOR' && <NavLink to="/admin/users" icon={Users}>User Management</NavLink>}
                 <NavLink to="/admin/enrollments" icon={UserPlus}>Manage Enrollments</NavLink>
-                <NavLink to="/admin/departments" icon={Building2}>Departments</NavLink>
-                <NavLink to="/admin/settings" icon={Settings}>System Settings</NavLink>
-
+                {user?.role === 'ADMINISTRATOR' && (
+                  <>
+                    <NavLink to="/admin/departments" icon={Building2}>Departments</NavLink>
+                    <NavLink to="/admin/settings" icon={Settings}>System Settings</NavLink>
+                  </>
+                )}
               </>
             )}
+
 
             {(user?.role === 'ADMINISTRATOR' || user?.role === 'COURSE_CREATOR' || user?.role === 'LEARNING_MANAGER') && (
               <>
