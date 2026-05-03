@@ -10,6 +10,8 @@ import { SystemSettings } from './pages/admin/SystemSettings';
 import { DepartmentManagement } from './pages/admin/DepartmentManagement';
 import { UserManagement } from './pages/admin/UserManagement';
 import { EvaluationTemplates } from './pages/admin/EvaluationTemplates';
+import { ManageBulletin } from './pages/admin/ManageBulletin';
+
 
 import { RoleGuard } from './components/auth/RoleGuard';
 import { Toaster } from './components/ui/sonner';
@@ -53,8 +55,10 @@ function App() {
                   <Route path="departments" element={<DepartmentManagement />} />
                   <Route path="users" element={<UserManagement />} />
                   <Route path="evaluation-templates" element={<EvaluationTemplates />} />
+                  <Route path="bulletin" element={<ManageBulletin />} />
 
                 </Route>
+
 
                 {/* COURSE_CREATOR Routes */}
                 <Route path="/creator" element={

@@ -72,7 +72,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setSettings(data);
 
       // Update Document Title
-      document.title = data.companyName || 'iLearn LMS';
+      document.title = data.companyName || 'Elevate LMS';
 
       // Update CSS Variables on :root
       const root = document.documentElement;

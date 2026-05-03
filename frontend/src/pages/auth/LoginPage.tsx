@@ -77,7 +77,7 @@ export const LoginPage: React.FC = () => {
           {settings?.companyLogoUrl ? (
             <img src={`${baseUrl}${settings.companyLogoUrl}`} alt="Logo" className="h-16 w-auto object-contain" />
           ) : (
-            <h1 className="text-white text-3xl font-black tracking-tighter">iLearn</h1>
+            <h1 className="text-white text-3xl font-black tracking-tighter">Elevate</h1>
           )}
         </div>
 

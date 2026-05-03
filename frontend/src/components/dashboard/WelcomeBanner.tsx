@@ -32,7 +32,7 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({ announcement }) =>
       
       {/* Decorative Corner Label */}
       <div className="absolute top-4 right-4 bg-white/10 backdrop-blur-md rounded-full px-4 py-1.5 text-[10px] font-black text-white uppercase tracking-[0.2em] border border-white/20 shadow-xl">
-        iLearn Official
+        Elevate Official
       </div>
     </div>
   );
