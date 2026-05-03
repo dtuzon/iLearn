@@ -105,13 +105,21 @@ export class QuizzesService {
 
     // Check passing score for Post-Quiz
     let completed = true;
+    let message = 'Module completed successfully.';
+
     if (module.type === ModuleType.POST_QUIZ) {
       const passingScore = module.course.passingGrade || 80;
       completed = score >= passingScore;
+      message = completed 
+        ? `Passed! You scored ${score}%.` 
+        : `Failed. You scored ${score}%, but ${passingScore}% is required to proceed.`;
+    } else if (module.type === ModuleType.PRE_QUIZ) {
+      completed = true; // Always bypass
+      message = `Pre-Quiz Complete. You scored ${score}%. Let's dive into the course material!`;
     }
 
     // Update progress
-    return prisma.moduleProgress.upsert({
+    await prisma.moduleProgress.upsert({
       where: {
         enrollmentId_moduleId: {
           enrollmentId: enrollment.id,
@@ -133,6 +141,13 @@ export class QuizzesService {
         attempts: 1
       }
     });
+
+    return {
+      score,
+      passed: completed,
+      message
+    };
+
   }
 
   static async updateQuestion(questionId: string, data: any) {

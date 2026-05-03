@@ -41,6 +41,8 @@ export const CoursePlayer: React.FC = () => {
   const [isAtClosing, setIsAtClosing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
+  const [quizResult, setQuizResult] = useState<{ score: number, passed: boolean, message: string } | null>(null);
+
 
 
   const fetchData = async () => {
@@ -54,6 +56,9 @@ export const CoursePlayer: React.FC = () => {
 
       setCourse(courseData);
       setEnrollment(progressData);
+      setQuizResult(null);
+      setQuizAnswers({});
+
 
       const modules = courseData.modules || [];
       modules.sort((a, b) => a.sequenceOrder - b.sequenceOrder);
@@ -130,15 +135,14 @@ export const CoursePlayer: React.FC = () => {
       }));
 
       const result = await quizzesApi.submitQuiz(currentModule.id, answers);
+      setQuizResult(result);
       
       if (result.passed) {
-        toast.success(`Quiz Passed! Score: ${result.score}%`);
-        handleCompleteModule(); // This will advance them
+        toast.success(result.message);
       } else {
-        toast.error(`Quiz Failed. Score: ${result.score}%. Required: ${course?.passingGrade}%. Try again!`);
-        // Reset answers for retry
-        setQuizAnswers({});
+        toast.error(result.message);
       }
+
 
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to submit quiz');
@@ -349,34 +353,81 @@ export const CoursePlayer: React.FC = () => {
 
             {/* QUIZ VIEW */}
             {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ') && (
-
               <div className="space-y-8">
-                 {quizQuestions.map((q, idx) => (
-                   <div key={q.id} className="space-y-4 p-4 border rounded-lg bg-muted/20">
-                     <h4 className="font-medium text-lg">{idx + 1}. {q.questionText}</h4>
-                     <RadioGroup 
-                       value={quizAnswers[q.id]} 
-                       onValueChange={(val) => setQuizAnswers({...quizAnswers, [q.id]: val})}
-                       className="space-y-3"
-                     >
-                       {q.options.map((opt) => (
-                         <div key={opt.id} className="flex items-center space-x-3 p-3 rounded-md hover:bg-background border cursor-pointer transition-colors">
-                           <RadioGroupItem value={opt.id} id={opt.id} />
-                           <Label htmlFor={opt.id} className="flex-1 cursor-pointer font-normal">{opt.optionText}</Label>
-                         </div>
-                       ))}
-                     </RadioGroup>
-                   </div>
-                 ))}
-                 
-                 {quizQuestions.length === 0 && (
-                   <div className="text-center py-12 text-muted-foreground">
-                      <HelpCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>No questions found for this quiz.</p>
-                   </div>
-                 )}
+                {quizResult ? (
+                  <div className="flex flex-col items-center justify-center py-10 space-y-6 text-center animate-in fade-in zoom-in duration-300">
+                    <div className={cn(
+                      "p-4 rounded-full",
+                      quizResult.passed ? "bg-green-500/10" : "bg-destructive/10"
+                    )}>
+                      {quizResult.passed ? (
+                        <CheckCircle2 className="h-16 w-16 text-green-500" />
+                      ) : (
+                        <AlertCircle className="h-16 w-16 text-destructive" />
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h3 className="text-3xl font-black uppercase italic tracking-tight">
+                        {currentModule.type === 'PRE_QUIZ' ? 'Baseline Assessment' : (quizResult.passed ? 'Assessment Passed' : 'Assessment Failed')}
+                      </h3>
+                      <p className="text-lg font-medium text-muted-foreground max-w-md mx-auto">
+                        {quizResult.message}
+                      </p>
+                    </div>
+
+                    <div className="w-full max-w-xs space-y-4 pt-4">
+                      <div className="flex items-center justify-between text-sm font-bold uppercase tracking-wider">
+                        <span>Your Score</span>
+                        <span>{quizResult.score}%</span>
+                      </div>
+                      <Progress value={quizResult.score} className="h-3" />
+                    </div>
+
+                    <div className="flex gap-4 pt-6">
+                      {!quizResult.passed && (
+                        <Button variant="outline" onClick={() => { setQuizResult(null); setQuizAnswers({}); }}>
+                          Try Again
+                        </Button>
+                      )}
+                      {quizResult.passed && (
+                        <Button onClick={handleCompleteModule} disabled={isSubmitting} className="h-12 px-8 font-bold shadow-lg shadow-primary/20">
+                          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Continue to Next Module"}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                     {quizQuestions.map((q, idx) => (
+                       <div key={q.id} className="space-y-4 p-4 border rounded-lg bg-muted/20">
+                         <h4 className="font-medium text-lg">{idx + 1}. {q.questionText}</h4>
+                         <RadioGroup 
+                           value={quizAnswers[q.id]} 
+                           onValueChange={(val) => setQuizAnswers({...quizAnswers, [q.id]: val})}
+                           className="space-y-3"
+                         >
+                           {q.options.map((opt) => (
+                             <div key={opt.id} className="flex items-center space-x-3 p-3 rounded-md hover:bg-background border cursor-pointer transition-colors">
+                               <RadioGroupItem value={opt.id} id={opt.id} />
+                               <Label htmlFor={opt.id} className="flex-1 cursor-pointer font-normal">{opt.optionText}</Label>
+                             </div>
+                           ))}
+                         </RadioGroup>
+                       </div>
+                     ))}
+                     
+                     {quizQuestions.length === 0 && (
+                       <div className="text-center py-12 text-muted-foreground">
+                          <HelpCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                          <p>No questions found for this quiz.</p>
+                       </div>
+                     )}
+                  </div>
+                )}
               </div>
             )}
+
 
             {/* WORKSHOP VIEW */}
             {currentModule.type === 'WORKSHOP' && (
@@ -415,16 +466,21 @@ export const CoursePlayer: React.FC = () => {
               Strict Learning Loop active: Skipping modules is disabled.
             </div>
             
-            {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ') && quizQuestions.length > 0 && (
-              <Button onClick={handleSubmitQuiz} disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Submit Answers
-              </Button>
+            {!quizResult && (
+              <>
+                {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ') && quizQuestions.length > 0 && (
+                  <Button onClick={handleSubmitQuiz} disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Submit Answers
+                  </Button>
+                )}
+                
+                {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ') && quizQuestions.length === 0 && (
+                   <Button onClick={handleCompleteModule} disabled={isSubmitting}>Skip Empty Quiz</Button>
+                )}
+              </>
             )}
-            
-            {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ') && quizQuestions.length === 0 && (
-               <Button onClick={handleCompleteModule} disabled={isSubmitting}>Skip Empty Quiz</Button>
-            )}
+
 
           </CardFooter>
         </Card>
