@@ -75,10 +75,18 @@ export class CoursesService {
     return prisma.course.findUnique({
       where: { id },
       include: {
-        modules: true,
-        certificateTemplate: true
+        modules: {
+          include: {
+            attachments: true
+          }
+        },
+        certificateTemplate: true,
+        attachments: {
+          where: { moduleId: null } // Only global ones here
+        }
       }
     });
+
   }
 
   static async create(lecturerId: string, data: any) {
@@ -119,9 +127,11 @@ export class CoursesService {
 
   static async getModule(id: string) {
     return prisma.courseModule.findUnique({
-      where: { id }
+      where: { id },
+      include: { attachments: true }
     });
   }
+
 
   static async upsertCertificateTemplate(courseId: string, data: any) {
     const { backgroundImageUrl, designConfig } = data;
@@ -472,7 +482,7 @@ export class CoursesService {
     });
   }
 
-  static async addAttachment(courseId: string, data: { fileName: string, fileUrl: string, fileSize: number, fileType: string }) {
+  static async addAttachment(courseId: string, data: { fileName: string, fileUrl: string, fileSize: number, fileType: string, moduleId?: string | null }) {
     return prisma.courseAttachment.create({
       data: {
         ...data,
@@ -480,6 +490,7 @@ export class CoursesService {
       }
     });
   }
+
 
   static async deleteAttachment(id: string) {
     return prisma.courseAttachment.delete({

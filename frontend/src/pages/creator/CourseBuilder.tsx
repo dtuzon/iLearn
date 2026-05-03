@@ -34,7 +34,7 @@ import {
   File as FileIcon
 } from 'lucide-react';
 
-import ReactQuill from 'react-quill-new';
+
 import 'react-quill-new/dist/quill.snow.css';
 
 
@@ -598,9 +598,62 @@ export const CourseBuilder: React.FC = () => {
   if (!course) {
     return <div className="text-center p-8">Course not found.</div>;
   }
+  const isDirty = course && JSON.stringify({
+    title: course.title,
+    description: course.description || '',
+    passingGrade: course.passingGrade,
+    targetAudience: course.targetAudience,
+    targetDepartments: course.targetDepartments,
+    thumbnailUrl: course.thumbnailUrl || ''
+  }) !== JSON.stringify({
+    title: identityForm.title,
+    description: identityForm.description,
+    passingGrade: identityForm.passingGrade,
+    targetAudience: identityForm.targetAudience,
+    targetDepartments: identityForm.targetDepartments,
+    thumbnailUrl: identityForm.thumbnailUrl
+  });
+
+  const handleDiscardChanges = () => {
+    if (course) {
+      setIdentityForm({
+        title: course.title,
+        description: course.description || '',
+        passingGrade: course.passingGrade,
+        targetAudience: course.targetAudience,
+        targetDepartments: course.targetDepartments,
+        introContent: course.introContent || '',
+        closingContent: course.closingContent || '',
+        thumbnailUrl: course.thumbnailUrl || ''
+      });
+      toast.info('Changes discarded');
+    }
+  };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto animate-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-8 max-w-7xl mx-auto animate-in slide-in-from-bottom-4 duration-500 relative">
+      {isDirty && !isReadonly && (
+        <div className="sticky top-4 z-50 bg-background/80 backdrop-blur-md border border-primary/20 shadow-2xl rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-8 duration-500 mb-8">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
+              <Save className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="font-bold text-primary">Unsaved Changes</p>
+              <p className="text-xs text-muted-foreground">You have modified the course configuration. Save as draft?</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={handleDiscardChanges} className="font-bold">
+              Discard
+            </Button>
+            <Button size="sm" onClick={handleUpdateIdentity} disabled={isSavingIdentity} className="font-black uppercase tracking-widest px-6 shadow-lg shadow-primary/20">
+              {isSavingIdentity ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save Changes"}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" className="rounded-full h-12 w-12 hover:bg-primary/5" onClick={() => navigate('/creator/courses')}>
@@ -819,7 +872,7 @@ export const CourseBuilder: React.FC = () => {
           </div>
         </TabsContent>
 
-        </TabsContent>
+
 
         <TabsContent value="certificate">
 
@@ -945,9 +998,11 @@ export const CourseBuilder: React.FC = () => {
                 {!isReadonly && (
                   <Button onClick={handleUpdateIdentity} disabled={isSavingIdentity} className="h-11 shadow-lg shadow-primary/10 font-bold">
                     {isSavingIdentity ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save Configuration
+                    Update Draft
                   </Button>
                 )}
+
+
               </CardContent>
             </Card>
 
@@ -990,73 +1045,6 @@ export const CourseBuilder: React.FC = () => {
                     />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none shadow-lg overflow-hidden">
-              <CardHeader className="bg-primary/5 border-b border-primary/10">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <UploadCloud className="h-4 w-4 text-primary" />
-                    <CardTitle className="text-lg">Attachments</CardTitle>
-                  </div>
-                  {isUploadingAttachment && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
-                </div>
-                <CardDescription>Downloadable PDFs, PPTs, or Docs.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                {!isReadonly && (
-                  <div className="p-4 border-b border-dashed border-border/50">
-                    <Label htmlFor="file-upload" className="flex flex-col items-center justify-center py-6 border-2 border-dashed rounded-xl cursor-pointer hover:bg-primary/5 transition-colors">
-                      <Plus className="h-6 w-6 text-primary mb-2" />
-                      <span className="text-xs font-bold text-primary uppercase tracking-widest">Add Attachment</span>
-                      <input 
-                        id="file-upload" 
-                        type="file" 
-                        className="hidden" 
-                        disabled={isUploadingAttachment}
-                        onChange={handleAttachmentUpload}
-                      />
-                    </Label>
-                  </div>
-                )}
-
-                <ScrollArea className="h-[300px]">
-                  <div className="flex flex-col divide-y divide-border/30">
-                    {attachments.length === 0 ? (
-                      <div className="p-8 text-center text-muted-foreground opacity-30 flex flex-col items-center">
-                        <FileIcon className="h-8 w-8 mb-2" />
-                        <p className="text-[10px] font-black uppercase">No materials attached</p>
-                      </div>
-                    ) : (
-                      attachments.map((file) => (
-                        <div key={file.id} className="p-4 flex items-center justify-between group hover:bg-muted/30 transition-colors">
-                          <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="h-8 w-8 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                              <FileIcon className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                            <div className="overflow-hidden">
-                              <p className="text-xs font-bold truncate pr-2">{file.fileName}</p>
-                              <p className="text-[10px] text-muted-foreground font-mono">
-                                {(file.fileSize / 1024 / 1024).toFixed(2)} MB
-                              </p>
-                            </div>
-                          </div>
-                          {!isReadonly && (
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => handleDeleteAttachment(file.id)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </ScrollArea>
               </CardContent>
             </Card>
           </div>

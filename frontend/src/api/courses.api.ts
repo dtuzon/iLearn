@@ -38,7 +38,7 @@ export interface Course {
 export interface CourseModule {
   id: string;
   title: string;
-  type: 'PRE_QUIZ' | 'VIDEO' | 'WORKSHOP' | 'POST_QUIZ' | 'EVALUATION' | 'ONLINE_EVALUATION';
+  type: 'PRE_QUIZ' | 'VIDEO' | 'WORKSHOP' | 'POST_QUIZ' | 'EVALUATION' | 'ONLINE_EVALUATION' | 'INTRODUCTION' | 'CLOSING';
   sequenceOrder: number;
   contentUrlOrText: string | null;
   durationSeconds: number | null;
@@ -49,7 +49,9 @@ export interface CourseModule {
   checkerType?: 'IMMEDIATE_SUPERIOR' | 'COURSE_CREATOR' | 'SPECIFIC_USER';
   specificCheckerId?: string;
   evaluationTemplateId?: string;
+  attachments?: CourseAttachment[];
 }
+
 
 export const coursesApi = {
   getAll: async (tab: string = 'active') => {
@@ -60,6 +62,11 @@ export const coursesApi = {
     const response = await apiClient.get(`/courses/${id}`);
     return response.data as Course;
   },
+  getModule: async (moduleId: string) => {
+    const response = await apiClient.get(`/courses/modules/${moduleId}`);
+    return response.data as CourseModule;
+  },
+
   create: async (data: { title: string; description?: string; passingGrade: number; targetAudience: string }) => {
     const response = await apiClient.post('/courses', data);
     return response.data as Course;
@@ -113,14 +120,16 @@ export const coursesApi = {
     });
     return response.data;
   },
-  uploadAttachment: async (courseId: string, file: File) => {
+  uploadAttachment: async (courseId: string, file: File, moduleId?: string) => {
     const formData = new FormData();
     formData.append('file', file);
+    if (moduleId) formData.append('moduleId', moduleId);
     const response = await apiClient.post(`/courses/${courseId}/attachments`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     return response.data as CourseAttachment;
   },
+
   deleteAttachment: async (attachmentId: string) => {
     await apiClient.delete(`/courses/attachments/${attachmentId}`);
   }

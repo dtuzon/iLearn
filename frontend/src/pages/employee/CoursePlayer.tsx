@@ -14,7 +14,7 @@ import { Label } from '../../components/ui/label';
 import { Progress } from '../../components/ui/progress';
 import { Alert, AlertTitle, AlertDescription } from '../../components/ui/alert';
 
-import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, Clock, Video, HelpCircle, BookOpen, ClipboardCheck } from 'lucide-react';
+import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, Clock, Video, HelpCircle, BookOpen, ClipboardCheck, UploadCloud, File as FileIcon } from 'lucide-react';
 
 
 import { toast } from 'sonner';
@@ -90,18 +90,7 @@ export const CoursePlayer: React.FC = () => {
     }
   };
 
-  const handleAdvance = async () => {
-    if (!courseId) return;
-    setIsSubmitting(true);
-    try {
-      await enrollmentsApi.advanceProgress(courseId);
-      fetchData();
-    } catch (error) {
-      toast.error('Failed to advance progress');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+
 
 
   useEffect(() => {
@@ -249,47 +238,49 @@ export const CoursePlayer: React.FC = () => {
         </div>
       </div>
 
-      {isAtIntro && currentModule ? (
-        <Card className="shadow-2xl border-none overflow-hidden">
-          <CardHeader className="bg-primary text-primary-foreground p-10">
-            <CardTitle className="text-3xl font-black uppercase tracking-tight italic">Welcome to {course.title}</CardTitle>
-            <CardDescription className="text-primary-foreground/70 text-lg">Foundation & Orientation</CardDescription>
-          </CardHeader>
-          <CardContent className="p-10 quill-content">
-            <div dangerouslySetInnerHTML={{ __html: currentModule.contentUrlOrText || '' }} />
-          </CardContent>
-          <CardFooter className="bg-muted/50 p-8 flex justify-end border-t">
-            <Button onClick={handleCompleteModule} disabled={isSubmitting} size="lg" className="h-14 px-10 font-black uppercase tracking-widest shadow-xl shadow-primary/20">
-               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Initiate Learning Sequence"}
-            </Button>
-          </CardFooter>
-        </Card>
-      ) : isAtClosing && currentModule ? (
+      {(isAtIntro || isAtClosing) && currentModule ? (
         <div className="space-y-8">
-          <Card className="shadow-2xl border-none overflow-hidden">
-            <CardHeader className="bg-success text-success-foreground p-10">
-              <CardTitle className="text-3xl font-black uppercase tracking-tight italic">Course Concluded</CardTitle>
-              <CardDescription className="text-success-foreground/70 text-lg">Final Summary & Resources</CardDescription>
+          <Card className={`shadow-2xl border-none overflow-hidden animate-in fade-in duration-500`}>
+            <CardHeader className={cn("p-10", isAtIntro ? "bg-primary text-primary-foreground" : "bg-success text-success-foreground")}>
+              <CardTitle className="text-3xl font-black uppercase tracking-tight italic">
+                {isAtIntro ? `Welcome to ${course.title}` : "Course Concluded"}
+              </CardTitle>
+              <CardDescription className={cn("text-lg", isAtIntro ? "text-primary-foreground/70" : "text-success-foreground/70")}>
+                {isAtIntro ? "Foundation & Orientation" : "Final Summary & Resources"}
+              </CardDescription>
             </CardHeader>
             <CardContent className="p-10 quill-content">
               <div dangerouslySetInnerHTML={{ __html: currentModule.contentUrlOrText || '' }} />
             </CardContent>
             <CardFooter className="bg-muted/50 p-8 flex justify-between border-t items-center">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">End of Learning Path</p>
-              <Button onClick={handleCompleteModule} disabled={isSubmitting} size="lg" className="h-14 px-10 font-black uppercase tracking-widest bg-success hover:bg-success/90 text-white shadow-xl shadow-success/20">
-                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Finalize & Exit"}
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                {isAtIntro ? "Ready to begin?" : "End of Learning Path"}
+              </p>
+              <Button 
+                onClick={handleCompleteModule} 
+                disabled={isSubmitting} 
+                size="lg" 
+                className={cn(
+                  "h-14 px-10 font-black uppercase tracking-widest shadow-xl",
+                  isAtIntro ? "shadow-primary/20" : "bg-success hover:bg-success/90 text-white shadow-success/20"
+                )}
+              >
+                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : isAtIntro ? "Initiate Learning Sequence" : "Finalize & Exit"}
               </Button>
             </CardFooter>
           </Card>
 
-          {course.attachments && course.attachments.length > 0 && (
-            <Card className="border-none shadow-lg">
+          {currentModule.attachments && currentModule.attachments.length > 0 && (
+            <Card className="border-none shadow-lg animate-in slide-in-from-bottom-4 duration-700">
               <CardHeader>
-                <CardTitle className="text-lg">Supplementary Materials</CardTitle>
+                <div className="flex items-center gap-2">
+                  <UploadCloud className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-lg">Supplementary Materials</CardTitle>
+                </div>
                 <CardDescription>Download these resources for your records.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {course.attachments.map(att => (
+                {currentModule.attachments.map((att: any) => (
                   <a 
                     key={att.id} 
                     href={att.fileUrl} 
@@ -298,7 +289,7 @@ export const CoursePlayer: React.FC = () => {
                     className="flex items-center gap-4 p-4 rounded-xl border hover:bg-primary/5 hover:border-primary/30 transition-all group"
                   >
                     <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-primary/10">
-                      <BookOpen className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+                      <FileIcon className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
                     </div>
                     <div className="overflow-hidden">
                       <p className="text-sm font-bold truncate pr-2">{att.fileName}</p>
@@ -309,7 +300,9 @@ export const CoursePlayer: React.FC = () => {
               </CardContent>
             </Card>
           )}
+
         </div>
+
       ) : !currentModule ? (
          <Card><CardContent className="p-8 text-center">No module available.</CardContent></Card>
       ) : (

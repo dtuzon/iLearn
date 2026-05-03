@@ -313,12 +313,15 @@ model CourseAttachment {
   fileSize  Int?     // In bytes
   fileType  String?  // e.g., 'application/pdf'
   courseId  String
+  moduleId  String?  // Linked to a specific module
   createdAt DateTime @default(now())
 
   course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  module    CourseModule? @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
   @@map("course_attachments")
 }
+
 
 
 model CourseModule {
@@ -346,6 +349,7 @@ model CourseModule {
   evaluationTemplate   EvaluationTemplate? @relation(fields: [evaluationTemplateId], references: [id])
 
 
+  attachments         CourseAttachment[]
   quizQuestions  QuizQuestion[]
   moduleProgress ModuleProgress[]
   onlineEvaluations OnlineEvaluationResult[]
@@ -353,6 +357,7 @@ model CourseModule {
 
   @@map("course_modules")
 }
+
 
 model ActivitySubmission {
   id            String   @id @default(cuid())

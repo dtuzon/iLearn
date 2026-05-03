@@ -36,6 +36,7 @@ export class CoursesController {
   static async uploadAttachment(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
+      const { moduleId } = req.body;
       if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
       // Ownership check
@@ -52,10 +53,12 @@ export class CoursesController {
         fileName: req.file.originalname,
         fileUrl,
         fileSize: req.file.size,
-        fileType: req.file.mimetype
+        fileType: req.file.mimetype,
+        moduleId: moduleId || null
       });
 
       res.status(201).json(attachment);
+
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
