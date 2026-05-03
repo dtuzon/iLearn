@@ -38,7 +38,8 @@ export interface Course {
 export interface CourseModule {
   id: string;
   title: string;
-  type: 'PRE_QUIZ' | 'VIDEO' | 'WORKSHOP' | 'POST_QUIZ' | 'EVALUATION' | 'ONLINE_EVALUATION' | 'INTRODUCTION' | 'CLOSING';
+  type: 'PRE_QUIZ' | 'VIDEO' | 'WORKSHOP' | 'POST_QUIZ' | 'EVALUATION' | 'ONLINE_EVALUATION' | 'INTRODUCTION' | 'CLOSING' | 'LIVE_SESSION';
+
   sequenceOrder: number;
   contentUrlOrText: string | null;
   durationSeconds: number | null;
@@ -49,7 +50,11 @@ export interface CourseModule {
   checkerType?: 'IMMEDIATE_SUPERIOR' | 'COURSE_CREATOR' | 'SPECIFIC_USER';
   specificCheckerId?: string;
   evaluationTemplateId?: string;
+  meetingUrl?: string;
+  scheduledAt?: string;
+  attendanceCode?: string;
   attachments?: CourseAttachment[];
+
 }
 
 
@@ -132,7 +137,12 @@ export const coursesApi = {
 
   deleteAttachment: async (attachmentId: string) => {
     await apiClient.delete(`/courses/attachments/${attachmentId}`);
+  },
+  verifyAttendance: async (moduleId: string, passcode: string) => {
+    const response = await apiClient.post(`/courses/modules/${moduleId}/verify-attendance`, { passcode });
+    return response.data;
   }
+
 };
 
 

@@ -149,5 +149,12 @@ router.delete(
   CoursesController.deleteAttachment
 );
 
+router.post(
+  '/modules/:moduleId/verify-attendance',
+  authenticate,
+  CoursesController.verifyAttendance
+);
+
 export default router;
+
 

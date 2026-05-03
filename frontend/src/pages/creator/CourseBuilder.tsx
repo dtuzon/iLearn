@@ -28,8 +28,10 @@ import {
   Video as VideoIcon,
   Eye,
   CopyPlus,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Calendar as CalendarIcon
 } from 'lucide-react';
+
 
 
 import 'react-quill-new/dist/quill.snow.css';
@@ -83,6 +85,8 @@ import { WorkshopActivityBuilder } from '../../components/creator/WorkshopActivi
 import { EvaluationTemplatePicker } from '../../components/creator/EvaluationTemplatePicker';
 import { TemplateCategory } from '../../api/evaluations.api';
 import { RichTextModuleBuilder } from '../../components/creator/RichTextModuleBuilder';
+import { LiveSessionBuilder } from '../../components/creator/LiveSessionBuilder';
+
 
 
 interface SortableModuleItemProps {
@@ -94,7 +98,9 @@ interface SortableModuleItemProps {
   setWorkshopModalState: (state: { isOpen: boolean, moduleId: string }) => void;
   setEvaluationModalState: (state: { isOpen: boolean, moduleId: string, category: TemplateCategory }) => void;
   setRichTextModalState: (state: { isOpen: boolean, moduleId: string }) => void;
+  setLiveSessionModalState: (state: { isOpen: boolean, moduleId: string }) => void;
   setEditingModule: (module: any) => void;
+
   handleDeleteModule: (moduleId: string) => void;
   readonly?: boolean;
 }
@@ -109,8 +115,10 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
   setWorkshopModalState,
   setEvaluationModalState,
   setRichTextModalState,
+  setLiveSessionModalState,
   setEditingModule, 
   handleDeleteModule,
+
 
   readonly
 }) => {
@@ -245,6 +253,21 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
                       <FileText className="mr-2 h-3.5 w-3.5" /> Manage Content
                     </Button>
                   )}
+
+                  {module.type === 'LIVE_SESSION' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="font-bold border-primary/20 hover:border-primary/50 hover:bg-primary/5"
+                      onClick={() => setLiveSessionModalState({
+                        isOpen: true,
+                        moduleId: module.id
+                      })}
+                    >
+                      <VideoIcon className="mr-2 h-3.5 w-3.5" /> Manage Session
+                    </Button>
+                  )}
+
 
 
                   <Button 
@@ -414,6 +437,11 @@ export const CourseBuilder: React.FC = () => {
     isOpen: false,
     moduleId: ''
   });
+  const [liveSessionModalState, setLiveSessionModalState] = useState<{ isOpen: boolean, moduleId: string }>({
+    isOpen: false,
+    moduleId: ''
+  });
+
 
   const handleAddModule = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -552,7 +580,9 @@ export const CourseBuilder: React.FC = () => {
       case 'ONLINE_EVALUATION': return <Award className="h-6 w-6 text-purple-500" />;
       case 'INTRODUCTION': return <Play className="h-6 w-6 text-primary" />;
       case 'CLOSING': return <CheckCircle2 className="h-6 w-6 text-success" />;
+      case 'LIVE_SESSION': return <VideoIcon className="h-6 w-6 text-orange-500" />;
       default: return <FileText className="h-6 w-6 text-muted-foreground" />;
+
     }
   };
 
@@ -777,7 +807,9 @@ export const CourseBuilder: React.FC = () => {
                           setWorkshopModalState={setWorkshopModalState}
                           setEvaluationModalState={setEvaluationModalState}
                           setRichTextModalState={setRichTextModalState}
+                          setLiveSessionModalState={setLiveSessionModalState}
                           setEditingModule={setEditingModule}
+
                           handleDeleteModule={handleDeleteModule}
                           readonly={isReadonly}
                         />
@@ -823,7 +855,9 @@ export const CourseBuilder: React.FC = () => {
                             <SelectItem value="WORKSHOP" className="font-bold">Workshop/Activity</SelectItem>
                             <SelectItem value="EVALUATION" className="font-bold">Quality Survey</SelectItem>
                             <SelectItem value="ONLINE_EVALUATION" className="font-bold">K.A.S.H. Assessment</SelectItem>
+                            <SelectItem value="LIVE_SESSION" className="font-bold">Blended: Live Session</SelectItem>
                           </SelectContent>
+
                         </Select>
                       </div>
                       <Button 
@@ -1065,7 +1099,9 @@ export const CourseBuilder: React.FC = () => {
                     <SelectItem value="POST_QUIZ">Post-Quiz Assessment</SelectItem>
                     <SelectItem value="EVALUATION">Quality Evaluation</SelectItem>
                     <SelectItem value="ONLINE_EVALUATION">Online Evaluation (K.A.S.H.)</SelectItem>
+                    <SelectItem value="LIVE_SESSION">Live Session / Webinar</SelectItem>
                   </SelectContent>
+
 
                 </Select>
               </div>
@@ -1113,6 +1149,15 @@ export const CourseBuilder: React.FC = () => {
         onClose={() => setRichTextModalState({ ...richTextModalState, isOpen: false })}
         onUpdate={() => fetchCourse(true)}
       />
+
+      <LiveSessionBuilder 
+        courseId={courseId!}
+        moduleId={liveSessionModalState.moduleId}
+        isOpen={liveSessionModalState.isOpen}
+        onClose={() => setLiveSessionModalState({ ...liveSessionModalState, isOpen: false })}
+        onUpdate={() => fetchCourse(true)}
+      />
+
 
     </div>
   );

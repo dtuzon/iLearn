@@ -22,6 +22,8 @@ import { cn } from '../../lib/utils';
 import { LocalVideoPlayer } from '../../components/learner/LocalVideoPlayer';
 import { ActivityPlayer } from '../../components/learner/ActivityPlayer';
 import { EvaluationPlayer } from '../../components/learner/EvaluationPlayer';
+import { LiveSessionPlayer } from '../../components/learner/LiveSessionPlayer';
+
 
 
 
@@ -313,7 +315,9 @@ export const CoursePlayer: React.FC = () => {
               {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ') && <HelpCircle className="h-6 w-6 text-primary" />}
               {currentModule.type === 'WORKSHOP' && <BookOpen className="h-6 w-6 text-green-600" />}
               {currentModule.type === 'EVALUATION' && <ClipboardCheck className="h-6 w-6 text-secondary-foreground" />}
+              {currentModule.type === 'LIVE_SESSION' && <Video className="h-6 w-6 text-orange-500" />}
               <CardTitle>{currentModule.title}</CardTitle>
+
             </div>
             <CardDescription className="capitalize">{currentModule.type.replace('_', ' ')} Module</CardDescription>
           </CardHeader>
@@ -392,6 +396,16 @@ export const CoursePlayer: React.FC = () => {
                 onComplete={handleCompleteModule}
               />
             )}
+
+
+            {/* LIVE SESSION VIEW */}
+            {currentModule.type === 'LIVE_SESSION' && (
+              <LiveSessionPlayer 
+                module={currentModule}
+                onComplete={handleCompleteModule}
+              />
+            )}
+
 
           </CardContent>
 

@@ -1,5 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { Role, CourseStatus } from '@prisma/client';
+import { EnrollmentsService } from '../enrollments/enrollments.service';
+
 
 
 
@@ -251,7 +253,11 @@ export class CoursesService {
               checkerType: module.checkerType,
               specificCheckerId: module.specificCheckerId,
               evaluationTemplateId: module.evaluationTemplateId,
+              meetingUrl: module.meetingUrl,
+              scheduledAt: module.scheduledAt,
+              attendanceCode: module.attendanceCode,
               quizQuestions: {
+
                 create: module.quizQuestions.map(q => ({
                   questionText: q.questionText,
                   sequenceOrder: q.sequenceOrder,
@@ -432,7 +438,11 @@ export class CoursesService {
               checkerType: module.checkerType,
               specificCheckerId: module.specificCheckerId,
               evaluationTemplateId: module.evaluationTemplateId,
+              meetingUrl: module.meetingUrl,
+              scheduledAt: module.scheduledAt,
+              attendanceCode: module.attendanceCode,
               quizQuestions: {
+
                 create: module.quizQuestions.map(q => ({
                   questionText: q.questionText,
                   sequenceOrder: q.sequenceOrder,
@@ -506,7 +516,30 @@ export class CoursesService {
     });
   }
 
+  static async verifyAttendance(moduleId: string, userId: string, passcode: string) {
+    const module = await prisma.courseModule.findUnique({
+      where: { id: moduleId }
+    });
+
+    if (!module || module.type !== 'LIVE_SESSION') {
+      throw new Error('Module not found or is not a live session');
+    }
+
+    if (!module.attendanceCode) {
+      throw new Error('Attendance code not configured for this session');
+    }
+
+    if (module.attendanceCode.trim().toLowerCase() !== passcode.trim().toLowerCase()) {
+      throw new Error('Incorrect passcode. Please ensure you attended the session to receive the code.');
+    }
+
+    // Mark as completed using the centralized progress service
+    return EnrollmentsService.completeModule(userId, moduleId);
+  }
+
+
 }
+
 
 
 

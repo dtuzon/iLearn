@@ -365,5 +365,17 @@ export class CoursesController {
       res.status(400).json({ message: error.message });
     }
   }
+  static async verifyAttendance(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { moduleId } = req.params;
+      const { passcode } = req.body;
+      const userId = req.user!.userId;
+
+      await CoursesService.verifyAttendance(moduleId as string, userId, passcode);
+      res.json({ message: 'Attendance verified and module marked as completed' });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 
 }

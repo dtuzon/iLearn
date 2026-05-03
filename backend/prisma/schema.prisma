@@ -30,6 +30,7 @@ enum ModuleType {
   ONLINE_EVALUATION
   INTRODUCTION
   CLOSING
+  LIVE_SESSION
 }
 
 
@@ -343,7 +344,13 @@ model CourseModule {
   checkerType          CheckerType? @default(COURSE_CREATOR)
   specificCheckerId    String?
 
+  // Live Session Fields
+  meetingUrl     String?
+  scheduledAt    DateTime?
+  attendanceCode String?
+
   courseId String
+
 
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
