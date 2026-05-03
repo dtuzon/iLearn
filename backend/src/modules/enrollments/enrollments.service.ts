@@ -2,7 +2,8 @@ import { prisma } from '../../lib/prisma';
 import { EnrollmentStatus, Role } from '@prisma/client';
 import { CertificatesService } from '../certificates/certificates.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { sendEmail } from '../../lib/email';
+import { sendEmail, sendBulkEmails } from '../../lib/email';
+
 
 
 
@@ -329,8 +330,9 @@ export class EnrollmentsService {
     const { contentType, contentId, targetUserIds, dueDate } = data;
     const parsedDueDate = dueDate ? new Date(dueDate) : undefined;
 
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       let enrollCount = 0;
+      const emailPayloads: any[] = [];
 
       for (const userId of targetUserIds) {
         if (contentType === 'COURSE') {
@@ -359,6 +361,25 @@ export class EnrollmentsService {
               type: 'INFO',
               link: `/learning/course/${contentId}`
             });
+
+            // Add to email queue
+            if (enrollment.user.email) {
+              emailPayloads.push({
+                to: enrollment.user.email,
+                subject: `Elevate LMS: New Course Assignment - ${enrollment.course.title}`,
+                html: `
+                  <div style="font-family: sans-serif; max-width: 600px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                    <h2 style="color: #0F172A;">New Course Assigned</h2>
+                    <p>Hello <strong>${enrollment.user.firstName}</strong>,</p>
+                    <p>You have been enrolled in a new course: <strong>${enrollment.course.title}</strong>.</p>
+                    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+                    <p><strong>Target Deadline:</strong> ${parsedDueDate ? parsedDueDate.toLocaleDateString() : 'None Specified'}</p>
+                    <p>Please log in to your dashboard to begin your learning journey.</p>
+                    <a href="${process.env.FRONTEND_URL}/learning/course/${contentId}" style="display: inline-block; background: #0F172A; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 10px;">View Course</a>
+                  </div>
+                `
+              });
+            }
           }
         } else {
           // Learning Path
@@ -386,13 +407,40 @@ export class EnrollmentsService {
               type: 'INFO',
               link: `/learning/paths/${contentId}`
             });
+
+            // Add to email queue
+            if (assignment.user.email) {
+              emailPayloads.push({
+                to: assignment.user.email,
+                subject: `Elevate LMS: New Learning Path Assignment - ${assignment.learningPath.title}`,
+                html: `
+                  <div style="font-family: sans-serif; max-width: 600px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                    <h2 style="color: #0F172A;">New Learning Path Assigned</h2>
+                    <p>Hello <strong>${assignment.user.firstName}</strong>,</p>
+                    <p>You have been enrolled in a new Learning Path: <strong>${assignment.learningPath.title}</strong>.</p>
+                    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+                    <p><strong>Target Deadline:</strong> ${parsedDueDate ? parsedDueDate.toLocaleDateString() : 'None Specified'}</p>
+                    <p>This path contains multiple courses designed for your professional development.</p>
+                    <a href="${process.env.FRONTEND_URL}/learning/paths/${contentId}" style="display: inline-block; background: #0F172A; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 10px;">View Path</a>
+                  </div>
+                `
+              });
+            }
           }
         }
       }
 
-      return { count: enrollCount };
+      return { count: enrollCount, emailPayloads };
     });
-  }
+
+    // Send emails in background
+    if (result.emailPayloads.length > 0) {
+      sendBulkEmails(result.emailPayloads);
+    }
+
+    return { count: result.count };
+  },
+
 
 }
 
