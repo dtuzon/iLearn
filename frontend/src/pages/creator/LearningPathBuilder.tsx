@@ -11,28 +11,28 @@ import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Label } from '../../components/ui/label';
 import { CertificateBuilder } from '../../components/creator/CertificateBuilder';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription, 
-  DialogFooter 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
 } from '../../components/ui/dialog';
 
-import { 
-  Loader2, 
-  ArrowLeft, 
-  Plus, 
-  GripVertical, 
-  Trash2, 
-  Save, 
-  Search, 
-  ChevronDown, 
-  CheckCircle2, 
+import {
+  Loader2,
+  ArrowLeft,
+  Plus,
+  GripVertical,
+  Trash2,
+  Save,
+  Search,
+  ChevronDown,
+  CheckCircle2,
   CheckCircle,
-  Route, 
-  Award, 
+  Route,
+  Award,
   Layers,
   Settings,
   EyeOff,
@@ -47,19 +47,19 @@ import { MultiSelect } from '../../components/ui/multi-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { departmentsApi, type Department } from '../../api/departments.api';
 
-import { 
-  DndContext, 
-  closestCenter, 
-  KeyboardSensor, 
-  PointerSensor, 
-  useSensor, 
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
   useSensors,
-  type DragEndEvent 
+  type DragEndEvent
 } from '@dnd-kit/core';
-import { 
-  arrayMove, 
-  SortableContext, 
-  sortableKeyboardCoordinates, 
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
   verticalListSortingStrategy,
   useSortable
 } from '@dnd-kit/sortable';
@@ -69,17 +69,13 @@ interface SortableCourseItemProps {
   item: LearningPathCourse;
   index: number;
   onRemove: (id: string) => void;
-  onMoveUp: (index: number) => void;
-  onMoveDown: (index: number) => void;
-  isFirst: boolean;
-  isLast: boolean;
   isReadonly: boolean;
 }
 
-const SortableCourseItem: React.FC<SortableCourseItemProps> = ({ 
-  item, 
-  index, 
-  onRemove, 
+const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
+  item,
+  index,
+  onRemove,
   isReadonly
 }) => {
   const {
@@ -88,70 +84,65 @@ const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
     setNodeRef,
     transform,
     transition,
+    isDragging
   } = useSortable({ id: item.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    zIndex: isDragging ? 100 : 'auto',
+    opacity: isDragging ? 0.5 : 1,
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="relative group pl-12">
-      {/* Vertical Track Connector */}
-      <div className="absolute left-4 top-0 bottom-0 flex flex-col items-center">
-        <div className="w-[2px] h-full bg-amber-100 group-last:h-1/2"></div>
-        <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-amber-400 bg-white shadow-sm flex items-center justify-center">
-          <div className="w-1.5 h-1.5 rounded-full bg-amber-400 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        </div>
-      </div>
+    <div ref={setNodeRef} style={style} className="relative group">
+      {/* Timeline Dot */}
+      <div className="absolute -left-[33px] top-5 h-4 w-4 rounded-full border-2 border-primary bg-background shadow-sm z-10 group-hover:scale-125 transition-transform" />
 
-      <div className="absolute left-10 top-1/2 -translate-y-1/2 -rotate-90 origin-center whitespace-nowrap">
-        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Step {index + 1}</span>
-      </div>
+      <Card className={`ml-4 border-none shadow-sm transition-all duration-300 hover:shadow-md ${isDragging ? 'shadow-xl' : isReadonly ? 'cursor-default' : 'group-hover:translate-x-1 cursor-grab'}`}>
+        <CardContent className="p-0">
+          <div className="flex flex-col md:flex-row md:items-center justify-between p-5 gap-4">
+            <div className="flex items-center gap-4 min-w-0">
+              {!isReadonly && (
+                <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-2 hover:bg-muted rounded-md shrink-0">
+                  <GripVertical className="h-5 w-5 text-muted-foreground/30" />
+                </div>
+              )}
+              <div className="text-xs font-black text-muted-foreground/30 font-mono min-w-[50px] shrink-0">STEP {index + 1}</div>
 
-      <Card className={`mb-4 border-none shadow-sm transition-all hover:shadow-md bg-white ${isReadonly ? 'cursor-default' : 'cursor-grab'}`}>
-        <CardContent className="p-5 flex items-center gap-6">
-          {!isReadonly && (
-            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-slate-50 rounded transition-colors">
-              <GripVertical className="h-4 w-4 text-slate-300" />
-            </div>
-          )}
-          
-          <div className="h-12 w-12 rounded-xl bg-amber-50 flex items-center justify-center border border-amber-100 shrink-0">
-            <Route className="h-6 w-6 text-amber-600" />
-          </div>
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Route className="h-5 w-5 text-primary" />
+              </div>
 
-          <div className="flex-1 min-w-0">
-            <h4 className="text-base font-bold text-slate-900 group-hover:text-amber-600 transition-colors truncate">
-              {item.course.title}
-            </h4>
-            <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
-              {item.course.description || 'Enterprise course module in this learning sequence.'}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-4 shrink-0">
-            <div className="flex flex-col items-end">
-              <Badge variant="outline" className="text-[10px] font-mono px-2 py-0 bg-slate-50 border-slate-100 text-slate-500">
-                {(item.course as any)._count?.modules || 0} Components
-              </Badge>
-              <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">
-                {item.course.passingGrade}% Pass Req.
-              </span>
+              <div className="min-w-0">
+                <div className="font-bold text-lg truncate">{item.course.title}</div>
+                <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                  {item.course.description || 'Enterprise course module in this learning sequence.'}
+                </div>
+              </div>
             </div>
 
-            {!isReadonly && (
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+            <div className="flex items-center gap-4 shrink-0">
+              <div className="flex flex-col items-end">
+                <Badge variant="secondary" className="text-[10px] font-bold tracking-tighter uppercase">
+                  {(item.course as any)._count?.modules || item.course.modules?.length || 0} Components
+                </Badge>
+                <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">
+                  {item.course.passingGrade}% Pass Req.
+                </span>
+              </div>
+
+              {!isReadonly && (
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => onRemove(item.id)}
                   className="h-8 w-8 rounded-lg text-slate-300 hover:text-destructive hover:bg-destructive/5"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -167,13 +158,13 @@ interface VersionTimelineItemProps {
 
 const VersionTimelineItem: React.FC<VersionTimelineItemProps> = ({ v, isCurrent }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
   return (
     <div className="relative group animate-in fade-in duration-500">
       {/* The node */}
       <div className={`absolute -left-[30px] top-1 h-[20px] w-[20px] rounded-full border-4 bg-white z-10 transition-all ${isCurrent ? 'border-primary shadow-[0_0_15px_rgba(234,179,8,0.3)]' : 'border-slate-300 group-hover:border-slate-400'}`}></div>
-      
-      <div 
+
+      <div
         className={`space-y-2 p-3 rounded-2xl transition-all cursor-pointer ${isCurrent ? 'bg-primary/5 border border-primary/10' : 'hover:bg-white hover:shadow-sm hover:border-slate-100 border border-transparent'}`}
         onClick={() => !isCurrent && setIsExpanded(!isExpanded)}
       >
@@ -188,7 +179,7 @@ const VersionTimelineItem: React.FC<VersionTimelineItemProps> = ({ v, isCurrent 
             {v.updatedAt ? new Date(v.updatedAt).toLocaleDateString() : '---'}
           </span>
         </div>
-        
+
         <div className="flex items-center justify-between gap-2">
           <p className={`text-sm font-bold tracking-tight truncate ${isCurrent ? 'text-slate-900' : 'text-slate-600'}`}>
             {v.versionTag || 'Unlabeled Release'}
@@ -221,7 +212,7 @@ export const LearningPathBuilder: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [courseSearch, setCourseSearch] = useState('');
   const [lineagePaths, setLineagePaths] = useState<LearningPath[]>([]);
-  
+
   const [approvalDialog, setApprovalDialog] = useState({
     isOpen: false,
     versionTagDraft: '',
@@ -310,7 +301,7 @@ export const LearningPathBuilder: React.FC = () => {
 
   const generateSmartDiff = () => {
     if (!path) return '';
-    
+
     // Find the previous published version
     const prev = lineagePaths.find(p => p.status === 'PUBLISHED' && p.id !== path.id);
     if (!prev) return 'Initial path configuration and sequence definition.';
@@ -321,7 +312,7 @@ export const LearningPathBuilder: React.FC = () => {
     if (path.title !== prev.title) changes.push(`Renamed path from "${prev.title}" to "${path.title}"`);
     if (path.description !== prev.description) changes.push(`Updated path description and objectives`);
     if (path.targetAudience !== prev.targetAudience) changes.push(`Changed target audience to ${path.targetAudience}`);
-    
+
     // 2. Sequence check
     const currentCourseIds = path.pathCourses.map(pc => pc.courseId);
     const prevCourseIds = prev.pathCourses.map(pc => pc.courseId);
@@ -331,12 +322,12 @@ export const LearningPathBuilder: React.FC = () => {
 
     if (added.length > 0) changes.push(`Added ${added.length} new course(s) to the sequence`);
     if (removed.length > 0) changes.push(`Removed ${removed.length} course(s) from the sequence`);
-    
+
     // Check if order changed for existing courses
     const intersection = currentCourseIds.filter(cid => prevCourseIds.includes(cid));
     const currentOrder = intersection;
     const prevOrder = prevCourseIds.filter(cid => currentCourseIds.includes(cid));
-    
+
     if (JSON.stringify(currentOrder) !== JSON.stringify(prevOrder)) {
       changes.push(`Restructured the course sequence and learning flow`);
     }
@@ -345,16 +336,16 @@ export const LearningPathBuilder: React.FC = () => {
       changes.push(path.hasCertificate ? 'Enabled automated certification' : 'Disabled automated certification');
     }
 
-    return changes.length > 0 
-      ? changes.map(c => `• ${c}`).join('\n') 
+    return changes.length > 0
+      ? changes.map(c => `• ${c}`).join('\n')
       : '';
   };
 
   const handleInitiatePublish = () => {
     if (!path) return;
-    
+
     const diff = generateSmartDiff();
-    
+
     // If v1 or has changes, show prompt
     if (path.version === 1 || diff) {
       setApprovalDialog({
@@ -419,28 +410,17 @@ export const LearningPathBuilder: React.FC = () => {
     if (path && over && active.id !== over.id) {
       const oldIndex = path.pathCourses.findIndex((i) => i.id === active.id);
       const newIndex = path.pathCourses.findIndex((i) => i.id === over.id);
-      
+
       const newPathCourses = arrayMove(path.pathCourses, oldIndex, newIndex).map((item, idx) => ({
         ...item,
         order: idx + 1
       }));
-      
+
       setPath({ ...path, pathCourses: newPathCourses });
     }
   };
 
-  const moveStep = (index: number, direction: 'up' | 'down') => {
-    if (!path) return;
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= path.pathCourses.length) return;
-    
-    const newPathCourses = arrayMove(path.pathCourses, index, newIndex).map((item, idx) => ({
-      ...item,
-      order: idx + 1
-    }));
-    
-    setPath({ ...path, pathCourses: newPathCourses });
-  };
+
 
   const addToPath = (course: Course) => {
     if (!path) return;
@@ -491,7 +471,7 @@ export const LearningPathBuilder: React.FC = () => {
     }
   };
 
-  const filteredCourses = allCourses.filter(c => 
+  const filteredCourses = allCourses.filter(c =>
     c.title.toLowerCase().includes(courseSearch.toLowerCase()) &&
     !path?.pathCourses.some(pc => pc.courseId === c.id)
   );
@@ -511,29 +491,31 @@ export const LearningPathBuilder: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center py-6 gap-4">
         <div className="flex items-center gap-6">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => navigate('/creator/learning-paths')} 
-            className="rounded-full hover:bg-amber-50 text-amber-600"
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/creator/learning-paths')}
+            className="rounded-full hover:bg-primary/5 text-primary"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-black tracking-tight text-amber-600 uppercase">
-                {path.title} {path.status === 'DRAFT' && <span className="text-amber-500/50 font-medium ml-1 lowercase">({path.status.toLowerCase()})</span>}
+              <h1 className="text-3xl font-extrabold tracking-tight text-primary">
+                {path.title.replace(/\s*\(Draft\)$/i, '')} {path.status === 'DRAFT' && <span className="text-primary/60 font-medium">(Draft)</span>}
               </h1>
-              <Badge variant="outline" className="font-mono text-[10px] py-0 px-2 bg-white border-slate-200">v{path.version}</Badge>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-muted rounded-full border text-xs font-mono text-muted-foreground shrink-0">
+                <span className="font-bold text-foreground">v{path.version}</span>
+              </div>
               <div className="flex items-center gap-2 px-3 py-1 bg-white border border-blue-100 rounded-full shadow-sm text-[10px] font-bold text-slate-700 uppercase tracking-tighter">
                 <CheckCircle2 className="h-3 w-3 text-blue-500" />
                 {path.status}
               </div>
             </div>
             <div className="flex items-center gap-2 mt-1">
-              <Layers className="h-3.5 w-3.5 text-amber-600/60" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/60">
-                Authoring Studio &bull; {path.pathCourses?.length || 0} Components
+              <Layers className="h-4 w-4 text-primary" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">
+                Learning Path Studio &bull; {path.pathCourses?.length || 0} Courses
               </p>
             </div>
           </div>
@@ -541,10 +523,10 @@ export const LearningPathBuilder: React.FC = () => {
 
         <div className="flex items-center gap-3">
           {!isReadonly && (
-            <Button 
-              onClick={handleSave} 
-              disabled={isSaving} 
-              className="h-10 px-6 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold shadow-lg shadow-orange-200 transition-all active:scale-95"
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="h-10 px-6 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-md shadow-orange-500/20 transition-all active:scale-95 border-none"
             >
               {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
               Save Sequence
@@ -552,9 +534,9 @@ export const LearningPathBuilder: React.FC = () => {
           )}
 
           {path.status === 'DRAFT' && (
-            <Button 
+            <Button
               onClick={handleInitiatePublish}
-              className="h-10 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-lg shadow-amber-100 transition-all active:scale-95"
+              className="h-10 px-6 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 font-bold"
             >
               <Timer className="mr-2 h-4 w-4" /> Publish Path
             </Button>
@@ -562,7 +544,7 @@ export const LearningPathBuilder: React.FC = () => {
 
           {path.status === 'PUBLISHED' && (
             <>
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => handleUpdateStatus('DRAFT')}
                 className="h-11 px-6 rounded-xl border-destructive/20 text-destructive hover:bg-destructive/5 font-bold"
@@ -571,7 +553,7 @@ export const LearningPathBuilder: React.FC = () => {
                 Unpublish
               </Button>
 
-              <Button 
+              <Button
                 onClick={handleCreateVersion}
                 disabled={isCreatingVersion}
                 variant="outline"
@@ -585,100 +567,69 @@ export const LearningPathBuilder: React.FC = () => {
         </div>
       </div>
 
-
       <Tabs defaultValue="curriculum" className="w-full">
-        <TabsList className="bg-muted/10 p-1 rounded-xl mb-8 flex justify-start w-fit">
-          <TabsTrigger value="curriculum" className="rounded-lg px-6 gap-2 data-[state=active]:shadow-sm data-[state=active]:bg-white transition-all">
-            <Layers className="h-4 w-4" />
-            Curriculum Loop
+        <TabsList className="bg-muted/50 p-1 h-12 mb-6">
+          <TabsTrigger value="curriculum" className="h-10 px-8 font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            Courses Loop
           </TabsTrigger>
-          <TabsTrigger value="certificate" className="rounded-lg px-6 gap-2 data-[state=active]:shadow-sm data-[state=active]:bg-white transition-all">
-            <Award className="h-4 w-4" />
-            Certificate Builder
+          <TabsTrigger value="certificate" className="h-10 px-8 font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Award className="mr-2 h-4 w-4" /> Certificate Builder
           </TabsTrigger>
-          <TabsTrigger value="settings" className="rounded-lg px-6 gap-2 data-[state=active]:shadow-sm data-[state=active]:bg-white transition-all">
-            <Settings className="h-4 w-4" />
-            Course Config
+          <TabsTrigger value="settings" className="h-10 px-8 font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Settings className="mr-2 h-4 w-4" /> Path Config
           </TabsTrigger>
         </TabsList>
 
-
-        <TabsContent value="curriculum" className="space-y-6 animate-in slide-in-from-left-4 duration-500">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 h-[calc(100vh-360px)] min-h-[500px]">
+        <TabsContent value="curriculum" className="space-y-8 animate-in slide-in-from-left-4 duration-500">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Left Side: The Path Sequence */}
-            <div className={`${isReadonly ? 'lg:col-span-5' : 'lg:col-span-3'} flex flex-col gap-6`}>
-              <Card className="flex-1 flex flex-col border-none shadow-xl bg-background/50 backdrop-blur-sm overflow-hidden">
-                <CardHeader className="border-b bg-muted/10">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Route className="h-5 w-5 text-primary" />
-                        Path Sequence
-                      </CardTitle>
-                      <CardDescription>
-                        {isReadonly ? "This published path's sequence is locked to preserve the learner journey." : "Drag and drop or use controls to define the learner's journey."}
-                      </CardDescription>
-                    </div>
-                    <Badge variant="secondary" className="font-bold">{path.pathCourses.length} Courses</Badge>
+            <div className="lg:col-span-3 space-y-6">
+              <div className="relative pl-8 space-y-8 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-primary before:via-primary/50 before:to-transparent">
+                {path.pathCourses.length === 0 ? (
+                  <div className="ml-4 p-12 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center text-muted-foreground bg-muted/5">
+                    <Layers className="h-12 w-12 mb-4 opacity-20" />
+                    <p className="text-xl font-bold">No courses added yet.</p>
+                    <p className="text-sm">Start building your sequence by adding your first course.</p>
                   </div>
-                </CardHeader>
-                <CardContent className="flex-1 overflow-y-auto p-6">
-                  {path.pathCourses.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-12 opacity-50 border-2 border-dashed rounded-3xl">
-                      <Plus className="h-12 w-12 mb-4" />
-                      <h3 className="text-lg font-medium italic">Your path is empty</h3>
-                      <p className="text-sm">Select courses from the library on the right to start building the sequence.</p>
-                    </div>
-                  ) : (
-                    <div className="relative pl-8 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-primary before:via-primary/50 before:to-transparent">
-                      <DndContext 
-                        sensors={sensors} 
-                        collisionDetection={closestCenter} 
-                        onDragEnd={handleDragEnd}
-                      >
-                        <SortableContext 
-                          items={path.pathCourses.map(pc => pc.id)} 
-                          strategy={verticalListSortingStrategy}
-                        >
-                          <div className="space-y-4">
-                            {path.pathCourses.map((pc, index) => (
-                              <div key={pc.id} className="relative">
-                                {/* Step Indicator Dot */}
-                                <div className="absolute -left-[30px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-primary border-4 border-background z-10" />
-                                <SortableCourseItem 
-                                  item={pc} 
-                                  index={index}
-                                  onRemove={removeStep}
-                                  onMoveUp={(idx) => moveStep(idx, 'up')}
-                                  onMoveDown={(idx) => moveStep(idx, 'down')}
-                                  isFirst={index === 0}
-                                  isLast={index === path.pathCourses.length - 1}
-                                  isReadonly={isReadonly}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </SortableContext>
-                      </DndContext>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                ) : (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={path.pathCourses.map(c => c.id)}
+                      strategy={verticalListSortingStrategy}
+                      disabled={isReadonly}
+                    >
+                      {path.pathCourses.map((item, index) => (
+                        <SortableCourseItem
+                          key={item.id}
+                          item={item}
+                          index={index}
+                          onRemove={removeStep}
+                          isReadonly={isReadonly}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                )}
+              </div>
             </div>
 
             {/* Right Side: Course Library - Hidden if Readonly */}
             {!isReadonly && (
-              <div className="lg:col-span-2 flex flex-col gap-6">
+              <div className="space-y-6">
                 <Card className="border-none shadow-xl bg-primary/5 sticky top-24">
                   <CardHeader>
                     <CardTitle className="text-lg">Add Course</CardTitle>
-                    <CardDescription>Expand the path sequence.</CardDescription>
+                    <CardDescription>Expand the sequence.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        placeholder="Filter published courses..." 
+                      <Input
+                        placeholder="Filter published courses..."
                         className="pl-10 h-10 bg-background/50"
                         value={courseSearch}
                         onChange={(e) => setCourseSearch(e.target.value)}
@@ -691,16 +642,16 @@ export const LearningPathBuilder: React.FC = () => {
                         </div>
                       ) : (
                         filteredCourses.map(course => (
-                          <div 
-                            key={course.id} 
+                          <div
+                            key={course.id}
                             onClick={() => addToPath(course)}
-                            className="group p-4 bg-background rounded-xl border border-slate-100 hover:border-amber-200 hover:shadow-md transition-all cursor-pointer"
+                            className="group p-4 bg-background rounded-xl border border-slate-100 hover:border-primary/30 hover:shadow-md transition-all cursor-pointer"
                           >
                             <div className="flex flex-col gap-2">
-                              <h4 className="text-sm font-bold text-slate-800 group-hover:text-amber-600 transition-colors leading-tight">{course.title}</h4>
+                              <h4 className="text-sm font-bold text-slate-800 group-hover:text-primary transition-colors leading-tight">{course.title}</h4>
                               <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0 bg-slate-50 text-slate-500">{course.passingGrade}% Pass</Badge>
-                                <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0 bg-slate-50 text-slate-500">{(course as any)._count?.modules || 0} Components</Badge>
+                                <Badge variant="secondary" className="text-[10px] font-bold tracking-tighter uppercase">{course.passingGrade}% Pass Req.</Badge>
+                                <span className="text-[10px] text-muted-foreground">{(course as any)._count?.modules || course.modules?.length || 0} Components</span>
                               </div>
                             </div>
                           </div>
@@ -716,7 +667,7 @@ export const LearningPathBuilder: React.FC = () => {
 
         <TabsContent value="certificate" className="animate-in slide-in-from-right-4 duration-500">
           <Card className="border-none shadow-xl bg-background/50 backdrop-blur-sm p-8">
-            <CertificateBuilder 
+            <CertificateBuilder
               learningPathId={path.id}
               initialData={{
                 backgroundUrl: path.certificateTemplate?.backgroundImageUrl,
@@ -772,12 +723,12 @@ export const LearningPathBuilder: React.FC = () => {
                     {!identityForm.thumbnailUrl && (
                       <Label htmlFor="thumb-upload" className="absolute inset-0 cursor-pointer" />
                     )}
-                    <input 
-                      id="thumb-upload" 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={handleThumbnailUpload} 
+                    <input
+                      id="thumb-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleThumbnailUpload}
                       disabled={isUploadingThumbnail}
                     />
                   </div>
@@ -797,116 +748,116 @@ export const LearningPathBuilder: React.FC = () => {
                 </div>
               </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="p-title">Path Title</Label>
-                    <Input 
-                      id="p-title" 
-                      value={identityForm.title}
-                      onChange={(e) => setIdentityForm({...identityForm, title: e.target.value})}
-                      placeholder="e.g. Executive Leadership Academy"
-                      className="h-11 rounded-xl"
-                      disabled={isReadonly}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Target Audience</Label>
-                    <Select 
-                      value={identityForm.targetAudience} 
-                      onValueChange={(val) => setIdentityForm({...identityForm, targetAudience: val})}
-                      disabled={isReadonly}
-                    >
-                      <SelectTrigger className="h-11 rounded-xl">
-                        <SelectValue placeholder="Select audience" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        <SelectItem value="GENERAL">General Audience</SelectItem>
-                        <SelectItem value="PHASE_1_NEW_HIRE">Phase 1: Newly Hired</SelectItem>
-                        <SelectItem value="PHASE_2_REGULARIZED">Phase 2: Newly Regularized</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label>Target Departments</Label>
-                  <MultiSelect 
-                    placeholder="Limit visibility to specific departments..."
-                    options={departments.map(d => ({ label: d.name, value: d.name }))}
-                    selected={identityForm.targetDepartments}
-                    onChange={(selected) => setIdentityForm({ ...identityForm, targetDepartments: selected })}
+                  <Label htmlFor="p-title">Path Title</Label>
+                  <Input
+                    id="p-title"
+                    value={identityForm.title}
+                    onChange={(e) => setIdentityForm({ ...identityForm, title: e.target.value })}
+                    placeholder="e.g. Executive Leadership Academy"
+                    className="h-11 rounded-xl"
                     disabled={isReadonly}
                   />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="p-desc">Path Description / Objectives</Label>
-                  <Textarea 
-                    id="p-desc" 
-                    value={identityForm.description}
-                    onChange={(e) => setIdentityForm({...identityForm, description: e.target.value})}
-                    className="min-h-[120px] rounded-xl"
-                    placeholder="Summarize the core impact of this learning journey..."
+                  <Label>Target Audience</Label>
+                  <Select
+                    value={identityForm.targetAudience}
+                    onValueChange={(val) => setIdentityForm({ ...identityForm, targetAudience: val })}
                     disabled={isReadonly}
-                  />
+                  >
+                    <SelectTrigger className="h-11 rounded-xl">
+                      <SelectValue placeholder="Select audience" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="GENERAL">General Audience</SelectItem>
+                      <SelectItem value="PHASE_1_NEW_HIRE">Phase 1: Newly Hired</SelectItem>
+                      <SelectItem value="PHASE_2_REGULARIZED">Phase 2: Newly Regularized</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+              </div>
 
-                {!isReadonly && (
-                  <Button onClick={handleUpdateIdentity} className="h-12 px-8 font-black uppercase tracking-widest shadow-lg shadow-primary/20 rounded-xl">
-                    Update Path Identity
-                  </Button>
-                )}
+              <div className="space-y-2">
+                <Label>Target Departments</Label>
+                <MultiSelect
+                  placeholder="Limit visibility to specific departments..."
+                  options={departments.map(d => ({ label: d.name, value: d.name }))}
+                  selected={identityForm.targetDepartments}
+                  onChange={(selected) => setIdentityForm({ ...identityForm, targetDepartments: selected })}
+                  disabled={isReadonly}
+                />
+              </div>
 
-                {/* Version Governance Section */}
-                <div className="pt-12 mt-12 border-t border-slate-100">
-                  <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-2xl bg-amber-50 flex items-center justify-center">
-                        <HistoryIcon className="h-6 w-6 text-amber-600" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold text-slate-900">Version Governance</h2>
-                        <p className="text-sm text-slate-500">Audit lineage and version history for this learning journey.</p>
-                      </div>
+              <div className="space-y-2">
+                <Label htmlFor="p-desc">Path Description / Objectives</Label>
+                <Textarea
+                  id="p-desc"
+                  value={identityForm.description}
+                  onChange={(e) => setIdentityForm({ ...identityForm, description: e.target.value })}
+                  className="min-h-[120px] rounded-xl"
+                  placeholder="Summarize the core impact of this learning journey..."
+                  disabled={isReadonly}
+                />
+              </div>
+
+              {!isReadonly && (
+                <Button onClick={handleUpdateIdentity} className="h-12 px-8 font-black uppercase tracking-widest shadow-lg shadow-primary/20 rounded-xl">
+                  Update Path Identity
+                </Button>
+              )}
+
+              {/* Version Governance Section */}
+              <div className="pt-12 mt-12 border-t border-slate-100">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-amber-50 flex items-center justify-center">
+                      <HistoryIcon className="h-6 w-6 text-amber-600" />
                     </div>
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                      {lineagePaths.length} Snapshots Captured
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900">Version Governance</h2>
+                      <p className="text-sm text-slate-500">Audit lineage and version history for this learning journey.</p>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                    {lineagePaths.length} Snapshots Captured
+                  </div>
+                </div>
 
-                  <div className="w-full">
-                    {/* Lineage Timeline */}
-                    <div className="flex flex-col">
-                      <div className="flex-1 p-4 overflow-hidden flex flex-col min-h-[400px] max-h-[600px]">
-                        <div className="flex items-center justify-between mb-8 shrink-0">
-                          <h3 className="font-black text-sm uppercase tracking-widest text-slate-400">Audit Stream</h3>
-                          <Badge variant="outline" className="bg-slate-100/50 border-slate-200 text-[10px] font-bold">LATEST: v{path.version}</Badge>
-                        </div>
-                        
-                        <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar">
-                          <div className="relative">
-                            {/* Vertical Track */}
-                            <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-slate-200"></div>
+                <div className="w-full">
+                  {/* Lineage Timeline */}
+                  <div className="flex flex-col">
+                    <div className="flex-1 p-4 overflow-hidden flex flex-col min-h-[400px] max-h-[600px]">
+                      <div className="flex items-center justify-between mb-8 shrink-0">
+                        <h3 className="font-black text-sm uppercase tracking-widest text-slate-400">Audit Stream</h3>
+                        <Badge variant="outline" className="bg-slate-100/50 border-slate-200 text-[10px] font-bold">LATEST: v{path.version}</Badge>
+                      </div>
 
-                            <div className="relative pl-10 space-y-8">
-                              {lineagePaths.map((v) => (
-                                <VersionTimelineItem 
-                                  key={v.id} 
-                                  v={v} 
-                                  isCurrent={v.id === path.id} 
-                                />
-                              ))}
-                            </div>
+                      <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar">
+                        <div className="relative">
+                          {/* Vertical Track */}
+                          <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-slate-200"></div>
+
+                          <div className="relative pl-10 space-y-8">
+                            {lineagePaths.map((v) => (
+                              <VersionTimelineItem
+                                key={v.id}
+                                v={v}
+                                isCurrent={v.id === path.id}
+                              />
+                            ))}
                           </div>
                         </div>
-                        
-                        <div className="mt-8 pt-6 border-t border-slate-200/50 shrink-0">
-                          <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest italic">End of Audit Stream</p>
-                        </div>
+                      </div>
+
+                      <div className="mt-8 pt-6 border-t border-slate-200/50 shrink-0">
+                        <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest italic">End of Audit Stream</p>
                       </div>
                     </div>
                   </div>
                 </div>
+              </div>
             </div>
           </Card>
         </TabsContent>
@@ -987,14 +938,14 @@ export const LearningPathBuilder: React.FC = () => {
           </div>
 
           <DialogFooter>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={() => setApprovalDialog(prev => ({ ...prev, isOpen: false }))}
               className="font-bold text-slate-500"
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleFinalPublish}
               disabled={approvalDialog.isSubmitting}
               className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
