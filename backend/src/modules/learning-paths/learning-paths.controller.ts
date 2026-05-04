@@ -110,8 +110,8 @@ export class LearningPathsController {
   static async updateStatus(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { status } = req.body;
-      const path = await LearningPathsService.updateStatus(id as string, status);
+      const { status, versionTag, changeSummary } = req.body;
+      const path = await LearningPathsService.updateStatus(id as string, status, versionTag, changeSummary);
       res.json(path);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

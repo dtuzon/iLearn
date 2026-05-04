@@ -77,8 +77,8 @@ export const learningPathsApi = {
     return response.data;
   },
 
-  updateStatus: async (id: string, status: string): Promise<LearningPath> => {
-    const response = await apiClient.patch(`/learning-paths/${id}/status`, { status });
+  updateStatus: async (id: string, status: string, versionTag?: string, changeSummary?: string): Promise<LearningPath> => {
+    const response = await apiClient.patch(`/learning-paths/${id}/status`, { status, versionTag, changeSummary });
     return response.data;
   },
 

@@ -65,10 +65,14 @@ export class LearningPathsService {
     });
   }
 
-  static async updateStatus(id: string, status: CourseStatus) {
+  static async updateStatus(id: string, status: CourseStatus, versionTag?: string, changeSummary?: string) {
     return prisma.learningPath.update({
       where: { id },
-      data: { status }
+      data: { 
+        status,
+        ...(versionTag && { versionTag }),
+        ...(changeSummary && { changeSummary })
+      } as any
     });
   }
 

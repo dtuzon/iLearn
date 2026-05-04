@@ -11,6 +11,14 @@ import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Label } from '../../components/ui/label';
 import { CertificateBuilder } from '../../components/creator/CertificateBuilder';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogFooter 
+} from '../../components/ui/dialog';
 
 import { 
   Loader2, 
@@ -20,17 +28,17 @@ import {
   Trash2, 
   Save, 
   Search, 
-  BookOpen, 
-  ChevronUp, 
   ChevronDown, 
   CheckCircle2, 
+  CheckCircle,
   Route, 
   Award, 
   Layers,
   Settings,
   EyeOff,
   Image as ImageIcon,
-  History as HistoryIcon
+  History as HistoryIcon,
+  Timer
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -72,10 +80,6 @@ const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
   item, 
   index, 
   onRemove, 
-  onMoveUp, 
-  onMoveDown,
-  isFirst,
-  isLast,
   isReadonly
 }) => {
   const {
@@ -92,55 +96,65 @@ const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
   };
 
   return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
-      className="group relative flex items-center gap-4 p-4 bg-background border rounded-2xl shadow-sm hover:shadow-md transition-all duration-200"
-    >
-      {!isReadonly && (
-        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-primary">
-          <GripVertical className="h-5 w-5" />
+    <div ref={setNodeRef} style={style} className="relative group pl-12">
+      {/* Vertical Track Connector */}
+      <div className="absolute left-4 top-0 bottom-0 flex flex-col items-center">
+        <div className="w-[2px] h-full bg-amber-100 group-last:h-1/2"></div>
+        <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-amber-400 bg-white shadow-sm flex items-center justify-center">
+          <div className="w-1.5 h-1.5 rounded-full bg-amber-400 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         </div>
-      )}
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <Badge variant="outline" className="font-mono text-xs">Step {index + 1}</Badge>
-          <h4 className="font-bold truncate">{item.course.title}</h4>
-        </div>
-        <p className="text-xs text-muted-foreground truncate">{item.course.description || 'No description'}</p>
       </div>
 
-      {!isReadonly && (
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8" 
-            onClick={() => onMoveUp(index)}
-            disabled={isFirst}
-          >
-            <ChevronUp className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8" 
-            onClick={() => onMoveDown(index)}
-            disabled={isLast}
-          >
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={() => onRemove(item.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+      <div className="absolute left-10 top-1/2 -translate-y-1/2 -rotate-90 origin-center whitespace-nowrap">
+        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Step {index + 1}</span>
+      </div>
+
+      <Card className={`mb-4 border-none shadow-sm transition-all hover:shadow-md bg-white ${isReadonly ? 'cursor-default' : 'cursor-grab'}`}>
+        <CardContent className="p-5 flex items-center gap-6">
+          {!isReadonly && (
+            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-slate-50 rounded transition-colors">
+              <GripVertical className="h-4 w-4 text-slate-300" />
+            </div>
+          )}
+          
+          <div className="h-12 w-12 rounded-xl bg-amber-50 flex items-center justify-center border border-amber-100 shrink-0">
+            <Route className="h-6 w-6 text-amber-600" />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <h4 className="text-base font-bold text-slate-900 group-hover:text-amber-600 transition-colors truncate">
+              {item.course.title}
+            </h4>
+            <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
+              {item.course.description || 'Enterprise course module in this learning sequence.'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4 shrink-0">
+            <div className="flex flex-col items-end">
+              <Badge variant="outline" className="text-[10px] font-mono px-2 py-0 bg-slate-50 border-slate-100 text-slate-500">
+                {(item.course as any)._count?.modules || 0} Components
+              </Badge>
+              <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">
+                {item.course.passingGrade}% Pass Req.
+              </span>
+            </div>
+
+            {!isReadonly && (
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => onRemove(item.id)}
+                  className="h-8 w-8 rounded-lg text-slate-300 hover:text-destructive hover:bg-destructive/5"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
@@ -207,6 +221,15 @@ export const LearningPathBuilder: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [courseSearch, setCourseSearch] = useState('');
   const [lineagePaths, setLineagePaths] = useState<LearningPath[]>([]);
+  
+  const [approvalDialog, setApprovalDialog] = useState({
+    isOpen: false,
+    versionTagDraft: '',
+    changeSummary: '',
+    isGeneratingDiff: false,
+    isSubmitting: false
+  });
+
   const isReadonly = path?.status === 'PUBLISHED' || path?.status === 'ARCHIVED';
 
   const sensors = useSensors(
@@ -273,14 +296,86 @@ export const LearningPathBuilder: React.FC = () => {
     }
   };
 
-  const handleUpdateStatus = async (status: string) => {
+  const handleUpdateStatus = async (status: string, versionTag?: string, changeSummary?: string) => {
     if (!id) return;
     try {
-      await learningPathsApi.updateStatus(id, status);
+      await learningPathsApi.updateStatus(id, status, versionTag, changeSummary);
       toast.success(`Path status updated to ${status}`);
       fetchData();
+      setApprovalDialog(prev => ({ ...prev, isOpen: false }));
     } catch (error) {
       toast.error('Failed to update status');
+    }
+  };
+
+  const generateSmartDiff = () => {
+    if (!path) return '';
+    
+    // Find the previous published version
+    const prev = lineagePaths.find(p => p.status === 'PUBLISHED' && p.id !== path.id);
+    if (!prev) return 'Initial path configuration and sequence definition.';
+
+    const changes: string[] = [];
+
+    // 1. Metadata check
+    if (path.title !== prev.title) changes.push(`Renamed path from "${prev.title}" to "${path.title}"`);
+    if (path.description !== prev.description) changes.push(`Updated path description and objectives`);
+    if (path.targetAudience !== prev.targetAudience) changes.push(`Changed target audience to ${path.targetAudience}`);
+    
+    // 2. Sequence check
+    const currentCourseIds = path.pathCourses.map(pc => pc.courseId);
+    const prevCourseIds = prev.pathCourses.map(pc => pc.courseId);
+
+    const added = currentCourseIds.filter(cid => !prevCourseIds.includes(cid));
+    const removed = prevCourseIds.filter(cid => !currentCourseIds.includes(cid));
+
+    if (added.length > 0) changes.push(`Added ${added.length} new course(s) to the sequence`);
+    if (removed.length > 0) changes.push(`Removed ${removed.length} course(s) from the sequence`);
+    
+    // Check if order changed for existing courses
+    const intersection = currentCourseIds.filter(cid => prevCourseIds.includes(cid));
+    const currentOrder = intersection;
+    const prevOrder = prevCourseIds.filter(cid => currentCourseIds.includes(cid));
+    
+    if (JSON.stringify(currentOrder) !== JSON.stringify(prevOrder)) {
+      changes.push(`Restructured the course sequence and learning flow`);
+    }
+
+    if (path.hasCertificate !== prev.hasCertificate) {
+      changes.push(path.hasCertificate ? 'Enabled automated certification' : 'Disabled automated certification');
+    }
+
+    return changes.length > 0 
+      ? changes.map(c => `• ${c}`).join('\n') 
+      : '';
+  };
+
+  const handleInitiatePublish = () => {
+    if (!path) return;
+    
+    const diff = generateSmartDiff();
+    
+    // If v1 or has changes, show prompt
+    if (path.version === 1 || diff) {
+      setApprovalDialog({
+        isOpen: true,
+        versionTagDraft: path.versionTag || '',
+        changeSummary: diff || 'Standard maintenance and sequence validation.',
+        isGeneratingDiff: false,
+        isSubmitting: false
+      });
+    } else {
+      // Automatic publish if no changes detected
+      handleUpdateStatus('PUBLISHED');
+    }
+  };
+
+  const handleFinalPublish = async () => {
+    setApprovalDialog(prev => ({ ...prev, isSubmitting: true }));
+    try {
+      await handleUpdateStatus('PUBLISHED', approvalDialog.versionTagDraft, approvalDialog.changeSummary);
+    } finally {
+      setApprovalDialog(prev => ({ ...prev, isSubmitting: false }));
     }
   };
 
@@ -412,85 +507,98 @@ export const LearningPathBuilder: React.FC = () => {
   if (!path) return <div>Path not found</div>;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto pb-24">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-background/50 backdrop-blur-md p-6 rounded-3xl border shadow-sm gap-4">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => navigate('/creator/learning-paths')} className="rounded-xl">
-            <ArrowLeft className="h-4 w-4" />
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center py-6 gap-4">
+        <div className="flex items-center gap-6">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate('/creator/learning-paths')} 
+            className="rounded-full hover:bg-amber-50 text-amber-600"
+          >
+            <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-none px-3 py-1 font-black">BUILDER</Badge>
-              <h1 className="text-2xl font-black tracking-tight">{path.title}</h1>
-              {path.status === 'PUBLISHED' ? (
-                <Badge className="bg-success hover:bg-success/90 border-none px-3 py-1">LIVE</Badge>
-              ) : (
-                <div className="flex items-center gap-2 px-3 py-1 bg-white border border-blue-100 rounded-full shadow-sm text-xs font-bold text-slate-700">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
-                  Draft
-                </div>
-              )}
+              <h1 className="text-2xl font-black tracking-tight text-amber-600 uppercase">
+                {path.title} {path.status === 'DRAFT' && <span className="text-amber-500/50 font-medium ml-1 lowercase">({path.status.toLowerCase()})</span>}
+              </h1>
+              <Badge variant="outline" className="font-mono text-[10px] py-0 px-2 bg-white border-slate-200">v{path.version}</Badge>
+              <div className="flex items-center gap-2 px-3 py-1 bg-white border border-blue-100 rounded-full shadow-sm text-[10px] font-bold text-slate-700 uppercase tracking-tighter">
+                <CheckCircle2 className="h-3 w-3 text-blue-500" />
+                {path.status}
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground font-medium">{path.description || 'Enterprise Learning Path'}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <Layers className="h-3.5 w-3.5 text-amber-600/60" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/60">
+                Authoring Studio &bull; {path.pathCourses?.length || 0} Components
+              </p>
+            </div>
           </div>
         </div>
-        
-        <div className="flex items-center gap-2">
-          {path.status === 'DRAFT' ? (
+
+        <div className="flex items-center gap-3">
+          {!isReadonly && (
             <Button 
-              onClick={() => handleUpdateStatus('PUBLISHED')}
-              className="rounded-xl bg-success hover:bg-success/90 shadow-lg shadow-success/20 font-bold"
+              onClick={handleSave} 
+              disabled={isSaving} 
+              className="h-10 px-6 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold shadow-lg shadow-orange-200 transition-all active:scale-95"
             >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              Publish Path
+              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Save Sequence
             </Button>
-          ) : (
+          )}
+
+          {path.status === 'DRAFT' && (
             <Button 
-              variant="outline"
-              onClick={() => handleUpdateStatus('DRAFT')}
-              className="rounded-xl border-destructive/20 text-destructive hover:bg-destructive/5 font-bold"
+              onClick={handleInitiatePublish}
+              className="h-10 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-lg shadow-amber-100 transition-all active:scale-95"
             >
-              <EyeOff className="mr-2 h-4 w-4" />
-              Unpublish
+              <Timer className="mr-2 h-4 w-4" /> Publish Path
             </Button>
           )}
 
           {path.status === 'PUBLISHED' && (
-            <Button 
-              onClick={handleCreateVersion}
-              disabled={isCreatingVersion}
-              variant="outline"
-              className="rounded-xl border-primary/20 text-primary hover:bg-primary/5 font-bold"
-            >
-              {isCreatingVersion ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-              New Version
-            </Button>
-          )}
-          {!isReadonly && (
-            <Button onClick={handleSave} disabled={isSaving} className="rounded-xl shadow-lg shadow-primary/20 font-bold">
-              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Save Sequence
-            </Button>
+            <>
+              <Button 
+                variant="outline"
+                onClick={() => handleUpdateStatus('DRAFT')}
+                className="h-11 px-6 rounded-xl border-destructive/20 text-destructive hover:bg-destructive/5 font-bold"
+              >
+                <EyeOff className="mr-2 h-4 w-4" />
+                Unpublish
+              </Button>
+
+              <Button 
+                onClick={handleCreateVersion}
+                disabled={isCreatingVersion}
+                variant="outline"
+                className="h-11 px-6 rounded-xl border-primary/20 text-primary hover:bg-primary/5 font-bold"
+              >
+                {isCreatingVersion ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                New Version
+              </Button>
+            </>
           )}
         </div>
       </div>
 
 
       <Tabs defaultValue="curriculum" className="w-full">
-
-        <TabsList className="bg-background/50 backdrop-blur-md p-1 rounded-2xl border mb-6">
-          <TabsTrigger value="curriculum" className="rounded-xl px-6 gap-2">
+        <TabsList className="bg-muted/10 p-1 rounded-xl mb-8 flex justify-start w-fit">
+          <TabsTrigger value="curriculum" className="rounded-lg px-6 gap-2 data-[state=active]:shadow-sm data-[state=active]:bg-white transition-all">
             <Layers className="h-4 w-4" />
-            Curriculum Sequence
+            Curriculum Loop
           </TabsTrigger>
-          <TabsTrigger value="certificate" className="rounded-xl px-6 gap-2">
+          <TabsTrigger value="certificate" className="rounded-lg px-6 gap-2 data-[state=active]:shadow-sm data-[state=active]:bg-white transition-all">
             <Award className="h-4 w-4" />
-            Macro-Credential Settings
+            Certificate Builder
           </TabsTrigger>
-          <TabsTrigger value="settings" className="rounded-xl px-6 gap-2">
+          <TabsTrigger value="settings" className="rounded-lg px-6 gap-2 data-[state=active]:shadow-sm data-[state=active]:bg-white transition-all">
             <Settings className="h-4 w-4" />
-            Path Settings
+            Course Config
           </TabsTrigger>
         </TabsList>
 
@@ -561,51 +669,40 @@ export const LearningPathBuilder: React.FC = () => {
             {/* Right Side: Course Library - Hidden if Readonly */}
             {!isReadonly && (
               <div className="lg:col-span-2 flex flex-col gap-6">
-                <Card className="flex-1 flex flex-col border-none shadow-xl bg-background/50 backdrop-blur-sm overflow-hidden">
-                  <CardHeader className="border-b bg-muted/10">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <BookOpen className="h-5 w-5 text-primary" />
-                      Course Library
-                    </CardTitle>
-                    <CardDescription>Only published courses are available for paths.</CardDescription>
-                    <div className="relative mt-4">
+                <Card className="border-none shadow-xl bg-primary/5 sticky top-24">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Add Course</CardTitle>
+                    <CardDescription>Expand the path sequence.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input 
                         placeholder="Filter published courses..." 
-                        className="pl-9 bg-background/50 border-primary/10 h-10"
+                        className="pl-10 h-10 bg-background/50"
                         value={courseSearch}
                         onChange={(e) => setCourseSearch(e.target.value)}
                       />
                     </div>
-                  </CardHeader>
-                  <CardContent className="flex-1 overflow-y-auto p-4">
-                    <div className="space-y-3">
+                    <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-500px)] pr-2 custom-scrollbar">
                       {filteredCourses.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground opacity-50 italic">
-                          {courseSearch ? 'No matching courses found.' : 'No available courses to add.'}
+                        <div className="text-center py-8 text-muted-foreground text-xs italic">
+                          No matching courses found.
                         </div>
                       ) : (
                         filteredCourses.map(course => (
                           <div 
                             key={course.id} 
-                            className="p-4 rounded-2xl border bg-background hover:border-primary/50 transition-all group flex items-center justify-between gap-4"
+                            onClick={() => addToPath(course)}
+                            className="group p-4 bg-background rounded-xl border border-slate-100 hover:border-amber-200 hover:shadow-md transition-all cursor-pointer"
                           >
-                            <div className="min-w-0">
-                              <h4 className="font-bold text-sm truncate">{course.title}</h4>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="outline" className="text-[10px] px-1 h-4">{course.passingGrade}% Pass</Badge>
-                                <Badge variant="outline" className="text-[10px] px-1 h-4">{(course as any)._count?.modules || 0} Modules</Badge>
+                            <div className="flex flex-col gap-2">
+                              <h4 className="text-sm font-bold text-slate-800 group-hover:text-amber-600 transition-colors leading-tight">{course.title}</h4>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0 bg-slate-50 text-slate-500">{course.passingGrade}% Pass</Badge>
+                                <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0 bg-slate-50 text-slate-500">{(course as any)._count?.modules || 0} Components</Badge>
                               </div>
                             </div>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => addToPath(course)}
-                            >
-                              <Plus className="h-4 w-4 mr-1" />
-                              Add
-                            </Button>
                           </div>
                         ))
                       )}
@@ -769,7 +866,7 @@ export const LearningPathBuilder: React.FC = () => {
                       </div>
                       <div>
                         <h2 className="text-xl font-bold text-slate-900">Version Governance</h2>
-                        <p className="text-sm text-slate-500">Track and manage the audit lineage for this learning journey.</p>
+                        <p className="text-sm text-slate-500">Audit lineage and version history for this learning journey.</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-widest">
@@ -777,52 +874,13 @@ export const LearningPathBuilder: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Active Release Config */}
-                    <div className="space-y-6">
-                      <div className="p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm space-y-6">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none px-2 py-0.5 text-[10px] font-black uppercase">Active Release Metadata</Badge>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Release Tag</Label>
-                          <Input 
-                            placeholder="e.g. 2025 Q1 Compliance Update" 
-                            value={path.versionTag || ''}
-                            onChange={(e) => setPath({ ...path, versionTag: e.target.value })}
-                            className="h-11 rounded-xl border-slate-200 focus:border-amber-400 focus:ring-amber-500/20"
-                            disabled={isReadonly}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Change Summary / Release Notes</Label>
-                          <Textarea 
-                            placeholder="What changed in this version? (Visible in history logs)" 
-                            value={path.changeSummary || ''}
-                            onChange={(e) => setPath({ ...path, changeSummary: e.target.value })}
-                            className="min-h-[140px] rounded-2xl border-slate-200 focus:border-amber-400 focus:ring-amber-500/20 italic"
-                            disabled={isReadonly}
-                          />
-                        </div>
-
-                        {!isReadonly && (
-                          <Button 
-                            onClick={handleUpdateIdentity}
-                            className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl"
-                          >
-                            <Save className="mr-2 h-4 w-4" /> Save Governance Metadata
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
+                  <div className="w-full">
                     {/* Lineage Timeline */}
                     <div className="flex flex-col">
-                      <div className="flex-1 rounded-[2rem] bg-slate-50/50 border border-slate-100 p-6 overflow-hidden flex flex-col max-h-[520px]">
-                        <div className="flex items-center justify-between mb-6 shrink-0">
+                      <div className="flex-1 p-4 overflow-hidden flex flex-col min-h-[400px] max-h-[600px]">
+                        <div className="flex items-center justify-between mb-8 shrink-0">
                           <h3 className="font-black text-sm uppercase tracking-widest text-slate-400">Audit Stream</h3>
+                          <Badge variant="outline" className="bg-slate-100/50 border-slate-200 text-[10px] font-bold">LATEST: v{path.version}</Badge>
                         </div>
                         
                         <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar">
@@ -830,7 +888,7 @@ export const LearningPathBuilder: React.FC = () => {
                             {/* Vertical Track */}
                             <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-slate-200"></div>
 
-                            <div className="relative pl-10 space-y-6">
+                            <div className="relative pl-10 space-y-8">
                               {lineagePaths.map((v) => (
                                 <VersionTimelineItem 
                                   key={v.id} 
@@ -842,8 +900,8 @@ export const LearningPathBuilder: React.FC = () => {
                           </div>
                         </div>
                         
-                        <div className="mt-6 pt-4 border-t border-slate-200/50 shrink-0">
-                          <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-tighter italic">End of Audit Stream</p>
+                        <div className="mt-8 pt-6 border-t border-slate-200/50 shrink-0">
+                          <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest italic">End of Audit Stream</p>
                         </div>
                       </div>
                     </div>
@@ -854,6 +912,99 @@ export const LearningPathBuilder: React.FC = () => {
         </TabsContent>
       </Tabs>
 
+      <Dialog open={approvalDialog.isOpen} onOpenChange={(open) => setApprovalDialog(prev => ({ ...prev, isOpen: open }))}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <HistoryIcon className="h-4 w-4 text-primary" />
+              </div>
+              Submit Version for Approval
+            </DialogTitle>
+            <DialogDescription>
+              <span className="block mt-1">
+                Like a GitHub release — give this version a tag and describe what changed. The Learning Manager will see this when reviewing.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 py-2">
+            {/* Version tag */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 font-bold">
+                <span className="font-mono text-xs px-1.5 py-0.5 bg-foreground text-background rounded">
+                  v{path?.version}
+                </span>
+                Version Tag
+                <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+              </Label>
+              <Input
+                value={approvalDialog.versionTagDraft}
+                onChange={(e) => setApprovalDialog(prev => ({ ...prev, versionTagDraft: e.target.value }))}
+                placeholder='e.g. "2025 Q1 Compliance Refresh"'
+                className="font-mono"
+                disabled={approvalDialog.isSubmitting}
+              />
+              <p className="text-xs text-muted-foreground">
+                This becomes the permanent label for this version in the path history.
+              </p>
+            </div>
+
+            {/* Change summary */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label className="font-bold">
+                  What changed in this version?
+                </Label>
+                {approvalDialog.changeSummary && (
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-success bg-success/10 px-2 py-0.5 rounded-full">
+                    <CheckCircle className="h-3 w-3" /> Smart Diff Ready
+                  </div>
+                )}
+              </div>
+              <Textarea
+                value={approvalDialog.changeSummary}
+                onChange={(e) => setApprovalDialog(prev => ({ ...prev, changeSummary: e.target.value }))}
+                placeholder="• Bullet points of changes..."
+                className="min-h-[140px] font-mono text-sm bg-slate-50 border-slate-200"
+                disabled={approvalDialog.isSubmitting}
+              />
+              <p className="text-[10px] text-muted-foreground italic text-center">
+                Review and polish the auto-generated notes above.
+              </p>
+            </div>
+
+            {/* Preview pill */}
+            {approvalDialog.versionTagDraft.trim() && (
+              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border border-dashed animate-in fade-in duration-200">
+                <span className="text-xs text-muted-foreground">Preview:</span>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-background rounded-full border text-xs font-mono">
+                  <span className="font-bold text-foreground">v{path?.version}</span>
+                  <span className="text-muted-foreground">&middot; &ldquo;{approvalDialog.versionTagDraft}&rdquo;</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="ghost" 
+              onClick={() => setApprovalDialog(prev => ({ ...prev, isOpen: false }))}
+              className="font-bold text-slate-500"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleFinalPublish}
+              disabled={approvalDialog.isSubmitting}
+              className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
+            >
+              {approvalDialog.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+              Confirm & Publish
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

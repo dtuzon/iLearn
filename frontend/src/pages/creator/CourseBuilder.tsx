@@ -1548,74 +1548,40 @@ export const CourseBuilder: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-                  {/* Left: Editor */}
-                  <div className="lg:col-span-7 space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <Label className="font-black text-slate-700 text-xs uppercase tracking-widest flex items-center gap-3">
-                          <span className="h-2 w-2 rounded-full bg-primary animate-pulse"></span>
-                          Active Version Metadata
-                        </Label>
-                        <Badge variant="outline" className="font-mono text-[10px] py-0 px-2 bg-white">v{course.version}</Badge>
+                <div className="w-full">
+                  {/* Lineage Timeline */}
+                  <div className="flex flex-col h-full">
+                    <div className="flex-1 p-4 overflow-hidden flex flex-col min-h-[400px] max-h-[600px]">
+                      <div className="flex items-center justify-between mb-8 shrink-0">
+                        <div className="flex items-center gap-2">
+                          <Layers className="h-3 w-3 text-slate-400" />
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Release Timeline</span>
+                        </div>
+                        <Badge variant="outline" className="text-[9px] font-mono bg-slate-100/50 border-slate-200">
+                          {lineageVersions.length} {lineageVersions.length === 1 ? 'Snapshot' : 'Snapshots'}
+                        </Badge>
                       </div>
-                      
-                      <div className="p-1 bg-white rounded-2xl shadow-sm border border-slate-100">
-                        <Input 
-                          placeholder="Release Name (e.g. 2025 Compliance Refresh)"
-                          value={identityForm.versionTag}
-                          onChange={(e) => setIdentityForm({...identityForm, versionTag: e.target.value})}
-                          className="h-12 border-none bg-transparent font-mono text-sm focus-visible:ring-0 px-4"
-                          disabled={isReadonly && course.status !== 'PENDING_APPROVAL'}
-                        />
-                        <div className="h-px bg-slate-100 mx-4" />
-                        <Textarea 
-                          placeholder="What changed in this version? Detailed release notes..."
-                          value={identityForm.changeSummary}
-                          onChange={(e) => setIdentityForm({...identityForm, changeSummary: e.target.value})}
-                          className="min-h-[160px] border-none bg-transparent font-mono text-sm focus-visible:ring-0 p-4 resize-none"
-                          disabled={isReadonly && course.status !== 'PENDING_APPROVAL'}
-                        />
+
+                      <div className="relative flex-1 overflow-y-auto pr-4 custom-scrollbar">
+                        {/* The Track */}
+                        <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-slate-200"></div>
+
+                        <div className="relative pl-10 space-y-8">
+                          {lineageVersions.map((v) => (
+                            <VersionTimelineItem 
+                              key={v.id} 
+                              v={v} 
+                              isCurrent={v.id === course.id} 
+                            />
+                          ))}
+                        </div>
                       </div>
-                      <p className="text-[10px] text-slate-400 italic px-2">
-                        * These metadata fields can be refined even while the course is in "Pending Approval" state.
-                      </p>
+
+                      <div className="mt-8 pt-6 border-t border-slate-200/50 shrink-0">
+                        <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest italic">End of Audit Stream</p>
+                      </div>
                     </div>
                   </div>
-
-                      {/* Right: Lineage Timeline */}
-                      <div className="lg:col-span-5 flex flex-col h-full">
-                        <div className="flex items-center justify-between mb-6">
-                          <div className="flex items-center gap-2">
-                            <Layers className="h-3 w-3 text-slate-400" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Release Timeline</span>
-                          </div>
-                          <Badge variant="outline" className="text-[9px] font-mono bg-slate-100/50 border-slate-200">
-                            {lineageVersions.length} {lineageVersions.length === 1 ? 'Snapshot' : 'Snapshots'}
-                          </Badge>
-                        </div>
-
-                        <div className="relative flex-1 max-h-[520px] overflow-y-auto pr-4 custom-scrollbar">
-                          {/* The Track */}
-                          <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-slate-200"></div>
-
-                          <div className="relative pl-10 space-y-6">
-                            {lineageVersions.map((v) => (
-                              <VersionTimelineItem 
-                                key={v.id} 
-                                v={v} 
-                                isCurrent={v.id === course.id} 
-                              />
-                            ))}
-                          </div>
-                        </div>
-
-                        {lineageVersions.length > 5 && (
-                          <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-center">
-                            <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">End of Audit Stream</p>
-                          </div>
-                        )}
-                      </div>
                 </div>
               </div>
             )}
