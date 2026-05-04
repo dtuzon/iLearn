@@ -19,6 +19,8 @@ export interface Course {
   closingContent: string | null;
   status: 'DRAFT' | 'PENDING_APPROVAL' | 'PUBLISHED' | 'ARCHIVED' | 'RETIRED';
   version: number;
+  versionTag: string | null;
+  changeSummary: string | null;
   parentId: string | null;
   isLatest: boolean;
   passingGrade: number;

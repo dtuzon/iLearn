@@ -322,6 +322,7 @@ export const CourseBuilder: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const isReadonly = course?.status === 'PUBLISHED' || 
+                    course?.status === 'PENDING_APPROVAL' ||
                     course?.status === 'ARCHIVED' || 
                     course?.status === 'RETIRED' || 
                     (user?.role === 'COURSE_CREATOR' && course?.lecturerId !== user?.id);
@@ -336,7 +337,9 @@ export const CourseBuilder: React.FC = () => {
     targetDepartments: [] as string[],
     introContent: '',
     closingContent: '',
-    thumbnailUrl: ''
+    thumbnailUrl: '',
+    versionTag: '' as string,
+    changeSummary: '' as string
   });
 
 
@@ -371,7 +374,9 @@ export const CourseBuilder: React.FC = () => {
         targetDepartments: data.targetDepartments,
         introContent: data.introContent || '',
         closingContent: data.closingContent || '',
-        thumbnailUrl: data.thumbnailUrl || ''
+        thumbnailUrl: data.thumbnailUrl || '',
+        versionTag: data.versionTag || '',
+        changeSummary: data.changeSummary || ''
       });
 
     } catch (error) {
@@ -409,6 +414,56 @@ export const CourseBuilder: React.FC = () => {
   };
 
   const [isUnpublishDialogOpen, setIsUnpublishDialogOpen] = useState(false);
+
+  // Release notes dialog state
+  const [approvalDialog, setApprovalDialog] = useState({
+    isOpen: false,
+    versionTagDraft: '',
+    changeSummary: '',
+    isSubmitting: false
+  });
+
+  const handleOpenApprovalDialog = () => {
+    setApprovalDialog(prev => ({
+      ...prev,
+      isOpen: true,
+      versionTagDraft: identityForm.versionTag || '',
+      changeSummary: ''
+    }));
+  };
+
+  const handleSubmitForApproval = async () => {
+    if (!courseId) return;
+    setApprovalDialog(prev => ({ ...prev, isSubmitting: true }));
+    try {
+      // Step 1: Save versionTag and changeSummary together
+      const patchPayload: Record<string, string> = {};
+      if (approvalDialog.versionTagDraft.trim()) {
+        patchPayload.versionTag = approvalDialog.versionTagDraft.trim();
+      }
+      if (approvalDialog.changeSummary.trim()) {
+        patchPayload.changeSummary = approvalDialog.changeSummary.trim();
+      }
+      if (Object.keys(patchPayload).length > 0) {
+        await coursesApi.partialUpdate(courseId, patchPayload);
+        setCourse(prev => prev ? { ...prev, ...patchPayload } : null);
+        setIdentityForm(prev => ({ ...prev, versionTag: patchPayload.versionTag || prev.versionTag }));
+      }
+      // Step 2: Transition to PENDING_APPROVAL
+      await coursesApi.updateStatus(courseId, 'PENDING_APPROVAL');
+      toast.success('Version submitted for approval', {
+        description: approvalDialog.versionTagDraft.trim()
+          ? `Tagged as "${approvalDialog.versionTagDraft.trim()}"`
+          : 'A Learning Manager will review your changes.'
+      });
+      setApprovalDialog(prev => ({ ...prev, isOpen: false }));
+      fetchCourse();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to submit for approval');
+    } finally {
+      setApprovalDialog(prev => ({ ...prev, isSubmitting: false }));
+    }
+  };
 
   const handleUpdateStatus = async (status: string) => {
     if (!courseId) return;
@@ -700,11 +755,17 @@ export const CourseBuilder: React.FC = () => {
             <ArrowLeft className="h-6 w-6 text-primary" />
           </Button>
           <div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-3xl font-extrabold tracking-tight text-primary">
                 {course.title}
-                <span className="ml-2 text-sm font-mono opacity-40">v{course.version}</span>
               </h1>
+              {/* Version tag pill — GitHub release style */}
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-muted rounded-full border text-xs font-mono text-muted-foreground shrink-0">
+                <span className="font-bold text-foreground">v{course.version}</span>
+                {course.versionTag && (
+                  <span>&middot; &ldquo;{course.versionTag}&rdquo;</span>
+                )}
+              </div>
               {course.status === 'PUBLISHED' && <Badge variant="success" className="text-[10px] font-black uppercase px-2 py-0">PUBLISHED</Badge>}
               {course.status === 'PENDING_APPROVAL' && <Badge variant="warning" className="text-[10px] font-black uppercase px-2 py-0 animate-pulse">PENDING</Badge>}
               {course.status === 'DRAFT' && (
@@ -742,7 +803,7 @@ export const CourseBuilder: React.FC = () => {
                   <Button 
                     size="sm" 
                     className="h-10 px-4 shadow-lg shadow-primary/20"
-                    onClick={() => handleUpdateStatus('PENDING_APPROVAL')}
+                    onClick={handleOpenApprovalDialog}
                   >
                     <Clock className="mr-2 h-4 w-4" /> Request Approval
                   </Button>
@@ -750,30 +811,9 @@ export const CourseBuilder: React.FC = () => {
               )}
 
               {course.status === 'PENDING_APPROVAL' && (
-                <div className="flex gap-2">
-                  <Badge variant="secondary" className="h-10 px-4 flex items-center bg-yellow-500/10 text-yellow-600 border-none animate-pulse">
-                    <Clock className="mr-2 h-4 w-4" /> Pending Approval
-                  </Badge>
-                  {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
-                    <>
-                      <Button 
-                        size="sm" 
-                        variant="destructive"
-                        className="h-10 px-4 shadow-lg shadow-destructive/20"
-                        onClick={() => handleUpdateStatus('DRAFT')}
-                      >
-                        <XCircle className="mr-2 h-4 w-4" /> Reject
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        className="h-10 px-4 shadow-lg shadow-success/20 bg-success hover:bg-success/90"
-                        onClick={() => handleUpdateStatus('PUBLISHED')}
-                      >
-                        <CheckCircle className="mr-2 h-4 w-4" /> Approve & Publish
-                      </Button>
-                    </>
-                  )}
-                </div>
+                <Badge variant="secondary" className="h-10 px-4 flex items-center bg-yellow-500/10 text-yellow-600 border-yellow-200 animate-pulse">
+                  <Clock className="mr-2 h-4 w-4" /> Under Review
+                </Badge>
               )}
             </>
           )}
@@ -845,7 +885,204 @@ export const CourseBuilder: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* ── Release Notes / Request Approval Dialog ── */}
+      <Dialog open={approvalDialog.isOpen} onOpenChange={(open) => setApprovalDialog(prev => ({ ...prev, isOpen: open }))}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Clock className="h-4 w-4 text-primary" />
+              </div>
+              Submit Version for Approval
+            </DialogTitle>
+            <DialogDescription>
+              <span className="block mt-1">
+                Like a GitHub release — give this version a tag and describe what changed. The Learning Manager will see this when reviewing.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
 
+          <div className="space-y-5 py-2">
+            {/* Version tag */}
+            <div className="space-y-2">
+              <Label htmlFor="approval-tag" className="flex items-center gap-2 font-bold">
+                <span className="font-mono text-xs px-1.5 py-0.5 bg-foreground text-background rounded">
+                  v{course?.version}
+                </span>
+                Version Tag
+                <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+              </Label>
+              <Input
+                id="approval-tag"
+                value={approvalDialog.versionTagDraft}
+                onChange={(e) => setApprovalDialog(prev => ({ ...prev, versionTagDraft: e.target.value }))}
+                placeholder='e.g. "2025 Compliance Refresh", "Workshop Module Rewrite"'
+                className="font-mono"
+                disabled={approvalDialog.isSubmitting}
+              />
+              <p className="text-xs text-muted-foreground">
+                This becomes the permanent label for this version in the course history.
+              </p>
+            </div>
+
+            {/* Change summary */}
+            <div className="space-y-2">
+              <Label htmlFor="approval-summary" className="font-bold">
+                What changed in this version?
+                <span className="ml-2 text-muted-foreground font-normal text-xs">(optional but recommended)</span>
+              </Label>
+              <Textarea
+                id="approval-summary"
+                value={approvalDialog.changeSummary}
+                onChange={(e) => setApprovalDialog(prev => ({ ...prev, changeSummary: e.target.value }))}
+                placeholder={"• Added 2 new workshop modules\n• Updated quiz questions for Section 3\n• Revised facilitator guidelines"}
+                className="min-h-[120px] font-mono text-sm resize-none"
+                disabled={approvalDialog.isSubmitting}
+              />
+            </div>
+
+            {/* Preview pill */}
+            {approvalDialog.versionTagDraft.trim() && (
+              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border border-dashed animate-in fade-in duration-200">
+                <span className="text-xs text-muted-foreground">Preview:</span>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-background rounded-full border text-xs font-mono">
+                  <span className="font-bold text-foreground">v{course?.version}</span>
+                  <span className="text-muted-foreground">&middot; &ldquo;{approvalDialog.versionTagDraft}&rdquo;</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setApprovalDialog(prev => ({ ...prev, isOpen: false }))}
+              disabled={approvalDialog.isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitForApproval}
+              disabled={approvalDialog.isSubmitting}
+              className="shadow-lg shadow-primary/20 font-bold"
+            >
+              {approvalDialog.isSubmitting
+                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                : <Clock className="mr-2 h-4 w-4" />}
+              {approvalDialog.isSubmitting ? 'Submitting...' : 'Submit for Approval'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Approver Review Panel ── visible to Admin/LM when course is pending */}
+      {course.status === 'PENDING_APPROVAL' && (user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
+        <div className="rounded-2xl border-2 border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 dark:border-amber-800/40 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
+          {/* Header bar */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-amber-200 dark:border-amber-800/40 bg-amber-100/60 dark:bg-amber-900/20">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="font-black text-amber-800 dark:text-amber-300 uppercase tracking-widest text-xs">Awaiting Your Review</p>
+                <p className="text-sm font-bold text-amber-900 dark:text-amber-200">
+                  {course.title}
+                  <span className="ml-2 font-mono text-amber-600 text-xs">v{course.version}{course.versionTag ? ` · "${course.versionTag}"` : ''}</span>
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-destructive/30 text-destructive hover:bg-destructive/5 font-bold"
+                onClick={() => handleUpdateStatus('DRAFT')}
+              >
+                <XCircle className="mr-2 h-4 w-4" /> Reject — Send Back
+              </Button>
+              <Button
+                size="sm"
+                className="bg-success hover:bg-success/90 text-white font-bold shadow-lg shadow-success/20"
+                onClick={() => handleUpdateStatus('PUBLISHED')}
+              >
+                <CheckCircle className="mr-2 h-4 w-4" /> Approve &amp; Publish
+              </Button>
+            </div>
+          </div>
+
+          {/* Version details body */}
+          <div className="px-6 py-5 grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Version info */}
+            <div className="space-y-1">
+              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/70">Version</p>
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-bold text-lg text-amber-900 dark:text-amber-200">v{course.version}</span>
+                {course.versionTag ? (
+                  <span className="px-2.5 py-0.5 bg-amber-200 text-amber-800 rounded-full text-xs font-bold font-mono">
+                    &ldquo;{course.versionTag}&rdquo;
+                  </span>
+                ) : (
+                  <span className="text-xs text-muted-foreground italic">No tag set</span>
+                )}
+              </div>
+              {course.parentId && (
+                <p className="text-xs text-muted-foreground">Part of a versioned lineage</p>
+              )}
+            </div>
+
+            {/* Author */}
+            <div className="space-y-1">
+              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/70">Submitted By</p>
+              <p className="font-bold text-sm text-amber-900 dark:text-amber-200">
+                {course.lecturer ? `${course.lecturer.firstName} ${course.lecturer.lastName}` : '—'}
+              </p>
+              <p className="text-xs text-muted-foreground">Course Creator</p>
+            </div>
+
+            {/* Curriculum count */}
+            <div className="space-y-1">
+              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/70">Curriculum</p>
+              <p className="font-bold text-sm text-amber-900 dark:text-amber-200">
+                {(course._count?.modules ?? course.modules?.length ?? 0)} modules
+              </p>
+              <p className="text-xs text-muted-foreground">Review the Curriculum Loop tab below</p>
+            </div>
+          </div>
+
+          {/* Change summary — only shown if filled */}
+          {course.changeSummary && (
+            <div className="px-6 pb-5">
+              <div className="p-4 bg-white/70 dark:bg-black/20 rounded-xl border border-amber-200 dark:border-amber-800/40">
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/70 mb-2">What Changed (Release Notes)</p>
+                <pre className="text-sm text-amber-900 dark:text-amber-200 font-mono whitespace-pre-wrap leading-relaxed">
+                  {course.changeSummary}
+                </pre>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Pending notice for non-approvers (the creator themselves) ── */}
+      {course.status === 'PENDING_APPROVAL' && user?.role === 'COURSE_CREATOR' && (
+        <div className="flex items-center gap-4 p-5 rounded-2xl bg-amber-50 border border-amber-200 animate-in fade-in duration-500">
+          <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+            <Clock className="h-5 w-5 text-amber-500 animate-pulse" />
+          </div>
+          <div className="flex-1">
+            <p className="font-bold text-amber-800">Version Submitted for Review</p>
+            <p className="text-sm text-amber-700">
+              {course.versionTag ? `v${course.version} · "${course.versionTag}" is` : `v${course.version} is`} awaiting approval from a Learning Manager. This course is locked until a decision is made.
+            </p>
+          </div>
+          {course.versionTag && (
+            <div className="px-3 py-1.5 bg-amber-200 text-amber-800 rounded-full text-xs font-bold font-mono shrink-0">
+              &ldquo;{course.versionTag}&rdquo;
+            </div>
+          )}
+        </div>
+      )}
 
       <Tabs defaultValue="curriculum" className="w-full">
         <TabsList className="bg-muted/50 p-1 h-12 mb-6">
@@ -1037,13 +1274,21 @@ export const CourseBuilder: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                   <div className="space-y-2">
-                    <Label htmlFor="c-title">Course Title</Label>
+                    <Label htmlFor="c-title" className="flex items-center gap-2">
+                      Course Title
+                      {course.parentId && (
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Locked</span>
+                      )}
+                    </Label>
                     <Input 
                       id="c-title" 
-                      disabled={isReadonly}
+                      disabled={isReadonly || !!course.parentId}
                       value={identityForm.title}
                       onChange={(e) => setIdentityForm({...identityForm, title: e.target.value})}
                     />
+                    {course.parentId && (
+                      <p className="text-xs text-muted-foreground">The course title is the canonical name for this lineage and cannot be changed per-version.</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>Target Audience</Label>
@@ -1063,6 +1308,41 @@ export const CourseBuilder: React.FC = () => {
                     </Select>
                   </div>
                 </div>
+
+                {/* Version Tag & Change Summary — Always editable for versions, even if pending */}
+                {course.parentId && (
+                  <div className="space-y-4 p-5 bg-muted/30 border-2 border-dashed rounded-2xl animate-in fade-in duration-300">
+                    <div className="space-y-2">
+                      <Label htmlFor="c-version-tag" className="flex items-center gap-2 font-bold text-primary">
+                        <span className="font-mono text-[10px] px-1.5 py-0.5 bg-primary text-white rounded">v{course.version}</span>
+                        Version Tag / Release Name
+                      </Label>
+                      <Input
+                        id="c-version-tag"
+                        disabled={course.status === 'PUBLISHED' || course.status === 'ARCHIVED'}
+                        value={identityForm.versionTag}
+                        onChange={(e) => setIdentityForm({...identityForm, versionTag: e.target.value})}
+                        placeholder='e.g. "2025 Compliance Refresh"'
+                        className="font-mono h-10"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="c-change-summary" className="font-bold text-primary">What changed in this version? (Release Notes)</Label>
+                      <Textarea
+                        id="c-change-summary"
+                        disabled={course.status === 'PUBLISHED' || course.status === 'ARCHIVED'}
+                        value={identityForm.changeSummary}
+                        onChange={(e) => setIdentityForm({...identityForm, changeSummary: e.target.value})}
+                        placeholder={"• Bullet points of changes..."}
+                        className="min-h-[100px] font-mono text-sm resize-none"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Metadata and release notes can be refined even while the version is under review.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-3">
                   <Label className="text-sm font-bold">Target Departments</Label>

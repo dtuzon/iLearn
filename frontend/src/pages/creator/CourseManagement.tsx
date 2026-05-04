@@ -36,7 +36,6 @@ import {
   Loader2, 
   Settings2,
   Clock, 
-  AlertCircle, 
   CopyPlus, 
   History, 
   RefreshCw, 
@@ -70,6 +69,7 @@ export const CourseManagement: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('active');
+  const [pendingCount, setPendingCount] = useState(0);
 
   // Versioning State
   const [courseToVersion, setCourseToVersion] = useState<Course | null>(null);
@@ -95,7 +95,17 @@ export const CourseManagement: React.FC = () => {
   useEffect(() => {
     fetchCourses(activeTab);
     fetchDepartments();
+    fetchPendingCount();
   }, [activeTab]);
+
+  const fetchPendingCount = async () => {
+    try {
+      const data = await coursesApi.getAll('pending');
+      setPendingCount(data.length);
+    } catch {
+      // silently fail — KPI card just shows 0
+    }
+  };
 
   const fetchCourses = async (tab: string = activeTab) => {
     setIsLoading(true);
@@ -209,8 +219,7 @@ export const CourseManagement: React.FC = () => {
   };
 
   const isAdminOrManager = user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER';
-  const totalModules = courses.reduce((acc, course) => acc + (course.modules?.length || 0), 0);
-  const pendingApprovals = courses.filter(c => c.status === 'PENDING_APPROVAL');
+  const totalModules = courses.reduce((acc, course) => acc + (course._count?.modules || course.modules?.length || 0), 0);
 
   if (isLoading) {
     return (
@@ -388,57 +397,20 @@ export const CourseManagement: React.FC = () => {
             <Clock className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingApprovals.length}</div>
+            <div className="text-2xl font-bold">{pendingCount}</div>
             <p className="text-xs text-muted-foreground">Courses awaiting approval</p>
+            {pendingCount > 0 && isAdminOrManager && (
+              <button
+                className="text-xs text-yellow-600 font-bold mt-1 hover:underline"
+                onClick={() => setActiveTab('pending')}
+              >
+                View pending &rarr;
+              </button>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Pending Approvals Section for Admins/Managers */}
-      {isAdminOrManager && pendingApprovals.length > 0 && (
-        <Card className="border-none shadow-2xl bg-yellow-50/50 backdrop-blur-sm border-l-4 border-yellow-400 overflow-hidden">
-          <CardHeader className="bg-yellow-100/30">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-400 rounded-lg text-white">
-                  <AlertCircle className="h-5 w-5" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl">Action Required: Pending Approvals</CardTitle>
-                  <CardDescription>The following courses have been submitted for final review and publication.</CardDescription>
-                </div>
-              </div>
-              <Badge variant="outline" className="bg-yellow-400 text-white border-none">{pendingApprovals.length}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableBody>
-                {pendingApprovals.map(course => (
-                  <TableRow key={course.id} className="hover:bg-yellow-100/20 border-yellow-100">
-                    <TableCell>
-                      <div className="font-bold">{course.title}</div>
-                      <div className="text-xs text-muted-foreground">Submitted by {course.lecturer?.firstName} {course.lecturer?.lastName}</div>
-                    </TableCell>
-                    <TableCell className="text-right px-6">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="rounded-xl border-yellow-200 hover:bg-yellow-100"
-                          onClick={() => navigate(`/creator/courses/${course.id}`)}
-                        >
-                          Review Content
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Main Table */}
       <Card className="border-none shadow-2xl overflow-hidden bg-background/50 backdrop-blur-md">
@@ -480,7 +452,14 @@ export const CourseManagement: React.FC = () => {
                       <TableCell>
                         <div className="font-semibold text-base group-hover:text-primary transition-colors flex items-center gap-2">
                           {course.title}
-                          <Badge variant="outline" className="text-[10px] h-4 px-1 font-mono opacity-60">v{course.version}</Badge>
+                          <div className="flex items-center gap-1">
+                            <Badge variant="outline" className="text-[10px] h-4 px-1 font-mono opacity-60">v{course.version}</Badge>
+                            {course.versionTag && (
+                              <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[150px]">
+                                &middot; {course.versionTag}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{course.description || 'No description provided.'}</div>
                       </TableCell>
@@ -503,12 +482,16 @@ export const CourseManagement: React.FC = () => {
                             size="sm"
                             className={cn(
                               "shadow-sm group-hover:translate-x-1 transition-transform",
-                              (course.status === 'PUBLISHED' || course.status === 'ARCHIVED' || (user?.role === 'COURSE_CREATOR' && course.lecturerId !== user?.id)) ? "bg-secondary hover:bg-secondary/90" : "bg-primary/90 hover:bg-primary text-white"
-
+                              course.status === 'PENDING_APPROVAL'
+                                ? "bg-amber-500 hover:bg-amber-600 text-white"
+                                : (course.status === 'PUBLISHED' || course.status === 'ARCHIVED' || (user?.role === 'COURSE_CREATOR' && course.lecturerId !== user?.id))
+                                  ? "bg-secondary hover:bg-secondary/90"
+                                  : "bg-primary/90 hover:bg-primary text-white"
                             )}
                           >
-                            {(course.status === 'PUBLISHED' || course.status === 'ARCHIVED' || (user?.role === 'COURSE_CREATOR' && course.lecturerId !== user?.id)) ? (
-
+                            {course.status === 'PENDING_APPROVAL' ? (
+                              <><Clock className="mr-2 h-4 w-4" /> Review</>
+                            ) : (course.status === 'PUBLISHED' || course.status === 'ARCHIVED' || (user?.role === 'COURSE_CREATOR' && course.lecturerId !== user?.id)) ? (
                               <><Eye className="mr-2 h-4 w-4" /> View Blueprint</>
                             ) : (
                               <><Settings2 className="mr-2 h-4 w-4" /> Author</>
@@ -659,9 +642,9 @@ export const CourseManagement: React.FC = () => {
                   <TableHeader className="bg-muted/50 text-[10px] font-black uppercase tracking-widest">
                     <TableRow>
                       <TableHead>Version</TableHead>
+                      <TableHead>Tag / Label</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Edited By</TableHead>
-                      <TableHead>Approved By</TableHead>
                       <TableHead>Last Modified</TableHead>
                       <TableHead className="text-right px-6">Actions</TableHead>
                     </TableRow>
@@ -671,12 +654,20 @@ export const CourseManagement: React.FC = () => {
                     {versions.map((v) => (
                       <TableRow key={v.id} className={cn(v.status === 'PUBLISHED' && "bg-success/5 font-bold")}>
                         <TableCell className="font-mono">v{v.version}</TableCell>
+                        <TableCell>
+                          <div className="max-w-[150px] truncate">
+                            {v.versionTag ? (
+                              <span className="text-xs font-mono font-bold bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                                {v.versionTag}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">---</span>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>{getStatusBadge(v.status)}</TableCell>
                         <TableCell className="text-xs">
                           {v.lecturer ? `${v.lecturer.firstName} ${v.lecturer.lastName}` : 'System'}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {v.approvedBy ? `${v.approvedBy.firstName} ${v.approvedBy.lastName}` : (v.status === 'PUBLISHED' || v.status === 'ARCHIVED' ? 'System' : '---')}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {new Date(v.updatedAt).toLocaleDateString()}

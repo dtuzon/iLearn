@@ -266,6 +266,8 @@ model Course {
   thumbnailUrl String?
   status       CourseStatus @default(DRAFT)
   version      Int          @default(1)
+  versionTag   String?      // Human-readable release label e.g. "2025 Compliance Refresh"
+  changeSummary String?     @db.Text // Release notes written by creator at approval request time
   parentId     String?      // Links new versions to the original course
   isLatest     Boolean      @default(true) // Helper to quickly query the active version
   

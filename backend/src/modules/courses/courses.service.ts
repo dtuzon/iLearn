@@ -10,7 +10,6 @@ export class CoursesService {
     const isRetired = tab === 'retired';
     const isPending = tab === 'pending';
 
-    
     if (role === Role.EMPLOYEE) {
       // Employees: Show latest active published courses or enrolled ones
       return prisma.course.findMany({
@@ -26,17 +25,20 @@ export class CoursesService {
           _count: { select: { modules: true } }
         }
       });
-
     }
 
+    // Determine status filter for each tab
+    let statusFilter: any;
+    if (isRetired) {
+      statusFilter = CourseStatus.RETIRED;
+    } else if (isPending) {
+      statusFilter = CourseStatus.PENDING_APPROVAL;
+    } else {
+      // Active tab: exclude RETIRED and PENDING_APPROVAL (they live in their own tabs)
+      statusFilter = { notIn: [CourseStatus.RETIRED, CourseStatus.PENDING_APPROVAL] };
+    }
 
-    
-    const baseWhere: any = {
-      status: isRetired 
-        ? CourseStatus.RETIRED 
-        : (isPending ? CourseStatus.PENDING_APPROVAL : { not: CourseStatus.RETIRED })
-    };
-
+    const baseWhere: any = { status: statusFilter };
 
     if (role === Role.COURSE_CREATOR) {
       baseWhere.lecturerId = userId;
@@ -45,32 +47,46 @@ export class CoursesService {
     const courses = await prisma.course.findMany({
       where: {
         ...baseWhere,
-        OR: [
-          { isLatest: true },
-          { status: CourseStatus.DRAFT, parentId: { not: null } }
-        ]
+        ...(isPending ? {} : {
+          OR: [
+            { isLatest: true },
+            { status: CourseStatus.DRAFT, parentId: { not: null } }
+          ]
+        })
       },
       include: {
         lecturer: { select: { firstName: true, lastName: true } },
         _count: { select: { modules: true } }
-      }
+      },
+      orderBy: { updatedAt: 'desc' }
     });
 
-    // Post-process to prioritize DRAFTs in the same lineage for management view
+    // For the pending tab: no deduplication needed — show all individual pending records
+    if (isPending) return courses;
+
+    // Post-process to deduplicate lineage for the active/retired tabs
+    // Priority: DRAFT > PENDING_APPROVAL > PUBLISHED > ARCHIVED
+    const statusPriority: Record<string, number> = {
+      DRAFT: 3,
+      PENDING_APPROVAL: 2,
+      PUBLISHED: 1,
+      ARCHIVED: 0,
+      RETIRED: 0
+    };
+
     const lineageMap = new Map();
     courses.forEach(course => {
       const lineageId = course.parentId || course.id;
       const existing = lineageMap.get(lineageId);
-      
-      // Prioritize DRAFT over others for management
-      if (!existing || course.status === CourseStatus.DRAFT) {
+      const currentPriority = statusPriority[course.status] ?? 0;
+      const existingPriority = existing ? (statusPriority[existing.status] ?? 0) : -1;
+
+      if (!existing || currentPriority > existingPriority) {
         lineageMap.set(lineageId, course);
       }
     });
 
     return Array.from(lineageMap.values());
-
-
   }
 
   static async getById(id: string) {
@@ -245,6 +261,7 @@ export class CoursesService {
           evaluationFormId: original.evaluationFormId,
           status: CourseStatus.DRAFT,
           version: original.version + 1,
+          versionTag: null, // Creator will label this version in the studio
           parentId: original.parentId || original.id,
           isLatest: false,
           introContent: original.introContent,
@@ -433,6 +450,7 @@ export class CoursesService {
           evaluationFormId: versionToRestore.evaluationFormId,
           status: CourseStatus.DRAFT,
           version: newVersionNum,
+          versionTag: null, // Creator will label this restored version in the studio
           parentId: pId,
           isLatest: true,
           introContent: versionToRestore.introContent,

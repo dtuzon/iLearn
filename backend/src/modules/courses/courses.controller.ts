@@ -132,6 +132,12 @@ export class CoursesController {
         }
       }
 
+      // Status guard
+      const course = await CoursesService.getById(courseId as string);
+      if (course?.status === 'PENDING_APPROVAL') {
+        return res.status(409).json({ message: 'Cannot add modules while the course is under review.' });
+      }
+
       const module = await CoursesService.addModule(courseId as string, req.body);
       res.status(201).json(module);
     } catch (error: any) {
@@ -204,6 +210,19 @@ export class CoursesController {
         }
       }
 
+      // Status guard: only allow versionTag/changeSummary updates while PENDING_APPROVAL
+      const targetCourse = await CoursesService.getById(id as string);
+      if (targetCourse?.status === 'PENDING_APPROVAL') {
+        const allowedFields = ['versionTag', 'changeSummary'];
+        const requestedFields = Object.keys(req.body);
+        const hasDisallowedField = requestedFields.some(f => !allowedFields.includes(f));
+        if (hasDisallowedField) {
+          return res.status(409).json({ 
+            message: 'This course is currently under review and cannot be edited. Ask a Learning Manager to reject it first if changes are needed.' 
+          });
+        }
+      }
+
       const course = await CoursesService.partialUpdate(id as string, req.body);
       res.json(course);
     } catch (error: any) {
@@ -246,6 +265,15 @@ export class CoursesController {
           if (!course || course.lecturerId !== req.user!.userId) {
             return res.status(403).json({ message: 'Forbidden: You do not own this course.' });
           }
+        }
+      }
+
+      // Status guard
+      const moduleObj = await CoursesService.getModule(moduleId as string);
+      if (moduleObj) {
+        const course = await CoursesService.getById(moduleObj.courseId);
+        if (course?.status === 'PENDING_APPROVAL') {
+          return res.status(409).json({ message: 'Cannot delete modules while the course is under review.' });
         }
       }
 
