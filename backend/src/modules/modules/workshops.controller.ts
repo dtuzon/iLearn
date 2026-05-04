@@ -59,4 +59,19 @@ export class WorkshopsController {
       res.status(400).json({ message: error.message });
     }
   }
+  static async reassign(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { submissionId } = req.params;
+      const { newCheckerId } = req.body;
+
+      if (req.user!.role !== Role.ADMINISTRATOR && req.user!.role !== Role.LEARNING_MANAGER) {
+        return res.status(403).json({ message: 'Forbidden: Only admins can reassign submissions' });
+      }
+
+      const submission = await WorkshopsService.reassignSubmission(submissionId as string, newCheckerId as string, req.user!.userId);
+      res.json(submission);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }

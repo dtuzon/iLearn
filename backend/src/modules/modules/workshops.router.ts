@@ -59,10 +59,17 @@ router.post(
 
 router.post(
   '/:submissionId/review',
-
   authenticate,
   auditLog('REVIEW_WORKSHOP'),
   WorkshopsController.review
+);
+
+router.post(
+  '/:submissionId/reassign',
+  authenticate,
+  authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+  auditLog('REASSIGN_WORKSHOP'),
+  WorkshopsController.reassign
 );
 
 export default router;

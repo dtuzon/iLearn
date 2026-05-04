@@ -135,6 +135,7 @@ model User {
 
 
   activitySubmissions ActivitySubmission[]
+  assignedSubmissions ActivitySubmission[] @relation("AssignedSubmissions")
   evaluationResponses EvaluationResponse[]
 
 
@@ -382,6 +383,9 @@ model ActivitySubmission {
   feedback      String? 
   submittedAt   DateTime @default(now())
   reviewedAt    DateTime?
+  
+  assignedCheckerId String?
+  assignedChecker   User?    @relation("AssignedSubmissions", fields: [assignedCheckerId], references: [id])
 
   module        CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)

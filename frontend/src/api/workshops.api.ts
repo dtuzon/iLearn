@@ -12,10 +12,15 @@ export interface ActivitySubmission {
   feedback: string | null;
   submittedAt: string;
   reviewedAt: string | null;
+  assignedCheckerId: string | null;
   user?: {
     firstName: string | null;
     lastName: string | null;
     username: string;
+  };
+  assignedChecker?: {
+    firstName: string | null;
+    lastName: string | null;
   };
   module?: {
     title: string;
@@ -42,6 +47,10 @@ export const workshopsApi = {
   },
   review: async (submissionId: string, data: { status: SubmissionStatus; feedback?: string }) => {
     const response = await apiClient.post(`/workshops/${submissionId}/review`, data);
+    return response.data as ActivitySubmission;
+  },
+  reassign: async (submissionId: string, newCheckerId: string) => {
+    const response = await apiClient.post(`/workshops/${submissionId}/reassign`, { newCheckerId });
     return response.data as ActivitySubmission;
   }
 };

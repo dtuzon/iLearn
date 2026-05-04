@@ -97,31 +97,55 @@ export class WorkshopsService {
 
 
   static async getPendingSubmissions(checkerId: string, role: Role) {
-    // This is a complex query because of different checker types.
-    // For now, let's get submissions where the module's checker matches the user.
+    // 1. Global view for Admins and Learning Managers
+    if (role === Role.ADMINISTRATOR || role === Role.LEARNING_MANAGER) {
+      return prisma.activitySubmission.findMany({
+        where: { status: SubmissionStatus.PENDING },
+        include: { 
+          user: true, 
+          module: { include: { course: true } },
+          assignedChecker: true
+        },
+        orderBy: { submittedAt: 'desc' }
+      });
+    }
+
+    // 2. Derive logic for others
     
-    // Submissions where I am the Specific Checker
+    // Explicitly assigned to me
+    const explicitlyAssigned = await prisma.activitySubmission.findMany({
+      where: {
+        status: SubmissionStatus.PENDING,
+        assignedCheckerId: checkerId
+      },
+      include: { user: true, module: { include: { course: true } } }
+    });
+
+    // Submissions where I am the Specific Checker (and no explicit override)
     const specific = await prisma.activitySubmission.findMany({
       where: {
         status: SubmissionStatus.PENDING,
+        assignedCheckerId: null,
         module: { checkerType: CheckerType.SPECIFIC_USER, specificCheckerId: checkerId }
       },
       include: { user: true, module: { include: { course: true } } }
     });
 
-    // Submissions where I am the Course Creator
+    // Submissions where I am the Course Creator (and no explicit override)
     const asCreator = await prisma.activitySubmission.findMany({
       where: {
         status: SubmissionStatus.PENDING,
+        assignedCheckerId: null,
         module: { checkerType: CheckerType.COURSE_CREATOR, course: { lecturerId: checkerId } }
       },
       include: { user: true, module: { include: { course: true } } }
     });
 
-    // Submissions where I am the Immediate Superior
+    // Submissions where I am the Immediate Superior (and no explicit override)
     const asSuperior = await prisma.activitySubmission.findMany({
       where: {
         status: SubmissionStatus.PENDING,
+        assignedCheckerId: null,
         user: { immediateSuperiorId: checkerId },
         module: { checkerType: CheckerType.IMMEDIATE_SUPERIOR }
       },
@@ -129,13 +153,47 @@ export class WorkshopsService {
     });
 
     // Combine and remove duplicates
-    const all = [...specific, ...asCreator, ...asSuperior];
+    const all = [...explicitlyAssigned, ...specific, ...asCreator, ...asSuperior];
     const uniqueIds = new Set();
     return all.filter(s => {
       if (uniqueIds.has(s.id)) return false;
       uniqueIds.add(s.id);
       return true;
     });
+  }
+
+  static async reassignSubmission(submissionId: string, newCheckerId: string, adminId: string) {
+    const submission = await prisma.activitySubmission.update({
+      where: { id: submissionId },
+      data: { assignedCheckerId: newCheckerId },
+      include: { 
+        module: { include: { course: true } },
+        user: true
+      }
+    });
+
+    const newChecker = await prisma.user.findUnique({ where: { id: newCheckerId } });
+    const studentName = `${submission.user.firstName} ${submission.user.lastName}`;
+
+    // Notify the new checker
+    await NotificationsService.createNotification({
+      userId: newCheckerId,
+      title: 'Activity Reassigned to You',
+      message: `Admin reassigned ${studentName}'s activity for "${submission.module.course.title}" to you.`,
+      link: '/approvals/activities'
+    });
+
+    if (newChecker?.email) {
+      const actionUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'}/approvals/activities`;
+      await sendActivitySubmissionEmail(
+        newChecker.email,
+        studentName,
+        submission.module.course.title,
+        actionUrl
+      );
+    }
+
+    return submission;
   }
 
   static async reviewSubmission(submissionId: string, checkerId: string, data: { status: SubmissionStatus; feedback?: string }) {
