@@ -14,7 +14,7 @@ import { Label } from '../../components/ui/label';
 import { Progress } from '../../components/ui/progress';
 import { Alert, AlertTitle, AlertDescription } from '../../components/ui/alert';
 
-import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, Clock, Video, HelpCircle, BookOpen, ClipboardCheck, UploadCloud, File as FileIcon } from 'lucide-react';
+import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, Clock, Video, HelpCircle, BookOpen, ClipboardCheck, UploadCloud, File as FileIcon, Lock, PlayCircle } from 'lucide-react';
 
 
 import { toast } from 'sonner';
@@ -34,7 +34,7 @@ export const CoursePlayer: React.FC = () => {
   
   const [course, setCourse] = useState<Course | null>(null);
   const [enrollment, setEnrollment] = useState<any>(null);
-  const [currentModule, setCurrentModule] = useState<CourseModule | null>(null);
+  const [displayedModule, setDisplayedModule] = useState<CourseModule | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAtIntro, setIsAtIntro] = useState(false);
@@ -70,23 +70,31 @@ export const CoursePlayer: React.FC = () => {
 
       // Target the current module based on progress order
       // If at order 0, we start at step 1
-      const targetOrder = (currentOrder === 0) ? 1 : currentOrder;
-      const current = modules.find(m => m.sequenceOrder === targetOrder);
+      const furthestOrder = (currentOrder === 0) ? 1 : currentOrder + 1;
+      const furthestModule = modules.find(m => m.sequenceOrder === furthestOrder) || modules[modules.length - 1];
       
-      if (current) {
-        setCurrentModule(current);
-        
-        // Update helper flags for special styling if needed
-        if (current.type === 'INTRODUCTION') setIsAtIntro(true);
-        if (current.type === 'CLOSING') setIsAtClosing(true);
+      // If we haven't selected a module yet, or if we just completed one, update the display
+      // Otherwise keep the user on their currently selected (back-tracked) module
+      setDisplayedModule(prev => {
+        if (!prev || (prev.sequenceOrder < furthestOrder && !isAtClosing)) {
+          return furthestModule;
+        }
+        // If we were on a module that just got "completed" and it's the same as the furthest module,
+        // we should refresh it to show new state (like quiz results)
+        const updated = modules.find(m => m.id === prev.id);
+        return updated || furthestModule;
+      });
 
-        if (current.type === 'PRE_QUIZ' || current.type === 'POST_QUIZ') {
-          const questions = await quizzesApi.getModuleQuestions(current.id);
+      // Special handling for intro/closing flags based on whatever is displayed
+      const target = furthestModule;
+      if (target) {
+        if (target.type === 'INTRODUCTION') setIsAtIntro(true);
+        if (target.type === 'CLOSING') setIsAtClosing(true);
+
+        if (target.type === 'PRE_QUIZ' || target.type === 'POST_QUIZ') {
+          const questions = await quizzesApi.getModuleQuestions(target.id);
           setQuizQuestions(questions);
         }
-      } else {
-        // No current module found, likely finished
-        setCurrentModule(null);
       }
 
     } catch (error: any) {
@@ -105,12 +113,12 @@ export const CoursePlayer: React.FC = () => {
   }, [courseId]);
 
   const handleCompleteModule = async () => {
-    if (!currentModule) return;
+    if (!displayedModule) return;
     setIsSubmitting(true);
     try {
-      await enrollmentsApi.completeModule(currentModule.id);
+      await enrollmentsApi.completeModule(displayedModule.id);
       toast.success('Module completed!');
-      fetchData(); // Reload to get next module
+      await fetchData(); // Reload to get next module
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to advance course');
     } finally {
@@ -119,7 +127,7 @@ export const CoursePlayer: React.FC = () => {
   };
 
   const handleSubmitQuiz = async () => {
-    if (!currentModule) return;
+    if (!displayedModule) return;
     
     // Check if all answered
     if (Object.keys(quizAnswers).length < quizQuestions.length) {
@@ -134,7 +142,7 @@ export const CoursePlayer: React.FC = () => {
         optionId: oId
       }));
 
-      const result = await quizzesApi.submitQuiz(currentModule.id, answers);
+      const result = await quizzesApi.submitQuiz(displayedModule.id, answers);
       setQuizResult(result);
       
       if (result.passed) {
@@ -162,7 +170,7 @@ export const CoursePlayer: React.FC = () => {
   if (!course) return <div>Course not found</div>;
 
   // Course Completed View
-  if (!currentModule && enrollment?.status === 'COMPLETED') {
+  if (!displayedModule && enrollment?.status === 'COMPLETED') {
     const workshopModules = course.modules?.filter(m => m.type === 'WORKSHOP') || [];
     const submissions = enrollment.user?.activitySubmissions || [];
     const allApproved = workshopModules.every(m => {
@@ -223,28 +231,131 @@ export const CoursePlayer: React.FC = () => {
 
 
   const totalModules = course.modules?.length || 0;
+  const furthestOrderReached = (enrollment.currentModuleOrder === 0) ? 1 : enrollment.currentModuleOrder + 1;
   const progressPercent = totalModules > 0 
     ? Math.min(100, Math.round((enrollment.currentModuleOrder / totalModules) * 100))
     : 0;
 
+  const handleModuleNavigate = async (m: CourseModule) => {
+    if (m.sequenceOrder > furthestOrderReached) return;
+    
+    setQuizResult(null);
+    setQuizAnswers({});
+    setDisplayedModule(m);
+    setIsAtIntro(m.type === 'INTRODUCTION');
+    setIsAtClosing(m.type === 'CLOSING');
+
+    if (m.type === 'PRE_QUIZ' || m.type === 'POST_QUIZ') {
+      const questions = await quizzesApi.getModuleQuestions(m.id);
+      setQuizQuestions(questions);
+    }
+  };
+
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={() => navigate('/learning/my-courses')}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
+    <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row gap-8 pb-12">
+      {/* Sidebar Navigation */}
+      <aside className="w-full md:w-72 shrink-0 space-y-6">
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start text-muted-foreground hover:text-primary mb-2"
+          onClick={() => navigate('/learning/my-courses')}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to My Learning
         </Button>
-        <div className="text-right">
-          <div className="text-sm font-medium">
-            {isAtIntro ? 'Introduction' : isAtClosing ? 'Course Wrap-up' : `Module ${enrollment.currentModuleOrder} of ${totalModules}`}
-          </div>
-          <div className="flex items-center gap-2 mt-1">
-            <Progress value={progressPercent} className="w-32 h-2" />
-            <span className="text-xs text-muted-foreground">{progressPercent}%</span>
+
+        <Card className="border shadow-lg bg-card overflow-hidden rounded-2xl">
+          <CardHeader className="pb-4 border-b bg-muted/30">
+            <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              Course Map
+            </CardTitle>
+            <div className="space-y-2 mt-4">
+              <div className="flex justify-between text-[10px] font-bold uppercase text-muted-foreground">
+                <span>Overall Progress</span>
+                <span>{progressPercent}%</span>
+              </div>
+              <Progress value={progressPercent} className="h-1.5" />
+            </div>
+          </CardHeader>
+          <CardContent className="p-2 space-y-1">
+            {course.modules?.sort((a, b) => a.sequenceOrder - b.sequenceOrder).map((m) => {
+              const isCompleted = m.sequenceOrder <= enrollment.currentModuleOrder;
+              const isCurrent = m.id === displayedModule?.id;
+              const isLocked = m.sequenceOrder > furthestOrderReached;
+
+              return (
+                <button
+                  key={m.id}
+                  disabled={isLocked}
+                  onClick={() => handleModuleNavigate(m)}
+                  className={cn(
+                    "w-full flex items-start gap-3 p-3 rounded-xl transition-all text-left group border border-transparent",
+                    isCurrent ? "bg-primary/10 border-primary/20 text-primary shadow-sm" : 
+                    isLocked ? "opacity-40 cursor-not-allowed" : 
+                    "hover:bg-muted/50"
+                  )}
+                >
+                  <div className={cn(
+                    "mt-0.5 rounded-full p-1.5 shrink-0",
+                    isCurrent ? "bg-primary text-white" : 
+                    isCompleted ? "bg-green-100 text-green-600" : 
+                    isLocked ? "bg-muted text-muted-foreground" : 
+                    "bg-muted text-primary"
+                  )}>
+                    {isCompleted ? <CheckCircle2 className="h-3 w-3" /> : 
+                     isLocked ? <Lock className="h-3 w-3" /> : 
+                     <PlayCircle className="h-3 w-3" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className={cn(
+                      "text-[9px] font-black uppercase tracking-widest",
+                      isCurrent ? "text-primary/70" : "text-muted-foreground"
+                    )}>
+                      {m.type.replace('_', ' ')}
+                    </p>
+                    <p className={cn(
+                      "text-[11px] font-bold truncate leading-tight mt-0.5",
+                      isCurrent ? "text-primary" : isLocked ? "text-muted-foreground" : "text-foreground"
+                    )}>
+                      {m.title}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </CardContent>
+        </Card>
+
+        {/* Small badge for current module info */}
+        <div className="bg-white border p-4 rounded-2xl shadow-sm text-center">
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Your Status</p>
+          <div className="flex items-center justify-center gap-2">
+            <div className={cn(
+              "h-2 w-2 rounded-full",
+              enrollment.status === 'COMPLETED' ? "bg-green-500" : "bg-primary animate-pulse"
+            )} />
+            <span className="text-[11px] font-black uppercase tracking-tighter text-foreground">
+              {enrollment.status.replace('_', ' ')}
+            </span>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {(isAtIntro || isAtClosing) && currentModule ? (
+      {/* Main Content Area */}
+      <main className="flex-1 space-y-8 pb-12">
+        {/* Module Header Pill */}
+        <div className="flex items-center justify-between">
+           <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-full border">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Sequence</span>
+              <div className="h-4 w-px bg-border" />
+              <span className="text-xs font-bold">{displayedModule?.title || 'Course Overview'}</span>
+           </div>
+           <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground tabular-nums">
+             Step {displayedModule?.sequenceOrder || 0} of {totalModules}
+           </div>
+        </div>
+
+      {(isAtIntro || isAtClosing) && displayedModule ? (
         <div className="space-y-8">
           <Card className={`shadow-2xl border-none overflow-hidden animate-in fade-in duration-500`}>
             <CardHeader className={cn("p-10", isAtIntro ? "bg-primary text-primary-foreground" : "bg-success text-success-foreground")}>
@@ -256,7 +367,7 @@ export const CoursePlayer: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-10 quill-content">
-              <div dangerouslySetInnerHTML={{ __html: currentModule.contentUrlOrText || '' }} />
+              <div dangerouslySetInnerHTML={{ __html: displayedModule.contentUrlOrText || '' }} />
             </CardContent>
             <CardFooter className="bg-muted/50 p-8 flex justify-between border-t items-center">
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
@@ -276,7 +387,7 @@ export const CoursePlayer: React.FC = () => {
             </CardFooter>
           </Card>
 
-          {currentModule.attachments && currentModule.attachments.length > 0 && (
+          {displayedModule.attachments && displayedModule.attachments.length > 0 && (
             <Card className="border-none shadow-lg animate-in slide-in-from-bottom-4 duration-700">
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -286,7 +397,7 @@ export const CoursePlayer: React.FC = () => {
                 <CardDescription>Download these resources for your records.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {currentModule.attachments.map((att: any) => (
+                {displayedModule.attachments.map((att: any) => (
                   <a 
                     key={att.id} 
                     href={att.fileUrl} 
@@ -309,31 +420,31 @@ export const CoursePlayer: React.FC = () => {
 
         </div>
 
-      ) : !currentModule ? (
+      ) : !displayedModule ? (
          <Card><CardContent className="p-8 text-center">No module available.</CardContent></Card>
       ) : (
         <Card className="shadow-lg border-primary/10">
           <CardHeader className="border-b bg-muted/30">
             <div className="flex items-center gap-3">
-              {currentModule.type === 'VIDEO' && <Video className="h-6 w-6 text-destructive" />}
-              {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ') && <HelpCircle className="h-6 w-6 text-primary" />}
-              {currentModule.type === 'WORKSHOP' && <BookOpen className="h-6 w-6 text-green-600" />}
-              {currentModule.type === 'EVALUATION' && <ClipboardCheck className="h-6 w-6 text-secondary-foreground" />}
-              {currentModule.type === 'LIVE_SESSION' && <Video className="h-6 w-6 text-orange-500" />}
-              <CardTitle>{currentModule.title}</CardTitle>
+              {displayedModule.type === 'VIDEO' && <Video className="h-6 w-6 text-destructive" />}
+              {(displayedModule.type === 'PRE_QUIZ' || displayedModule.type === 'POST_QUIZ') && <HelpCircle className="h-6 w-6 text-primary" />}
+              {displayedModule.type === 'WORKSHOP' && <BookOpen className="h-6 w-6 text-green-600" />}
+              {displayedModule.type === 'EVALUATION' && <ClipboardCheck className="h-6 w-6 text-secondary-foreground" />}
+              {displayedModule.type === 'LIVE_SESSION' && <Video className="h-6 w-6 text-orange-500" />}
+              <CardTitle>{displayedModule.title}</CardTitle>
 
             </div>
-            <CardDescription className="capitalize">{currentModule.type.replace('_', ' ')} Module</CardDescription>
+            <CardDescription className="capitalize">{displayedModule.type.replace('_', ' ')} Module</CardDescription>
           </CardHeader>
 
           <CardContent className="p-6 min-h-[300px]">
             {/* VIDEO VIEW */}
-            {currentModule.type === 'VIDEO' && (
+            {displayedModule.type === 'VIDEO' && (
               <div className="space-y-6">
                 <div className="aspect-video bg-black rounded-lg flex items-center justify-center overflow-hidden border">
-                  {currentModule.contentUrlOrText ? (
+                  {displayedModule.contentUrlOrText ? (
                     <LocalVideoPlayer 
-                      url={currentModule.contentUrlOrText} 
+                      url={displayedModule.contentUrlOrText} 
                       onComplete={handleCompleteModule}
                       className="w-full h-full"
                     />
@@ -341,7 +452,7 @@ export const CoursePlayer: React.FC = () => {
 
                     <div className="text-white text-center p-8">
                       <Video className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Video content placeholder. [Backend: {currentModule.contentUrlOrText || 'No URL'}]</p>
+                      <p>Video content placeholder. [Backend: {displayedModule.contentUrlOrText || 'No URL'}]</p>
                     </div>
                   )}
                 </div>
@@ -352,7 +463,7 @@ export const CoursePlayer: React.FC = () => {
             )}
 
             {/* QUIZ VIEW */}
-            {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ') && (
+            {(displayedModule.type === 'PRE_QUIZ' || displayedModule.type === 'POST_QUIZ') && (
               <div className="space-y-8">
                 {quizResult ? (
                   <div className="flex flex-col items-center justify-center py-10 space-y-6 text-center animate-in fade-in zoom-in duration-300">
@@ -369,7 +480,7 @@ export const CoursePlayer: React.FC = () => {
                     
                     <div className="space-y-2">
                       <h3 className="text-3xl font-black uppercase italic tracking-tight">
-                        {currentModule.type === 'PRE_QUIZ' ? 'Baseline Assessment' : (quizResult.passed ? 'Assessment Passed' : 'Assessment Failed')}
+                        {displayedModule.type === 'PRE_QUIZ' ? 'Baseline Assessment' : (quizResult.passed ? 'Assessment Passed' : 'Assessment Failed')}
                       </h3>
                       <p className="text-lg font-medium text-muted-foreground max-w-md mx-auto">
                         {quizResult.message}
@@ -430,29 +541,29 @@ export const CoursePlayer: React.FC = () => {
 
 
             {/* WORKSHOP VIEW */}
-            {currentModule.type === 'WORKSHOP' && (
+            {displayedModule.type === 'WORKSHOP' && (
               <ActivityPlayer 
-                module={currentModule} 
+                module={displayedModule} 
                 onComplete={handleCompleteModule} 
               />
             )}
 
 
             {/* UNIFIED EVALUATION VIEW */}
-            {(currentModule.type === 'EVALUATION' || currentModule.type === 'ONLINE_EVALUATION') && (
+            {(displayedModule.type === 'EVALUATION' || displayedModule.type === 'ONLINE_EVALUATION') && (
               <EvaluationPlayer 
                 courseId={courseId!}
-                moduleId={currentModule.id}
-                templateId={(currentModule as any).evaluationTemplateId}
+                moduleId={displayedModule.id}
+                templateId={(displayedModule as any).evaluationTemplateId}
                 onComplete={handleCompleteModule}
               />
             )}
 
 
             {/* LIVE SESSION VIEW */}
-            {currentModule.type === 'LIVE_SESSION' && (
+            {displayedModule.type === 'LIVE_SESSION' && (
               <LiveSessionPlayer 
-                module={currentModule}
+                module={displayedModule}
                 onComplete={handleCompleteModule}
               />
             )}
@@ -468,14 +579,14 @@ export const CoursePlayer: React.FC = () => {
             
             {!quizResult && (
               <>
-                {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ') && quizQuestions.length > 0 && (
+                {(displayedModule.type === 'PRE_QUIZ' || displayedModule.type === 'POST_QUIZ') && quizQuestions.length > 0 && (
                   <Button onClick={handleSubmitQuiz} disabled={isSubmitting}>
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Submit Answers
                   </Button>
                 )}
                 
-                {(currentModule.type === 'PRE_QUIZ' || currentModule.type === 'POST_QUIZ') && quizQuestions.length === 0 && (
+                {(displayedModule.type === 'PRE_QUIZ' || displayedModule.type === 'POST_QUIZ') && quizQuestions.length === 0 && (
                    <Button onClick={handleCompleteModule} disabled={isSubmitting}>Skip Empty Quiz</Button>
                 )}
               </>
@@ -485,6 +596,7 @@ export const CoursePlayer: React.FC = () => {
           </CardFooter>
         </Card>
       )}
+      </main>
     </div>
   );
 

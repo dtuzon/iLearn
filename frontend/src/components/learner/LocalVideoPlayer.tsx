@@ -31,8 +31,25 @@ export const LocalVideoPlayer: React.FC<LocalVideoPlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
 
+  // Reset state when URL changes
+  React.useEffect(() => {
+    setHighestWatchedTime(0);
+    setIsCompleted(false);
+    setProgress(0);
+    setIsPlaying(false);
+  }, [url]);
+
   // Get full URL for local assets
-  const fullUrl = url.startsWith('http') ? url : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '')}${url}`;
+  const baseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace('/api', '');
+  const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+  const fullUrl = url.startsWith('http') ? url : `${baseUrl}${cleanUrl}`;
+
+  console.log('Video Player Source:', { original: url, resolved: fullUrl });
+
+  const handleVideoError = (e: any) => {
+    console.error('Video loading error:', e);
+    toast.error('Failed to load video. Please check the source or your connection.');
+  };
 
   const handleTimeUpdate = () => {
     if (!videoRef.current) return;
@@ -107,11 +124,14 @@ export const LocalVideoPlayer: React.FC<LocalVideoPlayerProps> = ({
 
       {/* Video Element */}
       <video
+        key={fullUrl}
         ref={videoRef}
         src={fullUrl}
+        preload="auto"
         className="w-full h-full aspect-video cursor-pointer"
         onTimeUpdate={handleTimeUpdate}
         onSeeking={handleSeeking}
+        onError={handleVideoError}
         onEnded={() => {
           setIsCompleted(true);
           onComplete();
