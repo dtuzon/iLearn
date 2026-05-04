@@ -491,6 +491,11 @@ export const CourseBuilder: React.FC = () => {
   const generateAutoDiff = (current: Course, parent: Course) => {
     const changes: string[] = [];
 
+    // Title Changes
+    if (current.title !== parent.title) {
+      changes.push(`• Renamed course from "${parent.title}" to "${current.title}"`);
+    }
+
     // 1. Curriculum Changes
     const currentModules = current.modules || [];
     const parentModules = parent.modules || [];
@@ -842,6 +847,27 @@ export const CourseBuilder: React.FC = () => {
     changeSummary: identityForm.changeSummary
   });
 
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty && !isReadonly) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty, isReadonly]);
+
+  const handleBack = () => {
+    if (isDirty && !isReadonly) {
+      if (window.confirm("You have unsaved changes. Are you sure you want to discard them and leave?")) {
+        navigate('/creator/courses');
+      }
+    } else {
+      navigate('/creator/courses');
+    }
+  };
+
   const handleDiscardChanges = () => {
     if (course) {
       setIdentityForm({
@@ -862,31 +888,10 @@ export const CourseBuilder: React.FC = () => {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto animate-in slide-in-from-bottom-4 duration-500 relative">
-      {isDirty && !isReadonly && (
-        <div className="sticky top-4 z-50 bg-background/80 backdrop-blur-md border border-primary/20 shadow-2xl rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-8 duration-500 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
-              <Save className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="font-bold text-primary">Unsaved Changes</p>
-              <p className="text-xs text-muted-foreground">You have modified the course configuration. Save as draft?</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={handleDiscardChanges} className="font-bold">
-              Discard
-            </Button>
-            <Button size="sm" onClick={handleUpdateIdentity} disabled={isSavingIdentity} className="font-black uppercase tracking-widest px-6 shadow-lg shadow-primary/20">
-              {isSavingIdentity ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save Changes"}
-            </Button>
-          </div>
-        </div>
-      )}
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" className="rounded-full h-12 w-12 hover:bg-primary/5" onClick={() => navigate('/creator/courses')}>
+          <Button variant="ghost" size="icon" className="rounded-full h-12 w-12 hover:bg-primary/5" onClick={handleBack}>
             <ArrowLeft className="h-6 w-6 text-primary" />
           </Button>
           <div>
@@ -931,9 +936,10 @@ export const CourseBuilder: React.FC = () => {
                   <Button
                     variant="outline"
                     className="h-10 px-4 bg-orange-500 text-white hover:bg-orange-600 border-none font-bold shadow-md shadow-orange-500/20"
-                    onClick={() => toast.info('Sequence saved to local memory.')}
+                    onClick={handleUpdateIdentity}
+                    disabled={isSavingIdentity || (!isDirty && course.status === 'DRAFT')}
                   >
-                    <Save className="mr-2 h-4 w-4" /> Save Sequence
+                    {isSavingIdentity ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Save Course
                   </Button>
                   <Button
                     size="sm"
@@ -1433,18 +1439,21 @@ export const CourseBuilder: React.FC = () => {
                   <div className="space-y-2">
                     <Label htmlFor="c-title" className="flex items-center gap-2">
                       Course Title
-                      {course.parentId && (
+                      {course.parentId && user?.role !== 'ADMINISTRATOR' && (
                         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Locked</span>
                       )}
                     </Label>
                     <Input
                       id="c-title"
-                      disabled={isReadonly || !!course.parentId}
+                      disabled={isReadonly || (!!course.parentId && user?.role !== 'ADMINISTRATOR')}
                       value={identityForm.title}
                       onChange={(e) => setIdentityForm({ ...identityForm, title: e.target.value })}
                     />
-                    {course.parentId && (
+                    {course.parentId && user?.role !== 'ADMINISTRATOR' && (
                       <p className="text-xs text-muted-foreground">The course title is the canonical name for this lineage and cannot be changed per-version.</p>
+                    )}
+                    {course.parentId && user?.role === 'ADMINISTRATOR' && (
+                      <p className="text-xs text-amber-500 font-bold mt-1">ADMIN MODE: You are modifying the canonical name for this version.</p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -1494,10 +1503,7 @@ export const CourseBuilder: React.FC = () => {
                   />
                 </div>
                 {!isReadonly && (
-                  <Button onClick={handleUpdateIdentity} disabled={isSavingIdentity} className="h-11 shadow-lg shadow-primary/10 font-bold">
-                    {isSavingIdentity ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Update Draft
-                  </Button>
+                  <div className="h-4" />
                 )}
 
 

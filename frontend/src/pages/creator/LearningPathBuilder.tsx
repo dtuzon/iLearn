@@ -46,7 +46,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { MultiSelect } from '../../components/ui/multi-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { departmentsApi, type Department } from '../../api/departments.api';
-
+import { useAuth } from '../../context/AuthContext';
 import {
   DndContext,
   closestCenter,
@@ -212,6 +212,8 @@ export const LearningPathBuilder: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [courseSearch, setCourseSearch] = useState('');
   const [lineagePaths, setLineagePaths] = useState<LearningPath[]>([]);
+  const [isSequenceDirty, setIsSequenceDirty] = useState(false);
+  const { user } = useAuth();
 
   const [approvalDialog, setApprovalDialog] = useState({
     isOpen: false,
@@ -255,6 +257,7 @@ export const LearningPathBuilder: React.FC = () => {
       const published = coursesData.filter(c => c.status === 'PUBLISHED');
 
       setAllCourses(published);
+      setIsSequenceDirty(false);
     } catch (error) {
       toast.error('Failed to load builder data');
     } finally {
@@ -370,18 +373,67 @@ export const LearningPathBuilder: React.FC = () => {
     }
   };
 
-  const handleUpdateIdentity = async () => {
-    if (!id || isReadonly) return;
+  const isIdentityDirty = path && JSON.stringify({
+    title: path.title,
+    description: path.description || '',
+    targetAudience: path.targetAudience || 'GENERAL',
+    targetDepartments: path.targetDepartments || [],
+    thumbnailUrl: path.thumbnailUrl || ''
+  }) !== JSON.stringify({
+    title: identityForm.title,
+    description: identityForm.description,
+    targetAudience: identityForm.targetAudience,
+    targetDepartments: identityForm.targetDepartments,
+    thumbnailUrl: identityForm.thumbnailUrl
+  });
+
+  const isDirty = isSequenceDirty || isIdentityDirty;
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty && !isReadonly) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty, isReadonly]);
+
+  const handleBack = () => {
+    if (isDirty && !isReadonly) {
+      if (window.confirm("You have unsaved changes. Are you sure you want to discard them and leave?")) {
+        navigate('/creator/learning-paths');
+      }
+    } else {
+      navigate('/creator/learning-paths');
+    }
+  };
+
+  const handleSave = async () => {
+    if (!id || !path || isReadonly) return;
+    setIsSaving(true);
     try {
-      await learningPathsApi.update(id, {
-        ...identityForm,
-        versionTag: path?.versionTag,
-        changeSummary: path?.changeSummary
-      });
-      toast.success('Path settings updated');
+      if (isIdentityDirty) {
+        await learningPathsApi.update(id, {
+          ...identityForm,
+          versionTag: path?.versionTag,
+          changeSummary: path?.changeSummary
+        });
+      }
+      if (isSequenceDirty) {
+        const syncData = path.pathCourses.map(pc => ({
+          courseId: pc.courseId,
+          order: pc.order
+        }));
+        await learningPathsApi.syncCourses(path.id, syncData);
+      }
+      toast.success('Path saved successfully');
       fetchData();
     } catch (error) {
-      toast.error('Failed to update settings');
+      toast.error('Failed to save path');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -417,6 +469,7 @@ export const LearningPathBuilder: React.FC = () => {
       }));
 
       setPath({ ...path, pathCourses: newPathCourses });
+      setIsSequenceDirty(true);
     }
   };
 
@@ -441,6 +494,7 @@ export const LearningPathBuilder: React.FC = () => {
       ...path,
       pathCourses: [...path.pathCourses, newPathCourse]
     });
+    setIsSequenceDirty(true);
     toast.success(`Added ${course.title}`);
   };
 
@@ -451,24 +505,7 @@ export const LearningPathBuilder: React.FC = () => {
       order: idx + 1
     }));
     setPath({ ...path, pathCourses: filtered });
-  };
-
-  const handleSave = async () => {
-    if (!path || isReadonly) return;
-    setIsSaving(true);
-    try {
-      const syncData = path.pathCourses.map(pc => ({
-        courseId: pc.courseId,
-        order: pc.order
-      }));
-      await learningPathsApi.syncCourses(path.id, syncData);
-      toast.success('Path sequence saved successfully');
-      fetchData(); // Refresh to get real IDs instead of temp ones
-    } catch (error: any) {
-      toast.error('Failed to save path sequence');
-    } finally {
-      setIsSaving(false);
-    }
+    setIsSequenceDirty(true);
   };
 
   const filteredCourses = allCourses.filter(c =>
@@ -494,7 +531,7 @@ export const LearningPathBuilder: React.FC = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/creator/learning-paths')}
+            onClick={handleBack}
             className="rounded-full hover:bg-primary/5 text-primary"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -525,11 +562,11 @@ export const LearningPathBuilder: React.FC = () => {
           {!isReadonly && (
             <Button
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || (!isDirty && path.status === 'DRAFT')}
               className="h-10 px-6 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-md shadow-orange-500/20 transition-all active:scale-95 border-none"
             >
               {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Save Sequence
+              Save Path
             </Button>
           )}
 
@@ -770,8 +807,14 @@ export const LearningPathBuilder: React.FC = () => {
                     onChange={(e) => setIdentityForm({ ...identityForm, title: e.target.value })}
                     placeholder="e.g. Executive Leadership Academy"
                     className="h-11 rounded-xl"
-                    disabled={isReadonly}
+                    disabled={isReadonly || (!!path?.parentId && user?.role !== 'ADMINISTRATOR')}
                   />
+                  {path?.parentId && user?.role !== 'ADMINISTRATOR' && (
+                    <p className="text-xs text-muted-foreground mt-2">The path title is the canonical name for this lineage and cannot be changed per-version.</p>
+                  )}
+                  {path?.parentId && user?.role === 'ADMINISTRATOR' && (
+                    <p className="text-xs text-amber-500 font-bold mt-2">ADMIN MODE: You are modifying the canonical name for this version.</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Target Audience</Label>
@@ -816,9 +859,7 @@ export const LearningPathBuilder: React.FC = () => {
               </div>
 
               {!isReadonly && (
-                <Button onClick={handleUpdateIdentity} className="h-12 px-8 font-black uppercase tracking-widest shadow-lg shadow-primary/20 rounded-xl">
-                  Update Path Identity
-                </Button>
+                <div className="h-4" />
               )}
 
               {/* Version Governance Section */}
