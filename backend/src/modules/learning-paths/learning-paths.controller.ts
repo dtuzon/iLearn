@@ -151,6 +151,16 @@ export class LearningPathsController {
       res.status(500).json({ message: error.message });
     }
   }
+
+  static async discardDraft(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      await LearningPathsService.discardDraft(id as string);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
 }
 
 

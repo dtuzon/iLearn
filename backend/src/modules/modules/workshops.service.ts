@@ -1,7 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { EnrollmentStatus, SubmissionStatus, CheckerType, Role } from '@prisma/client';
 
-import { sendActivityUpdateEmail } from '../../lib/email-service';
+import { sendActivityUpdateEmail, sendActivitySubmissionEmail } from '../../lib/email-service';
 import { NotificationsService } from '../notifications/notifications.service';
 
 
@@ -70,14 +70,29 @@ export class WorkshopsService {
     }
 
     if (checkerId) {
+      const checker = await prisma.user.findUnique({ where: { id: checkerId } });
+      const studentName = `${student?.firstName} ${student?.lastName}`;
+      const title = 'New Activity Submission';
+      const message = `${studentName} submitted an activity for ${module.course.title}`;
+      const actionUrl = '/approvals/activities';
+
       await NotificationsService.createNotification({
         userId: checkerId,
-        title: 'New Activity Submission',
-        message: `${student?.firstName} ${student?.lastName} submitted an activity for ${module.course.title}`,
-        link: '/approvals/activities'
+        title,
+        message,
+        link: actionUrl
       });
-    }
 
+      if (checker?.email) {
+        const fullActionUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'}${actionUrl}`;
+        await sendActivitySubmissionEmail(
+          checker.email,
+          studentName,
+          module.course.title,
+          fullActionUrl
+        );
+      }
+    }
   }
 
 

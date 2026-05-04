@@ -155,6 +155,14 @@ router.post(
   CoursesController.verifyAttendance
 );
 
+router.delete(
+  '/:id/discard-draft',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+  auditLog('DISCARD_COURSE_DRAFT'),
+  CoursesController.discardDraft
+);
+
 export default router;
 
 

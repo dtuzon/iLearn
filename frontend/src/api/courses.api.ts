@@ -144,6 +144,9 @@ export const coursesApi = {
   verifyAttendance: async (moduleId: string, passcode: string) => {
     const response = await apiClient.post(`/courses/modules/${moduleId}/verify-attendance`, { passcode });
     return response.data;
+  },
+  discardDraft: async (courseId: string) => {
+    await apiClient.delete(`/courses/${courseId}/discard-draft`);
   }
 
 };

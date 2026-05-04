@@ -222,6 +222,8 @@ export const LearningPathBuilder: React.FC = () => {
     isGeneratingDiff: false,
     isSubmitting: false
   });
+  
+  const [isDiscarding, setIsDiscarding] = useState(false);
 
   const isReadonly = path?.status === 'PUBLISHED' || path?.status === 'ARCHIVED';
 
@@ -486,6 +488,20 @@ export const LearningPathBuilder: React.FC = () => {
     }
   };
 
+  const handleDiscardDraft = async () => {
+    if (!id || !window.confirm('Are you sure you want to discard this draft? This will permanently delete this version.')) return;
+    setIsDiscarding(true);
+    try {
+      await learningPathsApi.discardDraft(id);
+      toast.success('Draft discarded successfully');
+      navigate('/creator/learning-paths');
+    } catch (error) {
+      toast.error('Failed to discard draft');
+    } finally {
+      setIsDiscarding(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, [id]);
@@ -605,12 +621,23 @@ export const LearningPathBuilder: React.FC = () => {
           )}
 
           {path.status === 'DRAFT' && (
-            <Button
-              onClick={handleInitiatePublish}
-              className="h-10 px-6 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 font-bold"
-            >
-              <Timer className="mr-2 h-4 w-4" /> Publish Path
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleDiscardDraft}
+                disabled={isDiscarding}
+                className="h-10 px-4 border-destructive/20 text-destructive hover:bg-destructive/5 font-bold"
+              >
+                {isDiscarding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                Discard Draft
+              </Button>
+              <Button
+                onClick={handleInitiatePublish}
+                className="h-10 px-6 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 font-bold"
+              >
+                <Timer className="mr-2 h-4 w-4" /> Publish Path
+              </Button>
+            </div>
           )}
 
           {path.status === 'PUBLISHED' && (

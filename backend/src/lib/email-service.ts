@@ -62,3 +62,47 @@ export const sendActivityUpdateEmail = async (
     console.error('Failed to send email:', error);
   }
 };
+
+export const sendActivitySubmissionEmail = async (
+  checkerEmail: string,
+  studentName: string,
+  courseName: string,
+  actionUrl?: string
+) => {
+  const title = 'Action Required: New Activity Submission';
+  const color = '#f59e0b'; // Amber for attention
+  
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
+      <h2 style="color: ${color};">${title}</h2>
+      <p>Hello,</p>
+      <p><strong>${studentName}</strong> has submitted an activity for the course <strong>${courseName}</strong> and it is awaiting your review.</p>
+      
+      <p>Please log in to the Elevate LMS to evaluate the submission and provide feedback.</p>
+
+      ${actionUrl ? `
+        <div style="margin-top: 30px;">
+          <a href="${actionUrl}" style="background-color: ${color}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+            Review Submission
+          </a>
+        </div>
+      ` : ''}
+
+      <p style="margin-top: 40px; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+        This is an automated notification from the Elevate Learning Management System.
+      </p>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: `"Elevate LMS" <${process.env.SMTP_USER}>`,
+      to: checkerEmail,
+      subject: `[Elevate] ${title} - ${studentName}`,
+      html
+    });
+    console.log(`Notification email sent to checker ${checkerEmail} for ${studentName}'s submission`);
+  } catch (error) {
+    console.error('Failed to send checker notification email:', error);
+  }
+};

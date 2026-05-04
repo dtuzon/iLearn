@@ -275,5 +275,21 @@ export class LearningPathsService {
       return newVersion;
     });
   }
+
+  static async discardDraft(id: string) {
+    const path = await prisma.learningPath.findUnique({
+      where: { id }
+    });
+
+    if (!path) throw new Error('Learning Path not found');
+
+    if (path.status !== CourseStatus.DRAFT && path.status !== CourseStatus.PENDING_APPROVAL) {
+      throw new Error('Only drafts or pending versions can be discarded.');
+    }
+
+    return prisma.learningPath.delete({
+      where: { id }
+    });
+  }
 }
 

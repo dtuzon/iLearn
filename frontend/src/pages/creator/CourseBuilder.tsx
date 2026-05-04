@@ -406,6 +406,7 @@ export const CourseBuilder: React.FC = () => {
   const [isProcessingModule, setIsProcessingModule] = useState(false);
   const [lineageVersions, setLineageVersions] = useState<Course[]>([]);
   const [isSequenceDirty, setIsSequenceDirty] = useState(false);
+  const [isDiscarding, setIsDiscarding] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -638,6 +639,21 @@ export const CourseBuilder: React.FC = () => {
           : undefined,
         duration: 8000
       });
+    }
+  };
+  
+  const handleDiscardDraft = async () => {
+    if (!courseId || !window.confirm('Are you sure you want to discard this draft? All unsaved changes will be lost and this version will be permanently deleted.')) return;
+    
+    setIsDiscarding(true);
+    try {
+      await coursesApi.discardDraft(courseId);
+      toast.success('Draft discarded successfully');
+      navigate('/creator/courses');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to discard draft');
+    } finally {
+      setIsDiscarding(false);
     }
   };
 
@@ -938,9 +954,21 @@ export const CourseBuilder: React.FC = () => {
 
         <div className="flex gap-2">
           {!isReadonly && (
-            <>
+            <div className="flex gap-2">
+              {(course.status === 'DRAFT' || course.status === 'PENDING_APPROVAL') && (
+                <Button
+                  variant="outline"
+                  className="h-10 px-4 border-destructive/20 text-destructive hover:bg-destructive/5 font-bold"
+                  onClick={handleDiscardDraft}
+                  disabled={isDiscarding}
+                >
+                  {isDiscarding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                  Discard Draft
+                </Button>
+              )}
+
               {course.status === 'DRAFT' && (
-                <div className="flex gap-2">
+                <>
                   <Button
                     variant="outline"
                     className="h-10 px-4 bg-orange-500 text-white hover:bg-orange-600 border-none font-bold shadow-md shadow-orange-500/20"
@@ -956,7 +984,7 @@ export const CourseBuilder: React.FC = () => {
                   >
                     <Clock className="mr-2 h-4 w-4" /> Request Approval
                   </Button>
-                </div>
+                </>
               )}
 
               {course.status === 'PENDING_APPROVAL' && (
@@ -964,7 +992,7 @@ export const CourseBuilder: React.FC = () => {
                   <Clock className="mr-2 h-4 w-4" /> Under Review
                 </Badge>
               )}
-            </>
+            </div>
           )}
 
           {course.status === 'PUBLISHED' && (

@@ -589,6 +589,28 @@ export class CoursesService {
     return EnrollmentsService.completeModule(userId, moduleId);
   }
 
+  static async discardDraft(id: string) {
+    const course = await prisma.course.findUnique({
+      where: { id },
+      include: { _count: { select: { enrollments: true } } }
+    });
+
+    if (!course) throw new Error('Course not found');
+
+    if (course.status !== CourseStatus.DRAFT && course.status !== CourseStatus.PENDING_APPROVAL) {
+      throw new Error('Only drafts or pending versions can be discarded.');
+    }
+
+    // Safety check: if it somehow has active enrollments, don't delete
+    if (course._count.enrollments > 0) {
+       // This shouldn't happen for drafts unless someone was enrolled in a draft version manually
+       throw new Error('Cannot discard a version that has active enrollments.');
+    }
+
+    return prisma.course.delete({
+      where: { id }
+    });
+  }
 
 }
 

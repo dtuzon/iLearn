@@ -99,6 +99,10 @@ export const learningPathsApi = {
   createVersion: async (id: string): Promise<LearningPath> => {
     const response = await apiClient.post(`/learning-paths/${id}/versions`);
     return response.data;
+  },
+
+  discardDraft: async (id: string): Promise<void> => {
+    await apiClient.delete(`/learning-paths/${id}/discard-draft`);
   }
 };
 

@@ -100,6 +100,14 @@ router.post(
   LearningPathsController.createVersion
 );
 
+router.delete(
+  '/:id/discard-draft',
+  authenticate,
+  authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+  auditLog('DISCARD_LEARNING_PATH_DRAFT'),
+  LearningPathsController.discardDraft
+);
+
 export default router;
 
 

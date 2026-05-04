@@ -414,5 +414,24 @@ export class CoursesController {
       res.status(400).json({ message: error.message });
     }
   }
+  
+  static async discardDraft(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+
+      // Ownership check
+      if (req.user!.role === Role.COURSE_CREATOR) {
+        const course = await CoursesService.getById(id as string);
+        if (!course || course.lecturerId !== req.user!.userId) {
+          return res.status(403).json({ message: 'Forbidden: You do not own this course.' });
+        }
+      }
+
+      await CoursesService.discardDraft(id as string);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 
 }
