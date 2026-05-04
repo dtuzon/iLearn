@@ -533,6 +533,7 @@ export const LearningPathBuilder: React.FC = () => {
                   toast.error('Failed to update certificate status');
                 }
               }}
+              readonly={path.status === 'PUBLISHED' || path.status === 'ARCHIVED' || path.status === 'RETIRED'}
             />
           </Card>
         </TabsContent>

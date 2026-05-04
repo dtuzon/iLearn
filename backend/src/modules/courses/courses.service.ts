@@ -175,6 +175,25 @@ export class CoursesService {
   }
 
   static async updateStatus(id: string, status: CourseStatus, approverId?: string) {
+    // Guard: Prevent unpublishing a course that has IN_PROGRESS learners
+    if (status === CourseStatus.DRAFT) {
+      const course = await prisma.course.findUnique({ where: { id } });
+      if (course?.status === CourseStatus.PUBLISHED) {
+        const activeCount = await prisma.enrollment.count({
+          where: {
+            courseId: id,
+            status: 'IN_PROGRESS'
+          }
+        });
+        if (activeCount > 0) {
+          throw new Error(
+            `Cannot unpublish. There are ${activeCount} active learner(s) currently enrolled in this version. ` +
+            `Please use 'Create New Draft Version' instead to preserve historical tracking.`
+          );
+        }
+      }
+    }
+
     if (status === CourseStatus.PUBLISHED) {
       return this.publishCourse(id, approverId);
     }
@@ -296,6 +315,8 @@ export class CoursesService {
     if (!current) throw new Error('Course not found');
 
     const pId = current.parentId || current.id;
+    // Strip any trailing (Draft) / (draft) suffix from the title before going live
+    const cleanTitle = current.title.replace(/\s*\(Draft\)\s*$/i, '').trim();
 
     return prisma.$transaction(async (tx) => {
       // 1. Archive previous active version (Published or Retired)
@@ -326,16 +347,15 @@ export class CoursesService {
         }
       });
 
-      // 3. Publish current draft
-
+      // 3. Publish current draft with a clean title
       return tx.course.update({
         where: { id: courseId },
         data: {
           status: CourseStatus.PUBLISHED,
           isLatest: true,
-          approvedById: approverId
+          approvedById: approverId,
+          title: cleanTitle
         }
-
       });
     });
   }

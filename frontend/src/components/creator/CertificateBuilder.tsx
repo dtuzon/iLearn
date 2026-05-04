@@ -27,6 +27,7 @@ interface CertificateBuilderProps {
   };
   isEnabled?: boolean;
   onToggleEnabled?: (enabled: boolean) => void;
+  readonly?: boolean;
 }
 
 interface ElementConfig {
@@ -43,7 +44,8 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({
   learningPathId, 
   initialData,
   isEnabled,
-  onToggleEnabled
+  onToggleEnabled,
+  readonly
 }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -114,6 +116,7 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({
             checked={isEnabled}
             onCheckedChange={onToggleEnabled}
             className="data-[state=checked]:bg-primary"
+            disabled={readonly}
           />
         </div>
       </div>
@@ -160,6 +163,7 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({
                 className="hidden" 
                 onChange={handleFileChange}
                 accept="image/*"
+                disabled={readonly}
               />
             </div>
 
@@ -198,6 +202,7 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({
                         <Switch 
                           checked={config[key].enabled}
                           onCheckedChange={(val) => setConfig({...config, [key]: { ...config[key], enabled: val }})}
+                          disabled={readonly}
                         />
                       )}
                     </div>
@@ -213,6 +218,7 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({
                             type="number" 
                             value={config[key].x} 
                             onChange={(e) => setConfig({...config, [key]: { ...config[key], x: parseInt(e.target.value) || 0 }})} 
+                            disabled={readonly}
                           />
                         </div>
                         <div className="space-y-2">
@@ -221,6 +227,7 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({
                             type="number" 
                             value={config[key].y} 
                             onChange={(e) => setConfig({...config, [key]: { ...config[key], y: parseInt(e.target.value) || 0 }})} 
+                            disabled={readonly}
                           />
                         </div>
                       </div>
@@ -232,6 +239,7 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({
                             type="number" 
                             value={config[key].fontSize} 
                             onChange={(e) => setConfig({...config, [key]: { ...config[key], fontSize: parseInt(e.target.value) || 0 }})} 
+                            disabled={readonly}
                           />
                         </div>
                         <div className="space-y-2">
@@ -239,6 +247,7 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({
                           <Select 
                             value={config[key].fontFamily}
                             onValueChange={(val) => setConfig({...config, [key]: { ...config[key], fontFamily: val }})}
+                            disabled={readonly}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -262,6 +271,7 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({
                             value={config[key].color} 
                             onChange={(e) => setConfig({...config, [key]: { ...config[key], color: e.target.value }})}
                             className="w-12 h-10 p-1 cursor-pointer"
+                            disabled={readonly}
                           />
                           <Input 
                             type="text" 
@@ -269,6 +279,7 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({
                             onChange={(e) => setConfig({...config, [key]: { ...config[key], color: e.target.value }})}
                             placeholder="#000000"
                             className="flex-1"
+                            disabled={readonly}
                           />
                         </div>
                       </div>
@@ -278,9 +289,9 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({
               ))}
             </Tabs>
 
-            <Button className="w-full h-11" onClick={handleSave} disabled={isSaving}>
+            <Button className="w-full h-11" onClick={handleSave} disabled={isSaving || readonly}>
               {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Lock Template Settings
+              {readonly ? 'Template Locked (Read-Only)' : 'Lock Template Settings'}
             </Button>
           </CardContent>
         </Card>

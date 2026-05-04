@@ -67,6 +67,16 @@ import {
   DialogTitle 
 } from '../../components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
+import {
   DndContext, 
   closestCenter,
   KeyboardSensor,
@@ -398,6 +408,8 @@ export const CourseBuilder: React.FC = () => {
     }
   };
 
+  const [isUnpublishDialogOpen, setIsUnpublishDialogOpen] = useState(false);
+
   const handleUpdateStatus = async (status: string) => {
     if (!courseId) return;
     try {
@@ -405,8 +417,20 @@ export const CourseBuilder: React.FC = () => {
       toast.success(`Course status updated to ${status}`);
       fetchCourse();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update status');
+      const msg = error.response?.data?.message || 'Failed to update status';
+      // Surface the enrollment guard error with a destructive toast
+      toast.error(msg, {
+        description: msg.includes('active learner')
+          ? 'Use the \'Create New Draft Version\' button below to safely iterate on this course.'
+          : undefined,
+        duration: 8000
+      });
     }
+  };
+
+  const handleConfirmUnpublish = async () => {
+    setIsUnpublishDialogOpen(false);
+    await handleUpdateStatus('DRAFT');
   };
 
   const [isAddingModule, setIsAddingModule] = useState(false);
@@ -757,17 +781,29 @@ export const CourseBuilder: React.FC = () => {
           {course.status === 'PUBLISHED' && (
             <div className="flex gap-2">
               <Badge variant="success" className="h-10 px-4 flex items-center gap-2 text-sm">
-                <CheckCircle2 className="h-4 w-4" /> Published & Live
+                <CheckCircle2 className="h-4 w-4" /> Published &amp; Live
               </Badge>
               {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  className="h-10 px-4 border-dashed border-muted-foreground/30 text-muted-foreground hover:text-destructive hover:border-destructive/50"
-                  onClick={() => handleUpdateStatus('DRAFT')}
-                >
-                  <EyeOff className="mr-2 h-4 w-4" /> Unpublish Course
-                </Button>
+                <>
+                  {/* Step 4: Always show Create New Draft for Admin/LM on published courses */}
+                  <Button
+                    size="sm"
+                    onClick={handleCreateDraftVersion}
+                    disabled={isVersioning}
+                    className="h-10 px-4 font-bold shadow-lg shadow-primary/20"
+                  >
+                    {isVersioning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CopyPlus className="mr-2 h-4 w-4" />}
+                    New Version
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-10 px-4 border-dashed border-muted-foreground/30 text-muted-foreground hover:text-destructive hover:border-destructive/50"
+                    onClick={() => setIsUnpublishDialogOpen(true)}
+                  >
+                    <EyeOff className="mr-2 h-4 w-4" /> Unpublish Course
+                  </Button>
+                </>
               )}
             </div>
           )}
@@ -779,6 +815,35 @@ export const CourseBuilder: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Unpublish Confirmation Dialog */}
+      <AlertDialog open={isUnpublishDialogOpen} onOpenChange={setIsUnpublishDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <EyeOff className="h-5 w-5 text-destructive" />
+              Unpublish This Course?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <span className="block">
+                This will immediately remove the course from the live catalog and prevent new enrollments.
+              </span>
+              <span className="block p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm font-medium">
+                ⚠️ <strong>Data Risk:</strong> If you intend to make significant edits, we <strong>highly recommend</strong> using <em>"New Version"</em> instead. Unpublishing then deleting modules can corrupt progress records for active learners.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel — Keep Published</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmUnpublish}
+              className="bg-destructive hover:bg-destructive/90 text-white"
+            >
+              Yes, Unpublish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {isReadonly && (
         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
@@ -930,6 +995,7 @@ export const CourseBuilder: React.FC = () => {
             }}
             isEnabled={course.hasCertificate}
             onToggleEnabled={handleToggleCertificate}
+            readonly={isReadonly}
           />
         </TabsContent>
 
