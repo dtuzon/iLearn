@@ -107,34 +107,49 @@ export class EnrollmentsService {
       }
     });
 
-    // Check if this was the current module and increment currentModuleOrder
-    if (module.sequenceOrder === enrollment.currentModuleOrder) {
-      const nextOrder = enrollment.currentModuleOrder + 1;
-      
-      // Check if there are more modules
-      const totalModules = await prisma.courseModule.count({
-        where: { courseId: module.courseId }
+    // Check if we should increment currentModuleOrder
+    // If sequenceOrder is 1 and currentModuleOrder is 0, we advance.
+    const shouldAdvance = module.sequenceOrder > enrollment.currentModuleOrder;
+    const nextOrder = shouldAdvance ? module.sequenceOrder : enrollment.currentModuleOrder;
+    
+    // Check total modules to see if course is finished
+    const totalModules = await prisma.courseModule.count({
+      where: { courseId: module.courseId }
+    });
+
+    const isFinished = nextOrder >= totalModules;
+
+    if (shouldAdvance) {
+      const updatedEnrollment = await prisma.enrollment.update({
+        where: { id: enrollment.id },
+        data: {
+          currentModuleOrder: nextOrder,
+          status: isFinished ? EnrollmentStatus.COMPLETED : EnrollmentStatus.IN_PROGRESS,
+          completedAt: isFinished ? new Date() : undefined
+        },
+        include: { user: true, course: true }
       });
 
-      const isFinished = nextOrder >= totalModules;
-
-        const updatedEnrollment = await prisma.enrollment.update({
-          where: { id: enrollment.id },
-          data: {
-            currentModuleOrder: nextOrder,
-            status: isFinished ? EnrollmentStatus.COMPLETED : EnrollmentStatus.IN_PROGRESS,
-            completedAt: isFinished ? new Date() : undefined
-          },
-          include: { user: true, course: true }
-        });
-
-        // NEW: Learning Path Completion Logic
-        if (isFinished) {
-          await this.checkLearningPathCompletion(userId, module.courseId);
-          // NEW: Strict Accountability Hook
-          await this.notifyLeadershipOnLateCompletion(updatedEnrollment, 'COURSE');
-        }
+      // NEW: Learning Path Completion Logic
+      if (isFinished) {
+        await this.checkLearningPathCompletion(userId, module.courseId);
+        // NEW: Strict Accountability Hook
+        await this.notifyLeadershipOnLateCompletion(updatedEnrollment, 'COURSE');
       }
+    } else if (isFinished && enrollment.status !== EnrollmentStatus.COMPLETED) {
+       // Handle case where user completes a previous module but it was the last one missing
+       // (Though unlikely with shouldAdvance logic, good for safety)
+       const updatedEnrollment = await prisma.enrollment.update({
+         where: { id: enrollment.id },
+         data: {
+           status: EnrollmentStatus.COMPLETED,
+           completedAt: new Date()
+         },
+         include: { user: true, course: true }
+       });
+       await this.checkLearningPathCompletion(userId, module.courseId);
+       await this.notifyLeadershipOnLateCompletion(updatedEnrollment, 'COURSE');
+    }
 
 
 

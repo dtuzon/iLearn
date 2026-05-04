@@ -305,43 +305,77 @@ export const LearningPathBuilder: React.FC = () => {
   const generateSmartDiff = () => {
     if (!path) return '';
 
-    // Find the previous published version
-    const prev = lineagePaths.find(p => p.status === 'PUBLISHED' && p.id !== path.id);
-    if (!prev) return 'Initial path configuration and sequence definition.';
+    // Find the most recently published version in the lineage for comparison
+    // lineagePaths may not have full pathCourses detail — we compare the live `path` vs
+    // a previously published snapshot. If no published sibling exists, it's v1.
+    const prevPublished = lineagePaths.find(p => p.status === 'PUBLISHED' && p.id !== path.id);
+
+    if (!prevPublished || !prevPublished.pathCourses) {
+      // First version or no comparable published version — generate an initial summary
+      const lines: string[] = [];
+      const currentTitle = identityForm.title || path.title;
+      lines.push(`• Initial configuration: "${currentTitle}"`);
+      if (path.pathCourses?.length > 0) {
+        lines.push(`• Defined sequence of ${path.pathCourses.length} course(s)`);
+        path.pathCourses
+          .sort((a, b) => a.order - b.order)
+          .forEach((pc, i) => lines.push(`  ${i + 1}. ${pc.course?.title || pc.courseId}`));
+      }
+      return lines.join('\n');
+    }
 
     const changes: string[] = [];
 
-    // 1. Metadata check
-    if (path.title !== prev.title) changes.push(`Renamed path from "${prev.title}" to "${path.title}"`);
-    if (path.description !== prev.description) changes.push(`Updated path description and objectives`);
-    if (path.targetAudience !== prev.targetAudience) changes.push(`Changed target audience to ${path.targetAudience}`);
-
-    // 2. Sequence check
-    const currentCourseIds = path.pathCourses.map(pc => pc.courseId);
-    const prevCourseIds = prev.pathCourses.map(pc => pc.courseId);
-
-    const added = currentCourseIds.filter(cid => !prevCourseIds.includes(cid));
-    const removed = prevCourseIds.filter(cid => !currentCourseIds.includes(cid));
-
-    if (added.length > 0) changes.push(`Added ${added.length} new course(s) to the sequence`);
-    if (removed.length > 0) changes.push(`Removed ${removed.length} course(s) from the sequence`);
-
-    // Check if order changed for existing courses
-    const intersection = currentCourseIds.filter(cid => prevCourseIds.includes(cid));
-    const currentOrder = intersection;
-    const prevOrder = prevCourseIds.filter(cid => currentCourseIds.includes(cid));
-
-    if (JSON.stringify(currentOrder) !== JSON.stringify(prevOrder)) {
-      changes.push(`Restructured the course sequence and learning flow`);
+    // 1. Metadata changes — compare form (unsaved) vs published parent
+    const currentTitle = identityForm.title || path.title;
+    if (currentTitle !== prevPublished.title) {
+      changes.push(`Renamed path: "${prevPublished.title}" → "${currentTitle}"`);
+    }
+    const currentDesc = identityForm.description || path.description || '';
+    if (currentDesc !== (prevPublished.description || '')) {
+      changes.push('Updated path description and learning objectives');
+    }
+    const currentAudience = identityForm.targetAudience || path.targetAudience;
+    if (currentAudience !== prevPublished.targetAudience) {
+      changes.push(`Changed target audience: ${prevPublished.targetAudience?.replace(/_/g, ' ')} → ${currentAudience?.replace(/_/g, ' ')}`);
     }
 
-    if (path.hasCertificate !== prev.hasCertificate) {
-      changes.push(path.hasCertificate ? 'Enabled automated certification' : 'Disabled automated certification');
+    // 2. Sequence changes
+    const currentCourses = path.pathCourses || [];
+    const prevCourses = prevPublished.pathCourses || [];
+
+    const currentIds = new Set(currentCourses.map(pc => pc.courseId));
+    const prevIds = new Set(prevCourses.map(pc => pc.courseId));
+
+    // Added
+    const added = currentCourses.filter(pc => !prevIds.has(pc.courseId));
+    added.forEach(pc => changes.push(`Added course: "${pc.course?.title || pc.courseId}"`)  );
+
+    // Removed
+    const removed = prevCourses.filter(pc => !currentIds.has(pc.courseId));
+    removed.forEach(pc => changes.push(`Removed course: "${pc.course?.title || pc.courseId}"`)  );
+
+    // Reordering — only for courses present in both
+    const sharedCurrent = currentCourses
+      .filter(pc => prevIds.has(pc.courseId))
+      .sort((a, b) => a.order - b.order)
+      .map(pc => pc.courseId);
+    const sharedPrev = prevCourses
+      .filter(pc => currentIds.has(pc.courseId))
+      .sort((a, b) => a.order - b.order)
+      .map(pc => pc.courseId);
+    if (JSON.stringify(sharedCurrent) !== JSON.stringify(sharedPrev)) {
+      changes.push('Restructured the course sequence and learning flow');
+    }
+
+    // 3. Certificate
+    if (path.hasCertificate !== prevPublished.hasCertificate) {
+      changes.push(path.hasCertificate ? 'Enabled path completion certificate' : 'Disabled path completion certificate');
     }
 
     return changes.length > 0
       ? changes.map(c => `• ${c}`).join('\n')
-      : '';
+      : '• Minor adjustments and path polishing.';
   };
 
   const handleInitiatePublish = () => {

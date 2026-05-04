@@ -492,73 +492,93 @@ export const CourseBuilder: React.FC = () => {
     isGeneratingDiff: false
   });
 
-  const generateAutoDiff = (current: Course, parent: Course) => {
+  const generateAutoDiff = (current: Course, currentForm: typeof identityForm, parent: Course) => {
     const changes: string[] = [];
 
-    // Title Changes
-    if (current.title !== parent.title) {
-      changes.push(`• Renamed course from "${parent.title}" to "${current.title}"`);
+    // Title Changes — compare form (unsaved) title vs parent
+    const currentTitle = currentForm.title || current.title;
+    if (currentTitle !== parent.title) {
+      changes.push(`Renamed course from "${parent.title}" to "${currentTitle}"`);
     }
 
     // 1. Curriculum Changes
     const currentModules = current.modules || [];
     const parentModules = parent.modules || [];
 
-    const currentTitles = currentModules.map(m => m.title);
-    const parentTitles = parentModules.map(m => m.title);
+    // Use IDs for reliable matching, fall back to title
+    const currentIds = new Set(currentModules.map(m => m.id));
+    const parentIds = new Set(parentModules.map(m => m.id));
 
-    // Added
-    const added = currentTitles.filter(t => !parentTitles.includes(t));
-    added.forEach(t => changes.push(`• Added module: "${t}"`));
+    // Added (new modules with IDs not in parent)
+    const added = currentModules.filter(m => !parentIds.has(m.id));
+    added.forEach(m => changes.push(`Added module: "${m.title}" (${m.type.replace(/_/g, ' ')})`)  );
 
-    // Removed (Crossed out)
-    const removed = parentTitles.filter(t => !currentTitles.includes(t));
-    removed.forEach(t => changes.push(`• Removed module: ~~"${t}"~~`));
+    // Removed
+    const removed = parentModules.filter(m => !currentIds.has(m.id));
+    removed.forEach(m => changes.push(`Removed module: "${m.title}"`)  );
 
-    // Edited / Sequence
+    // Check resequencing and content updates for modules present in both
     currentModules.forEach((m) => {
-      const parentM = parentModules.find(pm => pm.title === m.title);
+      const parentM = parentModules.find(pm => pm.id === m.id);
       if (parentM) {
+        // sequenceOrder is 1-based, display as-is
         if (parentM.sequenceOrder !== m.sequenceOrder) {
-          changes.push(`• Re-sequenced: "${m.title}" (Moved to Step ${m.sequenceOrder + 1})`);
+          changes.push(`Re-sequenced: "${m.title}" (Step ${parentM.sequenceOrder} → Step ${m.sequenceOrder})`);
         }
-        // Simplified content check
-        if (parentM.type !== m.type || parentM.contentUrlOrText !== m.contentUrlOrText) {
-          changes.push(`• Updated content: "${m.title}"`);
+        if (parentM.type !== m.type) {
+          changes.push(`Changed type of "${m.title}": ${parentM.type.replace(/_/g, ' ')} → ${m.type.replace(/_/g, ' ')}`);
+        } else if (parentM.contentUrlOrText !== m.contentUrlOrText && m.type === 'VIDEO') {
+          changes.push(`Updated video content: "${m.title}"`);
         }
       }
     });
 
-    // 2. Configuration Changes
-    if (current.passingGrade !== parent.passingGrade) {
-      changes.push(`• Updated Passing Grade: ${parent.passingGrade}% → ${current.passingGrade}%`);
+    // 2. Configuration Changes — compare form values vs parent DB values
+    const currentGrade = currentForm.passingGrade ?? current.passingGrade;
+    if (currentGrade !== parent.passingGrade) {
+      changes.push(`Updated Passing Grade: ${parent.passingGrade}% → ${currentGrade}%`);
     }
-    if (current.targetAudience !== parent.targetAudience) {
-      changes.push(`• Changed Target Audience to ${current.targetAudience.replace(/_/g, ' ')}`);
+    const currentAudience = currentForm.targetAudience || current.targetAudience;
+    if (currentAudience !== parent.targetAudience) {
+      changes.push(`Changed Target Audience: ${parent.targetAudience.replace(/_/g, ' ')} → ${currentAudience.replace(/_/g, ' ')}`);
+    }
+
+    // Description changes
+    const currentDescription = currentForm.description || current.description || '';
+    if (currentDescription !== (parent.description || '')) {
+      changes.push('Updated course description');
     }
 
     // 3. Certificate Changes
     if (current.hasCertificate !== parent.hasCertificate) {
-      changes.push(current.hasCertificate ? '• Enabled Digital Certificate' : '• Disabled Digital Certificate');
+      changes.push(current.hasCertificate ? 'Enabled Digital Certificate' : 'Disabled Digital Certificate');
     }
 
-    return changes.length > 0 ? changes.join('\n') : '• Minor internal adjustments and polishing.';
+    return changes.length > 0
+      ? changes.map(c => `• ${c}`).join('\n')
+      : '• Minor internal adjustments and polishing.';
   };
 
   const handleOpenApprovalDialog = async () => {
     if (!course) return;
 
-    let autoSummary = '';
+    // Always open dialog first so user sees the loading spinner
+    setApprovalDialog(prev => ({ ...prev, isOpen: true, isGeneratingDiff: true }));
 
-    // If it's a versioned course and doesn't have a summary yet, generate one
-    if (course.parentId && !identityForm.changeSummary) {
-      setApprovalDialog(prev => ({ ...prev, isOpen: true, isGeneratingDiff: true }));
+    let autoSummary = identityForm.changeSummary || '';
+
+    // For versioned courses: always regenerate a fresh diff from the parent
+    if (course.parentId) {
       try {
         const parentCourse = await coursesApi.getById(course.parentId);
-        autoSummary = generateAutoDiff(course, parentCourse);
+        autoSummary = generateAutoDiff(course, identityForm, parentCourse);
       } catch (err) {
         console.error("Failed to generate auto-diff", err);
+        autoSummary = autoSummary || '• Changes from previous version.';
       }
+    } else {
+      // v1 (no parent): use a sensible default
+      autoSummary = autoSummary || '• Initial course configuration and curriculum definition.';
     }
 
     setApprovalDialog(prev => ({
@@ -566,7 +586,7 @@ export const CourseBuilder: React.FC = () => {
       isOpen: true,
       isGeneratingDiff: false,
       versionTagDraft: identityForm.versionTag || '',
-      changeSummary: identityForm.changeSummary || autoSummary
+      changeSummary: autoSummary
     }));
   };
 

@@ -88,11 +88,13 @@ export const EnrollmentManager: React.FC = () => {
       setIsLoading(true);
       try {
         const [c, p, u, d] = await Promise.all([
-          coursesApi.getAll(),
+          coursesApi.getAll('active'), // Fetches latest versions (Draft or Published)
           learningPathsApi.getAll(),
           usersApi.getAll(),
           departmentsApi.getAll()
         ]);
+        
+        // Ensure we only show Published content for enrollment
         setCourses(c.filter(course => course.status === 'PUBLISHED'));
         setPaths(p.filter(path => path.status === 'PUBLISHED'));
         setUsers(u.filter(user => user.isActive));
@@ -129,6 +131,32 @@ export const EnrollmentManager: React.FC = () => {
   const deselectAllFiltered = () => {
     const allIds = filteredUsers.map(u => u.id);
     setSelectedUserIds(prev => prev.filter(id => !allIds.includes(id)));
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) {
+      setDueDate(undefined);
+      return;
+    }
+    
+    // Preserve existing time if any, otherwise default to end of day
+    const newDate = new Date(date);
+    if (dueDate) {
+      newDate.setHours(dueDate.getHours());
+      newDate.setMinutes(dueDate.getMinutes());
+    } else {
+      newDate.setHours(23);
+      newDate.setMinutes(59);
+    }
+    setDueDate(newDate);
+  };
+
+  const handleTimeChange = (type: 'hours' | 'minutes', value: string) => {
+    if (!dueDate) return;
+    const newDate = new Date(dueDate);
+    if (type === 'hours') newDate.setHours(parseInt(value));
+    else newDate.setMinutes(parseInt(value));
+    setDueDate(newDate);
   };
 
   const handleDeploy = async () => {
@@ -257,16 +285,60 @@ export const EnrollmentManager: React.FC = () => {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dueDate ? format(dueDate, "PPP") : <span>Pick a deadline...</span>}
+                      {dueDate ? format(dueDate, "PPP p") : <span>Pick a deadline...</span>}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 rounded-2xl shadow-2xl border-none" align="start">
+                  <PopoverContent className="w-auto p-0 rounded-2xl shadow-2xl border border-border" align="start">
                     <Calendar
                       mode="single"
                       selected={dueDate}
-                      onSelect={setDueDate}
+                      onSelect={handleDateSelect}
                       initialFocus
                     />
+                    {dueDate && (
+                      <div className="p-4 border-t bg-muted/20 flex items-center justify-between gap-4">
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] font-black uppercase tracking-wider opacity-50">Set Time (24h)</Label>
+                          <div className="flex items-center gap-2">
+                            <Select 
+                              value={dueDate.getHours().toString()} 
+                              onValueChange={(v) => handleTimeChange('hours', v)}
+                            >
+                              <SelectTrigger className="h-8 w-[70px] text-xs font-bold bg-background">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 24 }).map((_, i) => (
+                                  <SelectItem key={i} value={i.toString()}>{i.toString().padStart(2, '0')}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <span className="font-bold">:</span>
+                            <Select 
+                              value={dueDate.getMinutes().toString()} 
+                              onValueChange={(v) => handleTimeChange('minutes', v)}
+                            >
+                              <SelectTrigger className="h-8 w-[70px] text-xs font-bold bg-background">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 60 }).map((_, i) => (
+                                  <SelectItem key={i} value={i.toString()}>{i.toString().padStart(2, '0')}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 text-[10px] font-black uppercase"
+                          onClick={() => setDueDate(undefined)}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    )}
                   </PopoverContent>
                 </Popover>
               </div>
@@ -344,14 +416,21 @@ export const EnrollmentManager: React.FC = () => {
                     </Select>
                   </div>
 
-                  <div className="flex items-center justify-between py-2 border-y bg-muted/10 px-4 rounded-lg">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                      {filteredUsers.length} Users Matching Filters
-                    </span>
+                  <div className="flex flex-col sm:flex-row items-center justify-between py-3 border-y bg-muted/10 px-4 rounded-lg gap-2">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        {filteredUsers.length} Users Matching Filters
+                      </span>
+                      {filteredUsers.length > 50 && (
+                        <span className="text-[9px] font-bold text-amber-600 uppercase animate-pulse">
+                          ⚠️ Only first 50 shown below. "Select All" affects all {filteredUsers.length}.
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-4">
-                      <Button variant="link" size="sm" className="h-auto p-0 text-[10px] font-black uppercase tracking-tighter" onClick={selectAllFiltered}>Select All</Button>
+                      <Button variant="link" size="sm" className="h-auto p-0 text-[10px] font-black uppercase tracking-tighter" onClick={selectAllFiltered}>Select All Matching</Button>
                       <div className="h-3 w-px bg-border" />
-                      <Button variant="link" size="sm" className="h-auto p-0 text-[10px] font-black uppercase tracking-tighter text-destructive" onClick={deselectAllFiltered}>Deselect All</Button>
+                      <Button variant="link" size="sm" className="h-auto p-0 text-[10px] font-black uppercase tracking-tighter text-destructive" onClick={deselectAllFiltered}>Deselect All Matching</Button>
                     </div>
                   </div>
 
