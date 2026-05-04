@@ -815,18 +815,6 @@ export const CourseBuilder: React.FC = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[600px] gap-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" />
-        <p className="text-muted-foreground font-medium animate-pulse">Syncing with Digital Twin...</p>
-      </div>
-    );
-  }
-
-  if (!course) {
-    return <div className="text-center p-8">Course not found.</div>;
-  }
   const isDirty = course && JSON.stringify({
     title: course.title,
     description: course.description || '',
@@ -868,23 +856,18 @@ export const CourseBuilder: React.FC = () => {
     }
   };
 
-  const handleDiscardChanges = () => {
-    if (course) {
-      setIdentityForm({
-        title: course.title,
-        description: course.description || '',
-        passingGrade: course.passingGrade,
-        targetAudience: course.targetAudience,
-        targetDepartments: course.targetDepartments,
-        introContent: course.introContent || '',
-        closingContent: course.closingContent || '',
-        thumbnailUrl: course.thumbnailUrl || '',
-        versionTag: course.versionTag || '',
-        changeSummary: course.changeSummary || ''
-      });
-      toast.info('Changes discarded');
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[600px] gap-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" />
+        <p className="text-muted-foreground font-medium animate-pulse">Syncing with Digital Twin...</p>
+      </div>
+    );
+  }
+
+  if (!course) {
+    return <div className="text-center p-8">Course not found.</div>;
+  }
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto animate-in slide-in-from-bottom-4 duration-500 relative">
