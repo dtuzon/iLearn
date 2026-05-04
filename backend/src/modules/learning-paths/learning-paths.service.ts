@@ -58,9 +58,10 @@ export class LearningPathsService {
         targetAudience: data.targetAudience,
         targetDepartments: data.targetDepartments,
         status: data.status,
-        hasCertificate: data.hasCertificate
-
-      }
+        hasCertificate: data.hasCertificate,
+        versionTag: data.versionTag,
+        changeSummary: data.changeSummary
+      } as any
     });
   }
 
@@ -177,5 +178,98 @@ export class LearningPathsService {
     });
   }
 
+  static async getVersions(parentId: string) {
+    return prisma.learningPath.findMany({
+      where: {
+        OR: [
+          { id: parentId },
+          { parentId: parentId }
+        ]
+      } as any,
+      orderBy: {
+        version: 'desc'
+      } as any,
+      include: {
+        pathCourses: {
+          include: {
+            course: true
+          },
+          orderBy: {
+            order: 'asc'
+          }
+        },
+        _count: {
+          select: { pathCourses: true }
+        }
+      }
+    });
+  }
+
+  static async createVersion(id: string) {
+    return prisma.$transaction(async (tx) => {
+      const source = await tx.learningPath.findUnique({
+        where: { id },
+        include: {
+          pathCourses: true,
+          certificateTemplate: true
+        }
+      });
+
+      if (!source) throw new Error('Source path not found');
+
+      const pId = source.parentId || source.id;
+      const latestVersion = await tx.learningPath.aggregate({
+        where: {
+          OR: [{ id: pId }, { parentId: pId }]
+        },
+        _max: { version: true }
+      });
+
+      const nextVersion = ((latestVersion as any)?._max?.version || 1) + 1;
+
+      // Mark all other versions as not latest
+      await tx.learningPath.updateMany({
+        where: {
+          OR: [{ id: pId }, { parentId: pId }]
+        } as any,
+        data: { isLatest: false } as any
+      });
+
+      // Create the new version
+      const newVersion = await tx.learningPath.create({
+        data: {
+          title: source.title,
+          description: source.description,
+          thumbnailUrl: source.thumbnailUrl,
+          targetAudience: source.targetAudience,
+          targetDepartments: source.targetDepartments,
+          status: CourseStatus.DRAFT,
+          version: nextVersion,
+          parentId: pId,
+          isLatest: true,
+          hasCertificate: source.hasCertificate,
+          pathCourses: {
+            create: (source as any).pathCourses.map((pc: any) => ({
+              courseId: pc.courseId,
+              order: pc.order
+            }))
+          }
+        } as any
+      });
+
+      // Clone certificate template if exists
+      if (source.certificateTemplate) {
+        await tx.certificateTemplate.create({
+          data: {
+            learningPathId: newVersion.id,
+            backgroundImageUrl: source.certificateTemplate.backgroundImageUrl,
+            designConfig: source.certificateTemplate.designConfig as any
+          }
+        });
+      }
+
+      return newVersion;
+    });
+  }
 }
 

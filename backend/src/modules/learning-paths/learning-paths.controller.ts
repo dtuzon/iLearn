@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { LearningPathsService } from './learning-paths.service';
+import { StorageService } from '../../lib/services/storage.service';
 
 export class LearningPathsController {
   static async getAll(req: Request, res: Response) {
@@ -89,7 +90,6 @@ export class LearningPathsController {
       const { id } = req.params;
       const designConfig = req.body.designConfig ? JSON.parse(req.body.designConfig) : undefined;
       
-      const { StorageService } = await import('../../lib/services/storage.service');
       let backgroundImageUrl = undefined;
       
       if (req.file) {
@@ -123,11 +123,30 @@ export class LearningPathsController {
       const { id } = req.params;
       if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-      const { StorageService } = await import('../../lib/services/storage.service');
       const thumbnailUrl = await StorageService.uploadFile(req.file, 'lp-thumbnails');
       
       const path = await LearningPathsService.uploadThumbnail(id as string, thumbnailUrl);
       res.json(path);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  static async getVersions(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const versions = await LearningPathsService.getVersions(id as string);
+      res.json(versions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  static async createVersion(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const newVersion = await LearningPathsService.createVersion(id as string);
+      res.status(201).json(newVersion);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

@@ -86,6 +86,20 @@ router.post(
   LearningPathsController.uploadThumbnail
 );
 
+router.get(
+  '/:id/versions',
+  authenticate,
+  LearningPathsController.getVersions
+);
+
+router.post(
+  '/:id/versions',
+  authenticate,
+  authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+  auditLog('CREATE_LEARNING_PATH_VERSION'),
+  LearningPathsController.createVersion
+);
+
 export default router;
 
 

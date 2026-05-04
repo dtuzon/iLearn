@@ -29,7 +29,8 @@ import {
   Layers,
   Settings,
   EyeOff,
-  Image as ImageIcon
+  Image as ImageIcon,
+  History as HistoryIcon
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -64,6 +65,7 @@ interface SortableCourseItemProps {
   onMoveDown: (index: number) => void;
   isFirst: boolean;
   isLast: boolean;
+  isReadonly: boolean;
 }
 
 const SortableCourseItem: React.FC<SortableCourseItemProps> = ({ 
@@ -73,7 +75,8 @@ const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
   onMoveUp, 
   onMoveDown,
   isFirst,
-  isLast
+  isLast,
+  isReadonly
 }) => {
   const {
     attributes,
@@ -94,9 +97,11 @@ const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
       style={style} 
       className="group relative flex items-center gap-4 p-4 bg-background border rounded-2xl shadow-sm hover:shadow-md transition-all duration-200"
     >
-      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-primary">
-        <GripVertical className="h-5 w-5" />
-      </div>
+      {!isReadonly && (
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-primary">
+          <GripVertical className="h-5 w-5" />
+        </div>
+      )}
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
@@ -106,33 +111,87 @@ const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
         <p className="text-xs text-muted-foreground truncate">{item.course.description || 'No description'}</p>
       </div>
 
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8" 
-          onClick={() => onMoveUp(index)}
-          disabled={isFirst}
-        >
-          <ChevronUp className="h-4 w-4" />
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8" 
-          onClick={() => onMoveDown(index)}
-          disabled={isLast}
-        >
-          <ChevronDown className="h-4 w-4" />
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-          onClick={() => onRemove(item.id)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+      {!isReadonly && (
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8" 
+            onClick={() => onMoveUp(index)}
+            disabled={isFirst}
+          >
+            <ChevronUp className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8" 
+            onClick={() => onMoveDown(index)}
+            disabled={isLast}
+          >
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={() => onRemove(item.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+interface VersionTimelineItemProps {
+  v: LearningPath;
+  isCurrent: boolean;
+}
+
+const VersionTimelineItem: React.FC<VersionTimelineItemProps> = ({ v, isCurrent }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  return (
+    <div className="relative group animate-in fade-in duration-500">
+      {/* The node */}
+      <div className={`absolute -left-[30px] top-1 h-[20px] w-[20px] rounded-full border-4 bg-white z-10 transition-all ${isCurrent ? 'border-primary shadow-[0_0_15px_rgba(234,179,8,0.3)]' : 'border-slate-300 group-hover:border-slate-400'}`}></div>
+      
+      <div 
+        className={`space-y-2 p-3 rounded-2xl transition-all cursor-pointer ${isCurrent ? 'bg-primary/5 border border-primary/10' : 'hover:bg-white hover:shadow-sm hover:border-slate-100 border border-transparent'}`}
+        onClick={() => !isCurrent && setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className={`text-[10px] font-black font-mono px-1.5 py-0.5 rounded ${isCurrent ? 'bg-primary text-white' : 'bg-slate-200 text-slate-600'}`}>
+              v{v.version}
+            </span>
+            {isCurrent && <span className="text-[9px] font-black text-primary uppercase animate-pulse">Active</span>}
+          </div>
+          <span className="text-[9px] text-slate-400 font-bold tabular-nums">
+            {v.updatedAt ? new Date(v.updatedAt).toLocaleDateString() : '---'}
+          </span>
+        </div>
+        
+        <div className="flex items-center justify-between gap-2">
+          <p className={`text-sm font-bold tracking-tight truncate ${isCurrent ? 'text-slate-900' : 'text-slate-600'}`}>
+            {v.versionTag || 'Unlabeled Release'}
+          </p>
+          {!isCurrent && v.changeSummary && (
+            <ChevronDown className={`h-3 w-3 text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+          )}
+        </div>
+
+        {/* Expanded Release Notes */}
+        {(isCurrent || (isExpanded && v.changeSummary)) && (
+          <div className={`animate-in slide-in-from-top-1 duration-300 overflow-hidden`}>
+            <div className={`p-3 rounded-xl font-mono text-[11px] leading-relaxed italic ${isCurrent ? 'bg-white/60 text-slate-600' : 'bg-slate-50 text-slate-500 border border-slate-100'}`}>
+              &ldquo;{v.changeSummary || 'No release notes provided.'}&rdquo;
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -147,6 +206,8 @@ export const LearningPathBuilder: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [courseSearch, setCourseSearch] = useState('');
+  const [lineagePaths, setLineagePaths] = useState<LearningPath[]>([]);
+  const isReadonly = path?.status === 'PUBLISHED' || path?.status === 'ARCHIVED';
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -159,13 +220,15 @@ export const LearningPathBuilder: React.FC = () => {
     if (!id) return;
     setIsLoading(true);
     try {
-      const [pathData, coursesData, deptsData] = await Promise.all([
+      const [pathData, coursesData, deptsData, versionsData] = await Promise.all([
         learningPathsApi.getById(id),
         coursesApi.getAll(),
-        departmentsApi.getAll()
+        departmentsApi.getAll(),
+        learningPathsApi.getVersions(id)
       ]);
       setPath(pathData);
       setDepartments(deptsData);
+      setLineagePaths(versionsData);
       setIdentityForm({
         title: pathData.title,
         description: pathData.description || '',
@@ -222,13 +285,32 @@ export const LearningPathBuilder: React.FC = () => {
   };
 
   const handleUpdateIdentity = async () => {
-    if (!id) return;
+    if (!id || isReadonly) return;
     try {
-      await learningPathsApi.update(id, identityForm);
+      await learningPathsApi.update(id, {
+        ...identityForm,
+        versionTag: path?.versionTag,
+        changeSummary: path?.changeSummary
+      });
       toast.success('Path settings updated');
       fetchData();
     } catch (error) {
       toast.error('Failed to update settings');
+    }
+  };
+
+  const [isCreatingVersion, setIsCreatingVersion] = useState(false);
+  const handleCreateVersion = async () => {
+    if (!id) return;
+    setIsCreatingVersion(true);
+    try {
+      const newVersion = await learningPathsApi.createVersion(id);
+      toast.success(`New draft version (v${newVersion.version}) created`);
+      navigate(`/creator/learning-paths/${newVersion.id}`);
+    } catch (error) {
+      toast.error('Failed to create new version');
+    } finally {
+      setIsCreatingVersion(false);
     }
   };
 
@@ -237,6 +319,7 @@ export const LearningPathBuilder: React.FC = () => {
   }, [id]);
 
   const handleDragEnd = (event: DragEndEvent) => {
+    if (isReadonly) return;
     const { active, over } = event;
     if (path && over && active.id !== over.id) {
       const oldIndex = path.pathCourses.findIndex((i) => i.id === active.id);
@@ -296,7 +379,7 @@ export const LearningPathBuilder: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!path) return;
+    if (!path || isReadonly) return;
     setIsSaving(true);
     try {
       const syncData = path.pathCourses.map(pc => ({
@@ -372,10 +455,24 @@ export const LearningPathBuilder: React.FC = () => {
               Unpublish
             </Button>
           )}
-          <Button onClick={handleSave} disabled={isSaving} className="rounded-xl shadow-lg shadow-primary/20 font-bold">
-            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Save Sequence
-          </Button>
+
+          {path.status === 'PUBLISHED' && (
+            <Button 
+              onClick={handleCreateVersion}
+              disabled={isCreatingVersion}
+              variant="outline"
+              className="rounded-xl border-primary/20 text-primary hover:bg-primary/5 font-bold"
+            >
+              {isCreatingVersion ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              New Version
+            </Button>
+          )}
+          {!isReadonly && (
+            <Button onClick={handleSave} disabled={isSaving} className="rounded-xl shadow-lg shadow-primary/20 font-bold">
+              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Save Sequence
+            </Button>
+          )}
         </div>
       </div>
 
@@ -401,7 +498,7 @@ export const LearningPathBuilder: React.FC = () => {
         <TabsContent value="curriculum" className="space-y-6 animate-in slide-in-from-left-4 duration-500">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 h-[calc(100vh-360px)] min-h-[500px]">
             {/* Left Side: The Path Sequence */}
-            <div className="lg:col-span-3 flex flex-col gap-6">
+            <div className={`${isReadonly ? 'lg:col-span-5' : 'lg:col-span-3'} flex flex-col gap-6`}>
               <Card className="flex-1 flex flex-col border-none shadow-xl bg-background/50 backdrop-blur-sm overflow-hidden">
                 <CardHeader className="border-b bg-muted/10">
                   <div className="flex items-center justify-between">
@@ -410,7 +507,9 @@ export const LearningPathBuilder: React.FC = () => {
                         <Route className="h-5 w-5 text-primary" />
                         Path Sequence
                       </CardTitle>
-                      <CardDescription>Drag and drop or use controls to define the learner's journey.</CardDescription>
+                      <CardDescription>
+                        {isReadonly ? "This published path's sequence is locked to preserve the learner journey." : "Drag and drop or use controls to define the learner's journey."}
+                      </CardDescription>
                     </div>
                     <Badge variant="secondary" className="font-bold">{path.pathCourses.length} Courses</Badge>
                   </div>
@@ -446,6 +545,7 @@ export const LearningPathBuilder: React.FC = () => {
                                   onMoveDown={(idx) => moveStep(idx, 'down')}
                                   isFirst={index === 0}
                                   isLast={index === path.pathCourses.length - 1}
+                                  isReadonly={isReadonly}
                                 />
                               </div>
                             ))}
@@ -458,60 +558,62 @@ export const LearningPathBuilder: React.FC = () => {
               </Card>
             </div>
 
-            {/* Right Side: Course Library */}
-            <div className="lg:col-span-2 flex flex-col gap-6">
-              <Card className="flex-1 flex flex-col border-none shadow-xl bg-background/50 backdrop-blur-sm overflow-hidden">
-                <CardHeader className="border-b bg-muted/10">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <BookOpen className="h-5 w-5 text-primary" />
-                    Course Library
-                  </CardTitle>
-                  <CardDescription>Only published courses are available for paths.</CardDescription>
-                  <div className="relative mt-4">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Filter published courses..." 
-                      className="pl-9 bg-background/50 border-primary/10 h-10"
-                      value={courseSearch}
-                      onChange={(e) => setCourseSearch(e.target.value)}
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-1 overflow-y-auto p-4">
-                  <div className="space-y-3">
-                    {filteredCourses.length === 0 ? (
-                      <div className="text-center py-12 text-muted-foreground opacity-50 italic">
-                        {courseSearch ? 'No matching courses found.' : 'No available courses to add.'}
-                      </div>
-                    ) : (
-                      filteredCourses.map(course => (
-                        <div 
-                          key={course.id} 
-                          className="p-4 rounded-2xl border bg-background hover:border-primary/50 transition-all group flex items-center justify-between gap-4"
-                        >
-                          <div className="min-w-0">
-                            <h4 className="font-bold text-sm truncate">{course.title}</h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-[10px] px-1 h-4">{course.passingGrade}% Pass</Badge>
-                              <Badge variant="outline" className="text-[10px] px-1 h-4">{(course as any)._count?.modules || 0} Modules</Badge>
-                            </div>
-                          </div>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => addToPath(course)}
-                          >
-                            <Plus className="h-4 w-4 mr-1" />
-                            Add
-                          </Button>
+            {/* Right Side: Course Library - Hidden if Readonly */}
+            {!isReadonly && (
+              <div className="lg:col-span-2 flex flex-col gap-6">
+                <Card className="flex-1 flex flex-col border-none shadow-xl bg-background/50 backdrop-blur-sm overflow-hidden">
+                  <CardHeader className="border-b bg-muted/10">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <BookOpen className="h-5 w-5 text-primary" />
+                      Course Library
+                    </CardTitle>
+                    <CardDescription>Only published courses are available for paths.</CardDescription>
+                    <div className="relative mt-4">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="Filter published courses..." 
+                        className="pl-9 bg-background/50 border-primary/10 h-10"
+                        value={courseSearch}
+                        onChange={(e) => setCourseSearch(e.target.value)}
+                      />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex-1 overflow-y-auto p-4">
+                    <div className="space-y-3">
+                      {filteredCourses.length === 0 ? (
+                        <div className="text-center py-12 text-muted-foreground opacity-50 italic">
+                          {courseSearch ? 'No matching courses found.' : 'No available courses to add.'}
                         </div>
-                      ))
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                      ) : (
+                        filteredCourses.map(course => (
+                          <div 
+                            key={course.id} 
+                            className="p-4 rounded-2xl border bg-background hover:border-primary/50 transition-all group flex items-center justify-between gap-4"
+                          >
+                            <div className="min-w-0">
+                              <h4 className="font-bold text-sm truncate">{course.title}</h4>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-[10px] px-1 h-4">{course.passingGrade}% Pass</Badge>
+                                <Badge variant="outline" className="text-[10px] px-1 h-4">{(course as any)._count?.modules || 0} Modules</Badge>
+                              </div>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => addToPath(course)}
+                            >
+                              <Plus className="h-4 w-4 mr-1" />
+                              Add
+                            </Button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         </TabsContent>
 
@@ -525,6 +627,7 @@ export const LearningPathBuilder: React.FC = () => {
               }}
               isEnabled={path.hasCertificate}
               onToggleEnabled={async (checked) => {
+                if (isReadonly) return;
                 try {
                   await learningPathsApi.update(path.id, { hasCertificate: checked });
                   setPath({ ...path, hasCertificate: checked });
@@ -597,59 +700,155 @@ export const LearningPathBuilder: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="p-title">Path Title</Label>
+                    <Input 
+                      id="p-title" 
+                      value={identityForm.title}
+                      onChange={(e) => setIdentityForm({...identityForm, title: e.target.value})}
+                      placeholder="e.g. Executive Leadership Academy"
+                      className="h-11 rounded-xl"
+                      disabled={isReadonly}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Target Audience</Label>
+                    <Select 
+                      value={identityForm.targetAudience} 
+                      onValueChange={(val) => setIdentityForm({...identityForm, targetAudience: val})}
+                      disabled={isReadonly}
+                    >
+                      <SelectTrigger className="h-11 rounded-xl">
+                        <SelectValue placeholder="Select audience" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="GENERAL">General Audience</SelectItem>
+                        <SelectItem value="PHASE_1_NEW_HIRE">Phase 1: Newly Hired</SelectItem>
+                        <SelectItem value="PHASE_2_REGULARIZED">Phase 2: Newly Regularized</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="p-title">Path Title</Label>
-                  <Input 
-                    id="p-title" 
-                    value={identityForm.title}
-                    onChange={(e) => setIdentityForm({...identityForm, title: e.target.value})}
-                    placeholder="e.g. Executive Leadership Academy"
-                    className="h-11 rounded-xl"
+                  <Label>Target Departments</Label>
+                  <MultiSelect 
+                    placeholder="Limit visibility to specific departments..."
+                    options={departments.map(d => ({ label: d.name, value: d.name }))}
+                    selected={identityForm.targetDepartments}
+                    onChange={(selected) => setIdentityForm({ ...identityForm, targetDepartments: selected })}
+                    disabled={isReadonly}
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label>Target Audience</Label>
-                  <Select 
-                    value={identityForm.targetAudience} 
-                    onValueChange={(val) => setIdentityForm({...identityForm, targetAudience: val})}
-                  >
-                    <SelectTrigger className="h-11 rounded-xl">
-                      <SelectValue placeholder="Select audience" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="GENERAL">General Audience</SelectItem>
-                      <SelectItem value="PHASE_1_NEW_HIRE">Phase 1: Newly Hired</SelectItem>
-                      <SelectItem value="PHASE_2_REGULARIZED">Phase 2: Newly Regularized</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="p-desc">Path Description / Objectives</Label>
+                  <Textarea 
+                    id="p-desc" 
+                    value={identityForm.description}
+                    onChange={(e) => setIdentityForm({...identityForm, description: e.target.value})}
+                    className="min-h-[120px] rounded-xl"
+                    placeholder="Summarize the core impact of this learning journey..."
+                    disabled={isReadonly}
+                  />
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label>Target Departments</Label>
-                <MultiSelect 
-                  placeholder="Limit visibility to specific departments..."
-                  options={departments.map(d => ({ label: d.name, value: d.name }))}
-                  selected={identityForm.targetDepartments}
-                  onChange={(selected) => setIdentityForm({ ...identityForm, targetDepartments: selected })}
-                />
-              </div>
+                {!isReadonly && (
+                  <Button onClick={handleUpdateIdentity} className="h-12 px-8 font-black uppercase tracking-widest shadow-lg shadow-primary/20 rounded-xl">
+                    Update Path Identity
+                  </Button>
+                )}
 
-              <div className="space-y-2">
-                <Label htmlFor="p-desc">Path Description / Objectives</Label>
-                <Textarea 
-                  id="p-desc" 
-                  value={identityForm.description}
-                  onChange={(e) => setIdentityForm({...identityForm, description: e.target.value})}
-                  className="min-h-[120px] rounded-xl"
-                  placeholder="Summarize the core impact of this learning journey..."
-                />
-              </div>
+                {/* Version Governance Section */}
+                <div className="pt-12 mt-12 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-2xl bg-amber-50 flex items-center justify-center">
+                        <HistoryIcon className="h-6 w-6 text-amber-600" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-slate-900">Version Governance</h2>
+                        <p className="text-sm text-slate-500">Track and manage the audit lineage for this learning journey.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      {lineagePaths.length} Snapshots Captured
+                    </div>
+                  </div>
 
-              <Button onClick={handleUpdateIdentity} className="h-12 px-8 font-black uppercase tracking-widest shadow-lg shadow-primary/20 rounded-xl">
-                Update Path Identity
-              </Button>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Active Release Config */}
+                    <div className="space-y-6">
+                      <div className="p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm space-y-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none px-2 py-0.5 text-[10px] font-black uppercase">Active Release Metadata</Badge>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Release Tag</Label>
+                          <Input 
+                            placeholder="e.g. 2025 Q1 Compliance Update" 
+                            value={path.versionTag || ''}
+                            onChange={(e) => setPath({ ...path, versionTag: e.target.value })}
+                            className="h-11 rounded-xl border-slate-200 focus:border-amber-400 focus:ring-amber-500/20"
+                            disabled={isReadonly}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Change Summary / Release Notes</Label>
+                          <Textarea 
+                            placeholder="What changed in this version? (Visible in history logs)" 
+                            value={path.changeSummary || ''}
+                            onChange={(e) => setPath({ ...path, changeSummary: e.target.value })}
+                            className="min-h-[140px] rounded-2xl border-slate-200 focus:border-amber-400 focus:ring-amber-500/20 italic"
+                            disabled={isReadonly}
+                          />
+                        </div>
+
+                        {!isReadonly && (
+                          <Button 
+                            onClick={handleUpdateIdentity}
+                            className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl"
+                          >
+                            <Save className="mr-2 h-4 w-4" /> Save Governance Metadata
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Lineage Timeline */}
+                    <div className="flex flex-col">
+                      <div className="flex-1 rounded-[2rem] bg-slate-50/50 border border-slate-100 p-6 overflow-hidden flex flex-col max-h-[520px]">
+                        <div className="flex items-center justify-between mb-6 shrink-0">
+                          <h3 className="font-black text-sm uppercase tracking-widest text-slate-400">Audit Stream</h3>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar">
+                          <div className="relative">
+                            {/* Vertical Track */}
+                            <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-slate-200"></div>
+
+                            <div className="relative pl-10 space-y-6">
+                              {lineagePaths.map((v) => (
+                                <VersionTimelineItem 
+                                  key={v.id} 
+                                  v={v} 
+                                  isCurrent={v.id === path.id} 
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-6 pt-4 border-t border-slate-200/50 shrink-0">
+                          <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-tighter italic">End of Audit Stream</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
             </div>
           </Card>
         </TabsContent>

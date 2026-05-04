@@ -16,6 +16,11 @@ export type LearningPath = {
   targetAudience: string | null;
   targetDepartments: string[];
   status: 'DRAFT' | 'PENDING_APPROVAL' | 'PUBLISHED' | 'ARCHIVED' | 'RETIRED';
+  version: number;
+  versionTag: string | null;
+  changeSummary: string | null;
+  parentId: string | null;
+  isLatest: boolean;
   hasCertificate: boolean;
   createdAt: string;
   updatedAt: string;
@@ -83,6 +88,16 @@ export const learningPathsApi = {
     const response = await apiClient.post(`/learning-paths/${id}/thumbnail`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
+    return response.data;
+  },
+
+  getVersions: async (id: string): Promise<LearningPath[]> => {
+    const response = await apiClient.get(`/learning-paths/${id}/versions`);
+    return response.data;
+  },
+
+  createVersion: async (id: string): Promise<LearningPath> => {
+    const response = await apiClient.post(`/learning-paths/${id}/versions`);
     return response.data;
   }
 };

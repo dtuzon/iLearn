@@ -572,9 +572,18 @@ model LearningPath {
   targetAudience    String?  // e.g., "Phase 1: Newly Hired"
   targetDepartments String[] // Array of department names
   status            CourseStatus @default(DRAFT)
+  version           Int          @default(1)
+  versionTag        String?      // Release label e.g. "2025 Core Curriculum"
+  changeSummary     String?      @db.Text
+  parentId          String?
+  isLatest          Boolean      @default(true)
+  
   hasCertificate    Boolean  @default(false)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  parent            LearningPath? @relation("PathVersions", fields: [parentId], references: [id])
+  versions          LearningPath[] @relation("PathVersions")
 
   pathCourses       LearningPathCourse[]
   enrollments       LearningPathEnrollment[]
