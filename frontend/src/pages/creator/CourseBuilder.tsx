@@ -845,27 +845,6 @@ export const CourseBuilder: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {isReadonly && (
-        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="flex items-center gap-4">
-            <div className="bg-primary/10 p-3 rounded-xl">
-              <Eye className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h3 className="font-bold text-primary">Read-Only Blueprint View</h3>
-              <p className="text-sm text-muted-foreground">This is a live or archived version. To make changes, you must create a new draft version.</p>
-            </div>
-          </div>
-          <Button 
-            onClick={handleCreateDraftVersion} 
-            disabled={isVersioning}
-            className="bg-primary hover:bg-primary/90 text-white font-bold px-6 shadow-lg hover:shadow-xl transition-all"
-          >
-            {isVersioning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CopyPlus className="mr-2 h-4 w-4" />}
-            Create New Draft Version
-          </Button>
-        </div>
-      )}
 
 
       <Tabs defaultValue="curriculum" className="w-full">

@@ -315,8 +315,8 @@ export class CoursesService {
     if (!current) throw new Error('Course not found');
 
     const pId = current.parentId || current.id;
-    // Strip any trailing (Draft) / (draft) suffix from the title before going live
-    const cleanTitle = current.title.replace(/\s*\(Draft\)\s*$/i, '').trim();
+    // Strip any internal workflow suffix: (Draft), (Restored v2), (Draft v3), etc.
+    const cleanTitle = current.title.replace(/\s*\([^)]*\)\s*$/i, '').trim();
 
     return prisma.$transaction(async (tx) => {
       // 1. Archive previous active version (Published or Retired)
@@ -415,11 +415,13 @@ export class CoursesService {
     });
 
     const newVersionNum = (latestVersion?.version || 0) + 1;
+    // Strip any existing internal suffix from the archived title for a clean draft name
+    const baseTitle = versionToRestore.title.replace(/\s*\([^)]*\)\s*$/i, '').trim();
 
     return prisma.$transaction(async (tx) => {
       return tx.course.create({
         data: {
-          title: `${versionToRestore.title} (Restored v${versionToRestore.version})`,
+          title: baseTitle,
           description: versionToRestore.description,
           thumbnailUrl: versionToRestore.thumbnailUrl,
           passingGrade: versionToRestore.passingGrade,
