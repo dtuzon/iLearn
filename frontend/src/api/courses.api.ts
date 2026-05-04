@@ -25,6 +25,7 @@ export interface Course {
   targetAudience: string;
   targetDepartments: string[];
   requires180DayEval: boolean;
+  hasCertificate: boolean;
   lecturerId: string;
   createdAt: string;
   updatedAt: string;

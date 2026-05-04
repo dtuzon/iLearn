@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Loader2, Save, Upload, Image as ImageIcon, Type, Calendar, User, Percent } from 'lucide-react';
+import { Loader2, Save, Upload, Image as ImageIcon, Type, Calendar, User, Percent, Award } from 'lucide-react';
 
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
@@ -25,6 +25,8 @@ interface CertificateBuilderProps {
       quizScore: ElementConfig;
     };
   };
+  isEnabled?: boolean;
+  onToggleEnabled?: (enabled: boolean) => void;
 }
 
 interface ElementConfig {
@@ -36,7 +38,13 @@ interface ElementConfig {
   color: string;
 }
 
-export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({ courseId, learningPathId, initialData }) => {
+export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({ 
+  courseId, 
+  learningPathId, 
+  initialData,
+  isEnabled,
+  onToggleEnabled
+}) => {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(initialData?.backgroundUrl || null);
@@ -89,7 +97,43 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({ courseId
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in duration-500">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between p-6 border-2 border-primary/10 rounded-2xl bg-primary/5 shadow-sm">
+        <div className="space-y-1">
+          <h3 className="text-lg font-bold text-primary flex items-center gap-2">
+            <Award className="h-5 w-5" />
+            Issue Digital Certificate
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Automatically generate and issue a verifiable certificate upon successful completion.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-black uppercase tracking-widest text-primary/40">{isEnabled ? 'ACTIVE' : 'INACTIVE'}</span>
+          <Switch 
+            checked={isEnabled}
+            onCheckedChange={onToggleEnabled}
+            className="data-[state=checked]:bg-primary"
+          />
+        </div>
+      </div>
+
+      {!isEnabled ? (
+        <Card className="border-none shadow-xl bg-muted/20 py-20">
+          <CardContent className="flex flex-col items-center justify-center text-center space-y-4 opacity-50 grayscale">
+            <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
+              <Award className="h-10 w-10" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-bold italic text-muted-foreground">Certificate Issuance Disabled</h3>
+              <p className="max-w-md text-sm">
+                Enable the toggle above to configure and design the digital credential for this content.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in duration-500">
       <div className="space-y-6">
         <Card className="border-none shadow-lg">
           <CardHeader>
@@ -328,6 +372,8 @@ export const CertificateBuilder: React.FC<CertificateBuilderProps> = ({ courseId
           </CardContent>
         </Card>
       </div>
+      </div>
+      )}
     </div>
   );
 };

@@ -33,8 +33,7 @@ import {
   Eye,
   EyeOff,
   CopyPlus,
-  Image as ImageIcon,
-  Calendar as CalendarIcon
+  Image as ImageIcon
 } from 'lucide-react';
 
 
@@ -929,6 +928,8 @@ export const CourseBuilder: React.FC = () => {
               backgroundUrl: (course as any).certificateBackgroundUrl,
               designConfig: (course as any).certificateDesignConfig
             }}
+            isEnabled={course.hasCertificate}
+            onToggleEnabled={handleToggleCertificate}
           />
         </TabsContent>
 
@@ -1059,19 +1060,6 @@ export const CourseBuilder: React.FC = () => {
                 <CardDescription>Adjust high-level settings for this course's lifecycle.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center justify-between p-4 border rounded-xl bg-muted/20">
-                  <div className="space-y-1">
-                    <Label className="text-base font-bold text-primary">Enable Certificate</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Learners will receive a verifiable certificate upon successful completion of all modules.
-                    </p>
-                  </div>
-                  <Switch 
-                    disabled={isReadonly}
-                    checked={course.hasCertificate} 
-                    onCheckedChange={handleToggleCertificate}
-                  />
-                </div>
 
                 <div className="flex items-center justify-between p-4 border rounded-xl bg-muted/20">
                   <div className="space-y-1">

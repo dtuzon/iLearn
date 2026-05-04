@@ -9,7 +9,6 @@ import { Input } from '../../components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Switch } from '../../components/ui/switch';
 import { Label } from '../../components/ui/label';
 import { CertificateBuilder } from '../../components/creator/CertificateBuilder';
 
@@ -518,50 +517,23 @@ export const LearningPathBuilder: React.FC = () => {
 
         <TabsContent value="certificate" className="animate-in slide-in-from-right-4 duration-500">
           <Card className="border-none shadow-xl bg-background/50 backdrop-blur-sm p-8">
-            <div className="flex items-center justify-between mb-8 border-b pb-6">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <Award className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold">Learning Path Certificate</h2>
-                  <p className="text-sm text-muted-foreground">Issue a unified certificate once all courses in this path are completed.</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 px-4 py-2 bg-muted/20 rounded-2xl border">
-                <Label htmlFor="path-cert-toggle" className="font-bold text-sm">Enable Certificate</Label>
-                <Switch 
-                  id="path-cert-toggle"
-                  checked={path.hasCertificate}
-                  onCheckedChange={async (checked) => {
-                    try {
-                      await learningPathsApi.update(path.id, { hasCertificate: checked });
-                      setPath({ ...path, hasCertificate: checked });
-                      toast.success(checked ? 'Certificate enabled' : 'Certificate disabled');
-                    } catch (error) {
-                      toast.error('Failed to update certificate status');
-                    }
-                  }}
-                />
-              </div>
-            </div>
-
-            {path.hasCertificate && (
-              <CertificateBuilder 
-                learningPathId={path.id}
-                initialData={{
-                  backgroundUrl: path.certificateTemplate?.backgroundImageUrl,
-                  designConfig: path.certificateTemplate?.designConfig
-                }}
-              />
-            )}
-            {!path.hasCertificate && (
-              <div className="py-20 flex flex-col items-center justify-center text-center opacity-30 grayscale">
-                <Award className="h-20 w-20 mb-4" />
-                <h3 className="text-2xl font-bold italic">Certificate Disabled</h3>
-                <p className="max-w-md mt-2">Learners will not receive a unified certificate for this path. Enable the toggle above to start designing the macro-credential.</p>
-              </div>
-            )}
+            <CertificateBuilder 
+              learningPathId={path.id}
+              initialData={{
+                backgroundUrl: path.certificateTemplate?.backgroundImageUrl,
+                designConfig: path.certificateTemplate?.designConfig
+              }}
+              isEnabled={path.hasCertificate}
+              onToggleEnabled={async (checked) => {
+                try {
+                  await learningPathsApi.update(path.id, { hasCertificate: checked });
+                  setPath({ ...path, hasCertificate: checked });
+                  toast.success(checked ? 'Certificate enabled' : 'Certificate disabled');
+                } catch (error) {
+                  toast.error('Failed to update certificate status');
+                }
+              }}
+            />
           </Card>
         </TabsContent>
 
