@@ -1243,6 +1243,19 @@ export const CourseBuilder: React.FC = () => {
         </TabsList>
 
         <TabsContent value="curriculum" className="space-y-8">
+          {!isReadonly && (
+            <div className="flex items-start gap-4 p-4 rounded-2xl bg-primary/5 border border-primary/10">
+              <div className="p-2 rounded-xl bg-primary/10 shrink-0 mt-0.5">
+                <GripVertical className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-bold text-primary">Sequence Blueprint</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Drag and drop the sequence items using the handle icon to reorder your curriculum loop.
+                </p>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div className="lg:col-span-3 space-y-6">
               <div className="relative pl-8 space-y-8 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-primary before:via-primary/50 before:to-transparent">

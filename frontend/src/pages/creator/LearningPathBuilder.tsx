@@ -125,7 +125,7 @@ const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
             <div className="flex items-center gap-4 shrink-0">
               <div className="flex flex-col items-end">
                 <Badge variant="secondary" className="text-[10px] font-bold tracking-tighter uppercase">
-                  {(item.course as any)._count?.modules || item.course.modules?.length || 0} Components
+                  {(item.course as any)._count?.modules || item.course.modules?.length || 0} Modules
                 </Badge>
                 <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">
                   {item.course.passingGrade}% Pass Req.
@@ -570,7 +570,7 @@ export const LearningPathBuilder: React.FC = () => {
       <Tabs defaultValue="curriculum" className="w-full">
         <TabsList className="bg-muted/50 p-1 h-12 mb-6">
           <TabsTrigger value="curriculum" className="h-10 px-8 font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            Courses Loop
+            Learning Path Loop
           </TabsTrigger>
           <TabsTrigger value="certificate" className="h-10 px-8 font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Award className="mr-2 h-4 w-4" /> Certificate Builder
@@ -581,6 +581,19 @@ export const LearningPathBuilder: React.FC = () => {
         </TabsList>
 
         <TabsContent value="curriculum" className="space-y-8 animate-in slide-in-from-left-4 duration-500">
+          {!isReadonly && (
+            <div className="flex items-start gap-4 p-4 rounded-2xl bg-primary/5 border border-primary/10">
+              <div className="p-2 rounded-xl bg-primary/10 shrink-0 mt-0.5">
+                <GripVertical className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-bold text-primary">Sequence Blueprint</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Drag and drop the sequence items using the handle icon to reorder your learning path loop.
+                </p>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Left Side: The Path Sequence */}
             <div className="lg:col-span-3 space-y-6">
@@ -651,7 +664,7 @@ export const LearningPathBuilder: React.FC = () => {
                               <h4 className="text-sm font-bold text-slate-800 group-hover:text-primary transition-colors leading-tight">{course.title}</h4>
                               <div className="flex items-center gap-2">
                                 <Badge variant="secondary" className="text-[10px] font-bold tracking-tighter uppercase">{course.passingGrade}% Pass Req.</Badge>
-                                <span className="text-[10px] text-muted-foreground">{(course as any)._count?.modules || course.modules?.length || 0} Components</span>
+                                <span className="text-[10px] text-muted-foreground">{(course as any)._count?.modules || course.modules?.length || 0} Modules</span>
                               </div>
                             </div>
                           </div>
