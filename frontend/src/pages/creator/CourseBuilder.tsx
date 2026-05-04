@@ -201,29 +201,31 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
 
                   {module.type === 'VIDEO' && (
                     <Button
-                      variant="outline"
+                      variant={module.contentUrlOrText ? "default" : "outline"}
                       size="sm"
-                      className="font-bold border-secondary/20 hover:border-secondary/50 hover:bg-secondary/5"
+                      className={`font-bold ${!module.contentUrlOrText ? 'border-secondary/20 hover:border-secondary/50 hover:bg-secondary/5' : ''}`}
                       onClick={() => setVideoModalState({
                         isOpen: true,
                         moduleId: module.id
                       })}
                     >
-                      <VideoIcon className="mr-2 h-3.5 w-3.5" /> Manage Video
+                      {module.contentUrlOrText ? <CheckCircle2 className="mr-2 h-3.5 w-3.5" /> : <VideoIcon className="mr-2 h-3.5 w-3.5" />}
+                      {module.contentUrlOrText ? 'Video Attached' : 'Upload Video'}
                     </Button>
                   )}
 
                   {module.type === 'WORKSHOP' && (
                     <Button
-                      variant="outline"
+                      variant={(module.activityInstructions || module.activityTemplateUrl) ? "default" : "outline"}
                       size="sm"
-                      className="font-bold border-green-500/20 hover:border-green-500/50 hover:bg-green-500/5"
+                      className={`font-bold ${!(module.activityInstructions || module.activityTemplateUrl) ? 'border-green-500/20 hover:border-green-500/50 hover:bg-green-500/5' : ''}`}
                       onClick={() => setWorkshopModalState({
                         isOpen: true,
                         moduleId: module.id
                       })}
                     >
-                      <BookOpen className="mr-2 h-3.5 w-3.5" /> Manage Activity
+                      {(module.activityInstructions || module.activityTemplateUrl) ? <CheckCircle2 className="mr-2 h-3.5 w-3.5" /> : <BookOpen className="mr-2 h-3.5 w-3.5" />}
+                      {(module.activityInstructions || module.activityTemplateUrl) ? 'Configured' : 'Manage Activity'}
                     </Button>
                   )}
 
@@ -403,6 +405,7 @@ export const CourseBuilder: React.FC = () => {
   const [editingModule, setEditingModule] = useState<any>(null);
   const [isProcessingModule, setIsProcessingModule] = useState(false);
   const [lineageVersions, setLineageVersions] = useState<Course[]>([]);
+  const [isSequenceDirty, setIsSequenceDirty] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -422,6 +425,7 @@ export const CourseBuilder: React.FC = () => {
     try {
       const data = await coursesApi.getById(courseId);
       setCourse(data);
+      setIsSequenceDirty(false);
       setIdentityForm({
         title: data.title,
         description: data.description || '',
@@ -706,11 +710,23 @@ export const CourseBuilder: React.FC = () => {
     if (!courseId) return;
     setIsSavingIdentity(true);
     try {
+      // Save identity fields
       await coursesApi.partialUpdate(courseId, identityForm);
+
+      // Save sequence if modified
+      if (isSequenceDirty && course?.modules) {
+        await Promise.all(
+          course.modules.map((m, idx) =>
+            coursesApi.updateModule(courseId, m.id, { sequenceOrder: idx + 1 })
+          )
+        );
+        setIsSequenceDirty(false);
+      }
+
       setCourse(prev => prev ? { ...prev, ...identityForm } : null);
-      toast.success('Course configuration updated');
+      toast.success('Course saved successfully');
     } catch (error) {
-      toast.error('Failed to update course configuration');
+      toast.error('Failed to save course changes');
     } finally {
       setIsSavingIdentity(false);
     }
@@ -725,18 +741,7 @@ export const CourseBuilder: React.FC = () => {
 
     const newModules = arrayMove(course.modules, oldIndex, newIndex);
     setCourse({ ...course, modules: newModules });
-
-    try {
-      await Promise.all(
-        newModules.map((m, idx) =>
-          coursesApi.updateModule(courseId!, m.id, { sequenceOrder: idx + 1 })
-        )
-      );
-      toast.success('Sequence updated');
-    } catch (err) {
-      toast.error('Failed to update sequence');
-      fetchCourse();
-    }
+    setIsSequenceDirty(true);
   };
 
   const handleUpdateModule = async (e: React.FormEvent) => {
@@ -833,7 +838,7 @@ export const CourseBuilder: React.FC = () => {
     thumbnailUrl: identityForm.thumbnailUrl,
     versionTag: identityForm.versionTag,
     changeSummary: identityForm.changeSummary
-  });
+  }) || isSequenceDirty;
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
