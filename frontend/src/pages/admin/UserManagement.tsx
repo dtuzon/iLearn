@@ -40,6 +40,7 @@ import {
   Search,
   Filter,
   UserCheck,
+  UserX,
   Shield,
   Calendar as CalendarIcon,
   BookOpen,
@@ -277,14 +278,9 @@ export const UserManagement: React.FC = () => {
   // Dialog States
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   
   const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null);
-  const [selectedPathId, setSelectedPathId] = useState<string>("");
-  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
-  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
-  const [assignType, setAssignType] = useState<'PATH' | 'COURSE'>('PATH');
 
   
   const [formData, setFormData] = useState({
@@ -304,20 +300,20 @@ export const UserManagement: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [userData, deptData, pathData] = await Promise.all([
-        usersApi.getAll({ 
-          search, 
-          role: roleFilter === 'all' ? undefined : roleFilter,
-          departmentId: deptFilter === 'all' ? undefined : deptFilter
-        }),
-        departmentsApi.getAll(),
-        learningPathsApi.getAll(),
-        import('../../api/courses.api').then(m => m.coursesApi.getAll('active'))
-      ]);
-      setUsers(userData);
-      setDepartments(deptData);
-      setLearningPaths(pathData.filter(p => p.isPublished));
-      setCourses(courseData);
+        const [userData, deptData, pathData, courseData] = await Promise.all([
+          usersApi.getAll({ 
+            search, 
+            role: roleFilter === 'all' ? undefined : roleFilter,
+            departmentId: deptFilter === 'all' ? undefined : deptFilter
+          }),
+          departmentsApi.getAll(),
+          learningPathsApi.getAll(),
+          import('../../api/courses.api').then(m => m.coursesApi.getAll('active'))
+        ]);
+        setUsers(userData);
+        setDepartments(deptData);
+        setLearningPaths(pathData.filter(p => p.status === 'PUBLISHED'));
+        setCourses(courseData);
 
     } catch (error) {
       toast.error('Failed to load data');
@@ -374,29 +370,6 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  const handleAssign = async () => {
-    if (!selectedUser || (assignType === 'PATH' && !selectedPathId) || (assignType === 'COURSE' && !selectedCourseId)) return;
-    setIsProcessing(true);
-    try {
-      if (assignType === 'PATH') {
-        await learningPathsApi.enroll(selectedPathId, selectedUser.id, dueDate);
-        toast.success(`Path assigned to ${selectedUser.firstName}`);
-      } else {
-        const { enrollmentsApi } = await import('../../api/enrollments.api');
-        await enrollmentsApi.enroll(selectedCourseId, selectedUser.id, dueDate);
-        toast.success(`Course assigned to ${selectedUser.firstName}`);
-      }
-      setIsAssignOpen(false);
-      setSelectedPathId("");
-      setSelectedCourseId("");
-      setDueDate(undefined);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Assignment failed');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   const resetForm = () => {
     setFormData({
       username: '', email: '', firstName: '', lastName: '', role: 'EMPLOYEE', departmentId: 'none', password: '', immediateSuperiorId: 'none'
@@ -417,15 +390,6 @@ export const UserManagement: React.FC = () => {
       immediateSuperiorId: user.immediateSuperiorId || 'none'
     });
     setIsEditOpen(true);
-  };
-
-  const openAssign = (user: UserResponse, type: 'PATH' | 'COURSE' = 'PATH') => {
-    setSelectedUser(user);
-    setAssignType(type);
-    setSelectedPathId("");
-    setSelectedCourseId("");
-    setDueDate(undefined);
-    setIsAssignOpen(true);
   };
 
   const handleBulkAction = async (action: string, extraData: any = {}) => {
@@ -550,102 +514,6 @@ export const UserManagement: React.FC = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Assign Dialog */}
-          <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
-            <DialogContent className="max-w-md rounded-3xl">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
-                  {assignType === 'PATH' ? <Route className="h-6 w-6 text-primary" /> : <BookOpen className="h-6 w-6 text-primary" />}
-                  {assignType === 'PATH' ? 'Assign Learning Path' : 'Assign Individual Course'}
-                </DialogTitle>
-                <DialogDescription>
-                  Enroll <strong>{selectedUser?.firstName} {selectedUser?.lastName}</strong> in a {assignType === 'PATH' ? 'sequenced path' : 'specific course'}.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="py-6 space-y-6">
-                <div className="space-y-2">
-                  <Label>Target Content</Label>
-                  {assignType === 'PATH' ? (
-                    <Select value={selectedPathId} onValueChange={setSelectedPathId}>
-                      <SelectTrigger className="rounded-xl h-12 bg-muted/30">
-                        <SelectValue placeholder="Choose a path..." />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        {learningPaths.map(path => (
-                          <SelectItem key={path.id} value={path.id}>{path.title}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
-                      <SelectTrigger className="rounded-xl h-12 bg-muted/30">
-                        <SelectValue placeholder="Choose a course..." />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        {courses.map(course => (
-                          <SelectItem key={course.id} value={course.id}>{course.title}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <CalendarIcon className="h-4 w-4 text-primary" />
-                    Target Completion Date (Optional)
-                  </Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full h-12 justify-start text-left font-normal rounded-xl bg-muted/30 border-none",
-                          !dueDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {dueDate ? format(dueDate, "PPP") : <span>Set a strict deadline</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 rounded-2xl shadow-2xl border-primary/10" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={dueDate}
-                        onSelect={setDueDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <p className="text-[10px] text-muted-foreground italic px-1">Learners will receive reminders before this date.</p>
-                </div>
-                
-                {((assignType === 'PATH' && selectedPathId) || (assignType === 'COURSE' && selectedCourseId)) && (
-                  <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-start gap-3 animate-in fade-in zoom-in-95 duration-300">
-                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
-                    <div className="text-sm">
-                      <p className="font-bold text-primary">Ready to Assign</p>
-                      <p className="text-muted-foreground">
-                        {dueDate 
-                          ? `Due by ${format(dueDate, "MMMM d, yyyy")}.` 
-                          : "No specific deadline set."}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button variant="outline" className="rounded-xl" onClick={() => setIsAssignOpen(false)}>Cancel</Button>
-                <Button 
-                  className="rounded-xl shadow-lg shadow-primary/20"
-                  disabled={isProcessing || (assignType === 'PATH' ? !selectedPathId : !selectedCourseId)}
-                  onClick={handleAssign}
-                >
-                  {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Assign Now
-                </Button>
-              </DialogFooter>
-            </DialogContent>
           </Dialog>
 
         </div>

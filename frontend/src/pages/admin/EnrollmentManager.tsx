@@ -94,8 +94,9 @@ export const EnrollmentManager: React.FC = () => {
           departmentsApi.getAll()
         ]);
         setCourses(c.filter(course => course.status === 'PUBLISHED'));
-        setPaths(p.filter(path => path.isPublished));
+        setPaths(p.filter(path => path.status === 'PUBLISHED'));
         setUsers(u.filter(user => user.isActive));
+
 
         setDepartments(d);
       } catch (error) {

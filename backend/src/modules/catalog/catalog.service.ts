@@ -41,7 +41,7 @@ export class CatalogService {
     if (type === 'all' || type === 'paths') {
       paths = await prisma.learningPath.findMany({
         where: {
-          isPublished: true,
+          status: CourseStatus.PUBLISHED,
           AND: [
             search ? {
               OR: [

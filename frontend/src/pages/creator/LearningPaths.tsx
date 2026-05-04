@@ -226,7 +226,7 @@ export const LearningPaths: React.FC = () => {
             <FileText className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{paths.filter(p => !p.isPublished).length}</div>
+            <div className="text-2xl font-bold">{paths.filter(p => p.status === 'DRAFT').length}</div>
             <p className="text-xs text-muted-foreground">Draft paths</p>
           </CardContent>
         </Card>
@@ -293,7 +293,7 @@ export const LearningPaths: React.FC = () => {
                         <Badge variant="secondary" className="font-bold">{path.pathCourses.length} Courses</Badge>
                       </TableCell>
                       <TableCell>
-                        {path.isPublished ? (
+                        {path.status === 'PUBLISHED' ? (
                           <Badge variant="success" className="px-3 py-1">LIVE</Badge>
                         ) : (
                           <Badge variant="warning" className="px-3 py-1 text-xs">DRAFTING</Badge>

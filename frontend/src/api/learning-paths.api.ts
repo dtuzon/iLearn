@@ -12,15 +12,17 @@ export type LearningPath = {
   id: string;
   title: string;
   description: string | null;
+  thumbnailUrl: string | null;
   targetAudience: string | null;
   targetDepartments: string[];
-  isPublished: boolean;
+  status: 'DRAFT' | 'PENDING_APPROVAL' | 'PUBLISHED' | 'ARCHIVED' | 'RETIRED';
   hasCertificate: boolean;
   createdAt: string;
   updatedAt: string;
   pathCourses: LearningPathCourse[];
   certificateTemplate?: any;
 };
+
 
 export const learningPathsApi = {
   getAll: async (): Promise<LearningPath[]> => {
@@ -68,7 +70,22 @@ export const learningPathsApi = {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     return response.data;
+  },
+
+  updateStatus: async (id: string, status: string): Promise<LearningPath> => {
+    const response = await apiClient.patch(`/learning-paths/${id}/status`, { status });
+    return response.data;
+  },
+
+  uploadThumbnail: async (id: string, file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('thumbnail', file);
+    const response = await apiClient.post(`/learning-paths/${id}/thumbnail`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
   }
 };
+
 
 

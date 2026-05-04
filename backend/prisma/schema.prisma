@@ -566,9 +566,10 @@ model LearningPath {
   id                String   @id @default(cuid())
   title             String
   description       String?
+  thumbnailUrl      String?
   targetAudience    String?  // e.g., "Phase 1: Newly Hired"
   targetDepartments String[] // Array of department names
-  isPublished       Boolean  @default(false)
+  status            CourseStatus @default(DRAFT)
   hasCertificate    Boolean  @default(false)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -580,6 +581,7 @@ model LearningPath {
   
   @@map("learning_paths")
 }
+
 
 model LearningPathCertificate {
   id             String       @id @default(cuid())

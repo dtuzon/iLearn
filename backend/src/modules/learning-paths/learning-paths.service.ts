@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma';
+import { CourseStatus } from '@prisma/client';
 
 export class LearningPathsService {
   static async getAll() {
@@ -41,7 +42,7 @@ export class LearningPathsService {
         description: data.description,
         targetAudience: data.targetAudience,
         targetDepartments: data.targetDepartments,
-        isPublished: data.isPublished || false,
+        status: data.status || CourseStatus.DRAFT,
         hasCertificate: data.hasCertificate || false
 
       }
@@ -56,12 +57,27 @@ export class LearningPathsService {
         description: data.description,
         targetAudience: data.targetAudience,
         targetDepartments: data.targetDepartments,
-        isPublished: data.isPublished,
+        status: data.status,
         hasCertificate: data.hasCertificate
 
       }
     });
   }
+
+  static async updateStatus(id: string, status: CourseStatus) {
+    return prisma.learningPath.update({
+      where: { id },
+      data: { status }
+    });
+  }
+
+  static async uploadThumbnail(id: string, thumbnailUrl: string) {
+    return prisma.learningPath.update({
+      where: { id },
+      data: { thumbnailUrl }
+    });
+  }
+
 
   static async delete(id: string) {
     return prisma.learningPath.delete({

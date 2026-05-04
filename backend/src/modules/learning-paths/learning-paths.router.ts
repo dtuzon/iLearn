@@ -69,5 +69,23 @@ router.put(
   LearningPathsController.updateCertificateTemplate
 );
 
+router.patch(
+  '/:id/status',
+  authenticate,
+  authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+  auditLog('UPDATE_LEARNING_PATH_STATUS'),
+  LearningPathsController.updateStatus
+);
+
+router.post(
+  '/:id/thumbnail',
+  authenticate,
+  authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+  upload.single('thumbnail'),
+  auditLog('UPDATE_LEARNING_PATH_THUMBNAIL'),
+  LearningPathsController.uploadThumbnail
+);
+
 export default router;
+
 

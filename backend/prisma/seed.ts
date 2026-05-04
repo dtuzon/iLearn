@@ -193,7 +193,8 @@ async function main() {
     data: {
       title: 'Standard Insurance Core Onboarding',
       description: 'The definitive gateway for all new members of the Standard Insurance family.',
-      isPublished: true,
+      status: CourseStatus.PUBLISHED,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=800',
       hasCertificate: true,
       pathCourses: {
         create: [

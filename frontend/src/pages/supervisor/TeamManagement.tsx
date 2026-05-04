@@ -52,8 +52,9 @@ export const TeamManagement: React.FC = () => {
       ]);
       const courseData = await coursesApi.getAll('active');
       setTeam(teamData);
-      setLearningPaths(pathData.filter(p => p.isPublished));
+      setLearningPaths(pathData.filter(p => p.status === 'PUBLISHED'));
       setCourses(courseData);
+
     } catch (error) {
 
       toast.error('Failed to load team data');

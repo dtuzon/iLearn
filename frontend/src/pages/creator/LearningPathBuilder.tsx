@@ -22,15 +22,23 @@ import {
   Save, 
   Search, 
   BookOpen, 
-  ChevronUp,
-  ChevronDown,
-  CheckCircle2,
-  Route,
-  Award,
-  Layers
+  ChevronUp, 
+  ChevronDown, 
+  CheckCircle2, 
+  Route, 
+  Award, 
+  Layers,
+  Settings,
+  EyeOff,
+  Image as ImageIcon
 } from 'lucide-react';
 
 import { toast } from 'sonner';
+import { Textarea } from '../../components/ui/textarea';
+import { MultiSelect } from '../../components/ui/multi-select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { departmentsApi, type Department } from '../../api/departments.api';
+
 import { 
   DndContext, 
   closestCenter, 
@@ -136,6 +144,7 @@ export const LearningPathBuilder: React.FC = () => {
   const navigate = useNavigate();
   const [path, setPath] = useState<LearningPath | null>(null);
   const [allCourses, setAllCourses] = useState<Course[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [courseSearch, setCourseSearch] = useState('');
@@ -151,11 +160,21 @@ export const LearningPathBuilder: React.FC = () => {
     if (!id) return;
     setIsLoading(true);
     try {
-      const [pathData, coursesData] = await Promise.all([
+      const [pathData, coursesData, deptsData] = await Promise.all([
         learningPathsApi.getById(id),
-        coursesApi.getAll()
+        coursesApi.getAll(),
+        departmentsApi.getAll()
       ]);
       setPath(pathData);
+      setDepartments(deptsData);
+      setIdentityForm({
+        title: pathData.title,
+        description: pathData.description || '',
+        targetAudience: pathData.targetAudience || 'GENERAL',
+        targetDepartments: pathData.targetDepartments || [],
+        thumbnailUrl: pathData.thumbnailUrl || ''
+      });
+
       // Only show published courses that aren't already in the path
       const published = coursesData.filter(c => c.status === 'PUBLISHED');
 
@@ -164,6 +183,53 @@ export const LearningPathBuilder: React.FC = () => {
       toast.error('Failed to load builder data');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const [identityForm, setIdentityForm] = useState({
+    title: '',
+    description: '',
+    targetAudience: 'GENERAL',
+    targetDepartments: [] as string[],
+    thumbnailUrl: ''
+  });
+
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
+
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+    setIsUploadingThumbnail(true);
+    try {
+      const { thumbnailUrl } = await learningPathsApi.uploadThumbnail(id, file);
+      setIdentityForm(prev => ({ ...prev, thumbnailUrl }));
+      toast.success('Thumbnail uploaded successfully');
+    } catch (error) {
+      toast.error('Failed to upload thumbnail');
+    } finally {
+      setIsUploadingThumbnail(false);
+    }
+  };
+
+  const handleUpdateStatus = async (status: string) => {
+    if (!id) return;
+    try {
+      await learningPathsApi.updateStatus(id, status);
+      toast.success(`Path status updated to ${status}`);
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to update status');
+    }
+  };
+
+  const handleUpdateIdentity = async () => {
+    if (!id) return;
+    try {
+      await learningPathsApi.update(id, identityForm);
+      toast.success('Path settings updated');
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to update settings');
     }
   };
 
@@ -266,31 +332,54 @@ export const LearningPathBuilder: React.FC = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Top Header */}
-      <div className="flex justify-between items-center bg-background/50 backdrop-blur-md p-6 rounded-3xl border shadow-sm">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-background/50 backdrop-blur-md p-6 rounded-3xl border shadow-sm gap-4">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" onClick={() => navigate('/creator/learning-paths')} className="rounded-xl">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <div className="flex items-center gap-2">
-              <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-none px-3 py-1">BUILDER</Badge>
-              <h1 className="text-2xl font-bold tracking-tight">{path.title}</h1>
+            <div className="flex items-center gap-3">
+              <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-none px-3 py-1 font-black">BUILDER</Badge>
+              <h1 className="text-2xl font-black tracking-tight">{path.title}</h1>
+              {path.status === 'PUBLISHED' ? (
+                <Badge className="bg-success hover:bg-success/90 border-none px-3 py-1">LIVE</Badge>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-1 bg-white border border-blue-100 rounded-full shadow-sm text-xs font-bold text-slate-700">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
+                  Draft
+                </div>
+              )}
             </div>
-            <p className="text-sm text-muted-foreground">{path.description || 'Enterprise Learning Path'}</p>
+            <p className="text-sm text-muted-foreground font-medium">{path.description || 'Enterprise Learning Path'}</p>
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
-          <Button variant="outline" className="rounded-xl">
-            <CheckCircle2 className="mr-2 h-4 w-4" />
-            {path.isPublished ? 'Live' : 'Draft'}
-          </Button>
-          <Button onClick={handleSave} disabled={isSaving} className="rounded-xl shadow-lg shadow-primary/20">
+        <div className="flex items-center gap-2">
+          {path.status === 'DRAFT' ? (
+            <Button 
+              onClick={() => handleUpdateStatus('PUBLISHED')}
+              className="rounded-xl bg-success hover:bg-success/90 shadow-lg shadow-success/20 font-bold"
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              Publish Path
+            </Button>
+          ) : (
+            <Button 
+              variant="outline"
+              onClick={() => handleUpdateStatus('DRAFT')}
+              className="rounded-xl border-destructive/20 text-destructive hover:bg-destructive/5 font-bold"
+            >
+              <EyeOff className="mr-2 h-4 w-4" />
+              Unpublish
+            </Button>
+          )}
+          <Button onClick={handleSave} disabled={isSaving} className="rounded-xl shadow-lg shadow-primary/20 font-bold">
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save Sequence
           </Button>
         </div>
       </div>
+
 
       <Tabs defaultValue="curriculum" className="w-full">
 
@@ -303,7 +392,12 @@ export const LearningPathBuilder: React.FC = () => {
             <Award className="h-4 w-4" />
             Macro-Credential Settings
           </TabsTrigger>
+          <TabsTrigger value="settings" className="rounded-xl px-6 gap-2">
+            <Settings className="h-4 w-4" />
+            Path Settings
+          </TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="curriculum" className="space-y-6 animate-in slide-in-from-left-4 duration-500">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 h-[calc(100vh-360px)] min-h-[500px]">
@@ -470,8 +564,125 @@ export const LearningPathBuilder: React.FC = () => {
             )}
           </Card>
         </TabsContent>
+
+        <TabsContent value="settings" className="animate-in slide-in-from-right-4 duration-500">
+          <Card className="border-none shadow-xl bg-background/50 backdrop-blur-sm p-8">
+            <div className="flex items-center gap-4 mb-8 border-b pb-6">
+              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Settings className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Path Identity & Branding</h2>
+                <p className="text-sm text-muted-foreground">Configure the metadata and visual assets for this learning journey.</p>
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              {/* Thumbnail Section */}
+              <div className="space-y-3">
+                <Label className="text-sm font-bold uppercase tracking-widest text-primary">Path Thumbnail</Label>
+                <div className="flex flex-col md:flex-row gap-6 items-start">
+                  <div className="w-full md:w-64 h-36 rounded-2xl border-2 border-dashed border-muted-foreground/20 flex items-center justify-center bg-muted/5 overflow-hidden relative group">
+                    {identityForm.thumbnailUrl ? (
+                      <>
+                        <img src={identityForm.thumbnailUrl} alt="Thumbnail" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Label htmlFor="thumb-upload" className="cursor-pointer text-white text-xs font-bold uppercase tracking-widest bg-primary/80 px-4 py-2 rounded-full">Change Image</Label>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground/40">
+                        <ImageIcon className="h-8 w-8" />
+                        <span className="text-[10px] font-black uppercase">No Image</span>
+                      </div>
+                    )}
+                    {!identityForm.thumbnailUrl && (
+                      <Label htmlFor="thumb-upload" className="absolute inset-0 cursor-pointer" />
+                    )}
+                    <input 
+                      id="thumb-upload" 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleThumbnailUpload} 
+                      disabled={isUploadingThumbnail}
+                    />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <p className="text-sm font-bold text-muted-foreground">Recommendation</p>
+                    <ul className="text-xs text-muted-foreground/60 space-y-1 list-disc pl-4">
+                      <li>16:9 Aspect Ratio (e.g., 1280x720)</li>
+                      <li>Vibrant imagery that represents the path theme</li>
+                      <li>Max file size: 2MB</li>
+                    </ul>
+                    {isUploadingThumbnail && (
+                      <div className="flex items-center gap-2 text-primary font-bold text-xs animate-pulse">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Uploading branding assets...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="p-title">Path Title</Label>
+                  <Input 
+                    id="p-title" 
+                    value={identityForm.title}
+                    onChange={(e) => setIdentityForm({...identityForm, title: e.target.value})}
+                    placeholder="e.g. Executive Leadership Academy"
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Target Audience</Label>
+                  <Select 
+                    value={identityForm.targetAudience} 
+                    onValueChange={(val) => setIdentityForm({...identityForm, targetAudience: val})}
+                  >
+                    <SelectTrigger className="h-11 rounded-xl">
+                      <SelectValue placeholder="Select audience" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="GENERAL">General Audience</SelectItem>
+                      <SelectItem value="PHASE_1_NEW_HIRE">Phase 1: Newly Hired</SelectItem>
+                      <SelectItem value="PHASE_2_REGULARIZED">Phase 2: Newly Regularized</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Target Departments</Label>
+                <MultiSelect 
+                  placeholder="Limit visibility to specific departments..."
+                  options={departments.map(d => ({ label: d.name, value: d.name }))}
+                  selected={identityForm.targetDepartments}
+                  onChange={(selected) => setIdentityForm({ ...identityForm, targetDepartments: selected })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="p-desc">Path Description / Objectives</Label>
+                <Textarea 
+                  id="p-desc" 
+                  value={identityForm.description}
+                  onChange={(e) => setIdentityForm({...identityForm, description: e.target.value})}
+                  className="min-h-[120px] rounded-xl"
+                  placeholder="Summarize the core impact of this learning journey..."
+                />
+              </div>
+
+              <Button onClick={handleUpdateIdentity} className="h-12 px-8 font-black uppercase tracking-widest shadow-lg shadow-primary/20 rounded-xl">
+                Update Path Identity
+              </Button>
+            </div>
+          </Card>
+        </TabsContent>
       </Tabs>
 
     </div>
   );
 };
+
