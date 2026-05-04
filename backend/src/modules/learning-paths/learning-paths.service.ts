@@ -217,12 +217,12 @@ export class LearningPathsService {
 
       if (!source) throw new Error('Source path not found');
 
-      const pId = source.parentId || source.id;
+      const pId = (source as any).parentId || source.id;
       const latestVersion = await tx.learningPath.aggregate({
         where: {
           OR: [{ id: pId }, { parentId: pId }]
-        },
-        _max: { version: true }
+        } as any,
+        _max: { version: true } as any
       });
 
       const nextVersion = ((latestVersion as any)?._max?.version || 1) + 1;
