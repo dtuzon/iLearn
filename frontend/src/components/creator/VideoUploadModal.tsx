@@ -14,6 +14,7 @@ import { Upload, Video, CheckCircle2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../api/client';
 
+interface VideoUploadModalProps {
   isOpen: boolean;
   currentVideoUrl?: string;
   onClose: () => void;
