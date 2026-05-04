@@ -3,8 +3,6 @@ import { usersApi } from '../../api/users.api';
 import type { UserResponse } from '../../api/users.api';
 import { departmentsApi } from '../../api/departments.api';
 import type { Department } from '../../api/departments.api';
-import { learningPathsApi } from '../../api/learning-paths.api';
-import type { LearningPath } from '../../api/learning-paths.api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -13,9 +11,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Badge } from '../../components/ui/badge';
-import { Calendar } from '../../components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
-import { format } from 'date-fns';
 
 
 import { 
@@ -28,8 +23,6 @@ import {
 } from '../../components/ui/dropdown-menu';
 import { 
   Building,
-  Route,
-  CheckCircle2,
   Copy,
   RotateCcw,
   Eye,
@@ -42,8 +35,6 @@ import {
   UserCheck,
   UserX,
   Shield,
-  Calendar as CalendarIcon,
-  BookOpen,
   MoreHorizontal
 } from 'lucide-react';
 
@@ -262,8 +253,6 @@ const UserFormFields: React.FC<UserFormFieldsProps> = ({
 export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   
@@ -300,20 +289,16 @@ export const UserManagement: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-        const [userData, deptData, pathData, courseData] = await Promise.all([
+        const [userData, deptData] = await Promise.all([
           usersApi.getAll({ 
             search, 
             role: roleFilter === 'all' ? undefined : roleFilter,
             departmentId: deptFilter === 'all' ? undefined : deptFilter
           }),
-          departmentsApi.getAll(),
-          learningPathsApi.getAll(),
-          import('../../api/courses.api').then(m => m.coursesApi.getAll('active'))
+          departmentsApi.getAll()
         ]);
         setUsers(userData);
         setDepartments(deptData);
-        setLearningPaths(pathData.filter(p => p.status === 'PUBLISHED'));
-        setCourses(courseData);
 
     } catch (error) {
       toast.error('Failed to load data');
@@ -512,8 +497,6 @@ export const UserManagement: React.FC = () => {
                 </DialogFooter>
               </form>
             </DialogContent>
-          </Dialog>
-
           </Dialog>
 
         </div>
