@@ -33,7 +33,10 @@ import {
   Eye,
   EyeOff,
   CopyPlus,
-  Image as ImageIcon
+  Image as ImageIcon,
+  RefreshCw,
+  History as HistoryIcon,
+  ChevronDown
 } from 'lucide-react';
 
 
@@ -313,6 +316,58 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
   );
 };
 
+export 
+interface VersionTimelineItemProps {
+  v: Course;
+  isCurrent: boolean;
+}
+
+const VersionTimelineItem: React.FC<VersionTimelineItemProps> = ({ v, isCurrent }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  return (
+    <div className="relative group animate-in fade-in duration-500">
+      {/* The node */}
+      <div className={`absolute -left-[30px] top-1 h-[20px] w-[20px] rounded-full border-4 bg-white z-10 transition-all ${isCurrent ? 'border-primary shadow-[0_0_15px_rgba(234,179,8,0.3)]' : 'border-slate-300 group-hover:border-slate-400'}`}></div>
+      
+      <div 
+        className={`space-y-2 p-3 rounded-2xl transition-all cursor-pointer ${isCurrent ? 'bg-primary/5 border border-primary/10' : 'hover:bg-white hover:shadow-sm hover:border-slate-100 border border-transparent'}`}
+        onClick={() => !isCurrent && setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className={`text-[10px] font-black font-mono px-1.5 py-0.5 rounded ${isCurrent ? 'bg-primary text-white' : 'bg-slate-200 text-slate-600'}`}>
+              v{v.version}
+            </span>
+            {isCurrent && <span className="text-[9px] font-black text-primary uppercase animate-pulse">Active</span>}
+          </div>
+          <span className="text-[9px] text-slate-400 font-bold tabular-nums">
+            {v.updatedAt ? new Date(v.updatedAt).toLocaleDateString() : '---'}
+          </span>
+        </div>
+        
+        <div className="flex items-center justify-between gap-2">
+          <p className={`text-sm font-bold tracking-tight truncate ${isCurrent ? 'text-slate-900' : 'text-slate-600'}`}>
+            {v.versionTag || 'Unlabeled Release'}
+          </p>
+          {!isCurrent && v.changeSummary && (
+            <ChevronDown className={`h-3 w-3 text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+          )}
+        </div>
+
+        {/* Expanded Release Notes */}
+        {(isCurrent || (isExpanded && v.changeSummary)) && (
+          <div className={`animate-in slide-in-from-top-1 duration-300 overflow-hidden`}>
+            <div className={`p-3 rounded-xl font-mono text-[11px] leading-relaxed italic ${isCurrent ? 'bg-white/60 text-slate-600' : 'bg-slate-50 text-slate-500 border border-slate-100'}`}>
+              &ldquo;{v.changeSummary || 'No release notes provided.'}&rdquo;
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export const CourseBuilder: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
@@ -347,6 +402,7 @@ export const CourseBuilder: React.FC = () => {
   const [isSavingIdentity, setIsSavingIdentity] = useState(false);
   const [editingModule, setEditingModule] = useState<any>(null);
   const [isProcessingModule, setIsProcessingModule] = useState(false);
+  const [lineageVersions, setLineageVersions] = useState<Course[]>([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -378,6 +434,15 @@ export const CourseBuilder: React.FC = () => {
         versionTag: data.versionTag || '',
         changeSummary: data.changeSummary || ''
       });
+
+      // Fetch version lineage
+      try {
+        const pId = data.parentId || data.id;
+        const vData = await coursesApi.getVersions(pId);
+        setLineageVersions(vData);
+      } catch (err) {
+        console.error("Failed to fetch version lineage", err);
+      }
 
     } catch (error) {
       toast.error('Failed to load course details');
@@ -415,20 +480,84 @@ export const CourseBuilder: React.FC = () => {
 
   const [isUnpublishDialogOpen, setIsUnpublishDialogOpen] = useState(false);
 
-  // Release notes dialog state
   const [approvalDialog, setApprovalDialog] = useState({
     isOpen: false,
     versionTagDraft: '',
     changeSummary: '',
-    isSubmitting: false
+    isSubmitting: false,
+    isGeneratingDiff: false
   });
 
-  const handleOpenApprovalDialog = () => {
+  const generateAutoDiff = (current: Course, parent: Course) => {
+    const changes: string[] = [];
+
+    // 1. Curriculum Changes
+    const currentModules = current.modules || [];
+    const parentModules = parent.modules || [];
+
+    const currentTitles = currentModules.map(m => m.title);
+    const parentTitles = parentModules.map(m => m.title);
+
+    // Added
+    const added = currentTitles.filter(t => !parentTitles.includes(t));
+    added.forEach(t => changes.push(`• Added module: "${t}"`));
+
+    // Removed (Crossed out)
+    const removed = parentTitles.filter(t => !currentTitles.includes(t));
+    removed.forEach(t => changes.push(`• Removed module: ~~"${t}"~~`));
+
+    // Edited / Sequence
+    currentModules.forEach((m) => {
+      const parentM = parentModules.find(pm => pm.title === m.title);
+      if (parentM) {
+        if (parentM.sequenceOrder !== m.sequenceOrder) {
+          changes.push(`• Re-sequenced: "${m.title}" (Moved to Step ${m.sequenceOrder + 1})`);
+        }
+        // Simplified content check
+        if (parentM.type !== m.type || parentM.contentUrlOrText !== m.contentUrlOrText) {
+          changes.push(`• Updated content: "${m.title}"`);
+        }
+      }
+    });
+
+    // 2. Configuration Changes
+    if (current.passingGrade !== parent.passingGrade) {
+      changes.push(`• Updated Passing Grade: ${parent.passingGrade}% → ${current.passingGrade}%`);
+    }
+    if (current.targetAudience !== parent.targetAudience) {
+      changes.push(`• Changed Target Audience to ${current.targetAudience.replace(/_/g, ' ')}`);
+    }
+
+    // 3. Certificate Changes
+    if (current.hasCertificate !== parent.hasCertificate) {
+      changes.push(current.hasCertificate ? '• Enabled Digital Certificate' : '• Disabled Digital Certificate');
+    }
+
+    return changes.length > 0 ? changes.join('\n') : '• Minor internal adjustments and polishing.';
+  };
+
+  const handleOpenApprovalDialog = async () => {
+    if (!course) return;
+    
+    let autoSummary = '';
+    
+    // If it's a versioned course and doesn't have a summary yet, generate one
+    if (course.parentId && !identityForm.changeSummary) {
+      setApprovalDialog(prev => ({ ...prev, isOpen: true, isGeneratingDiff: true }));
+      try {
+        const parentCourse = await coursesApi.getById(course.parentId);
+        autoSummary = generateAutoDiff(course, parentCourse);
+      } catch (err) {
+        console.error("Failed to generate auto-diff", err);
+      }
+    }
+
     setApprovalDialog(prev => ({
       ...prev,
       isOpen: true,
+      isGeneratingDiff: false,
       versionTagDraft: identityForm.versionTag || '',
-      changeSummary: ''
+      changeSummary: identityForm.changeSummary || autoSummary
     }));
   };
 
@@ -699,14 +828,18 @@ export const CourseBuilder: React.FC = () => {
     passingGrade: course.passingGrade,
     targetAudience: course.targetAudience,
     targetDepartments: course.targetDepartments,
-    thumbnailUrl: course.thumbnailUrl || ''
+    thumbnailUrl: course.thumbnailUrl || '',
+    versionTag: course.versionTag || '',
+    changeSummary: course.changeSummary || ''
   }) !== JSON.stringify({
     title: identityForm.title,
     description: identityForm.description,
     passingGrade: identityForm.passingGrade,
     targetAudience: identityForm.targetAudience,
     targetDepartments: identityForm.targetDepartments,
-    thumbnailUrl: identityForm.thumbnailUrl
+    thumbnailUrl: identityForm.thumbnailUrl,
+    versionTag: identityForm.versionTag,
+    changeSummary: identityForm.changeSummary
   });
 
   const handleDiscardChanges = () => {
@@ -719,7 +852,9 @@ export const CourseBuilder: React.FC = () => {
         targetDepartments: course.targetDepartments,
         introContent: course.introContent || '',
         closingContent: course.closingContent || '',
-        thumbnailUrl: course.thumbnailUrl || ''
+        thumbnailUrl: course.thumbnailUrl || '',
+        versionTag: course.versionTag || '',
+        changeSummary: course.changeSummary || ''
       });
       toast.info('Changes discarded');
     }
@@ -891,7 +1026,7 @@ export const CourseBuilder: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Clock className="h-4 w-4 text-primary" />
+                <HistoryIcon className="h-4 w-4 text-primary" />
               </div>
               Submit Version for Approval
             </DialogTitle>
@@ -927,18 +1062,32 @@ export const CourseBuilder: React.FC = () => {
 
             {/* Change summary */}
             <div className="space-y-2">
-              <Label htmlFor="approval-summary" className="font-bold">
-                What changed in this version?
-                <span className="ml-2 text-muted-foreground font-normal text-xs">(optional but recommended)</span>
-              </Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="approval-summary" className="font-bold">
+                  What changed in this version?
+                </Label>
+                {approvalDialog.isGeneratingDiff && (
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary animate-pulse">
+                    <RefreshCw className="h-3 w-3 animate-spin" /> Analyzing blueprints...
+                  </div>
+                )}
+                {!approvalDialog.isGeneratingDiff && approvalDialog.changeSummary && (
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-success bg-success/10 px-2 py-0.5 rounded-full">
+                    <CheckCircle className="h-3 w-3" /> Smart Diff Ready
+                  </div>
+                )}
+              </div>
               <Textarea
                 id="approval-summary"
                 value={approvalDialog.changeSummary}
                 onChange={(e) => setApprovalDialog(prev => ({ ...prev, changeSummary: e.target.value }))}
-                placeholder={"• Added 2 new workshop modules\n• Updated quiz questions for Section 3\n• Revised facilitator guidelines"}
-                className="min-h-[120px] font-mono text-sm resize-none"
-                disabled={approvalDialog.isSubmitting}
+                placeholder="• Bullet points of changes..."
+                className="min-h-[140px] font-mono text-sm bg-slate-50 border-slate-200"
+                disabled={approvalDialog.isSubmitting || approvalDialog.isGeneratingDiff}
               />
+              <p className="text-[10px] text-muted-foreground italic">
+                {approvalDialog.isGeneratingDiff ? "Stand by while we compare versions..." : "Review and polish the auto-generated notes above."}
+              </p>
             </div>
 
             {/* Preview pill */}
@@ -975,92 +1124,87 @@ export const CourseBuilder: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ── Approver Review Panel ── visible to Admin/LM when course is pending */}
+      {/* ── Approver Review Command Center ── visible to Admin/LM when course is pending */}
       {course.status === 'PENDING_APPROVAL' && (user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
-        <div className="rounded-2xl border-2 border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 dark:border-amber-800/40 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
-          {/* Header bar */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-amber-200 dark:border-amber-800/40 bg-amber-100/60 dark:bg-amber-900/20">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-amber-600" />
+        <div className="mb-10 rounded-[2.5rem] bg-white/70 backdrop-blur-3xl border-2 border-primary/10 shadow-[0_32px_64px_-12px_rgba(234,179,8,0.12)] overflow-hidden animate-in fade-in zoom-in-95 duration-700">
+          <div className="p-8">
+            {/* Header: Identity & Actions */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
+              <div className="flex items-center gap-5">
+                <div className="h-16 w-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center border-2 border-primary/20 shadow-sm shadow-primary/5">
+                  <Clock className="h-8 w-8 text-primary animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Governance Protocol</span>
+                    <Badge variant="outline" className="bg-primary text-white border-none text-[10px] font-black py-0 px-2 rounded-full">Review Required</Badge>
+                  </div>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                    {course.title.replace(/\s*\(Draft\)$/i, '')}
+                  </h2>
+                </div>
               </div>
-              <div>
-                <p className="font-black text-amber-800 dark:text-amber-300 uppercase tracking-widest text-xs">Awaiting Your Review</p>
-                <p className="text-sm font-bold text-amber-900 dark:text-amber-200">
-                  {course.title}
-                  <span className="ml-2 font-mono text-amber-600 text-xs">v{course.version}{course.versionTag ? ` · "${course.versionTag}"` : ''}</span>
-                </p>
+
+              <div className="flex items-center gap-3 w-full lg:w-auto">
+                <Button
+                  variant="outline"
+                  className="flex-1 lg:flex-none h-14 px-8 border-slate-200 text-slate-500 hover:text-destructive hover:border-destructive/30 hover:bg-destructive/5 font-bold rounded-2xl transition-all"
+                  onClick={() => handleUpdateStatus('DRAFT')}
+                >
+                  <XCircle className="mr-2 h-5 w-5" /> Reject Version
+                </Button>
+                <Button
+                  className="flex-1 lg:flex-none h-14 px-10 bg-success hover:bg-success/90 text-white font-black rounded-2xl shadow-xl shadow-success/20 border-none transition-all hover:scale-[1.02] active:scale-95"
+                  onClick={() => handleUpdateStatus('PUBLISHED')}
+                >
+                  <CheckCircle className="mr-2 h-6 w-6" /> Approve &amp; Publish
+                </Button>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-destructive/30 text-destructive hover:bg-destructive/5 font-bold"
-                onClick={() => handleUpdateStatus('DRAFT')}
-              >
-                <XCircle className="mr-2 h-4 w-4" /> Reject — Send Back
-              </Button>
-              <Button
-                size="sm"
-                className="bg-success hover:bg-success/90 text-white font-bold shadow-lg shadow-success/20"
-                onClick={() => handleUpdateStatus('PUBLISHED')}
-              >
-                <CheckCircle className="mr-2 h-4 w-4" /> Approve &amp; Publish
-              </Button>
+
+            {/* Grid: Metadata & Release Notes */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Stats Bar */}
+              <div className="lg:col-span-4 flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-5 rounded-3xl bg-primary/5 border border-primary/10 space-y-1 group hover:bg-primary/10 transition-colors">
+                    <p className="text-[10px] font-black text-primary uppercase tracking-widest">Version</p>
+                    <p className="text-xl font-mono font-black text-slate-900">v{course.version}</p>
+                    <p className="text-[10px] text-slate-500 truncate font-medium">{course.versionTag || 'Unlabeled Release'}</p>
+                  </div>
+                  <div className="p-5 rounded-3xl bg-primary/5 border border-primary/10 space-y-1 group hover:bg-primary/10 transition-colors">
+                    <p className="text-[10px] font-black text-primary uppercase tracking-widest">Blueprint</p>
+                    <p className="text-xl font-black text-slate-900">{(course._count?.modules ?? course.modules?.length ?? 0)}</p>
+                    <p className="text-[10px] text-slate-500 font-medium">Components</p>
+                  </div>
+                </div>
+                <div className="p-5 rounded-3xl bg-slate-50 border border-slate-100 flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-full bg-white flex items-center justify-center text-xs font-black text-primary uppercase border-2 border-primary/20 shadow-sm">
+                    {course.lecturer?.firstName?.charAt(0)}{course.lecturer?.lastName?.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Submitted By</p>
+                    <p className="text-base font-bold text-slate-800">{course.lecturer ? `${course.lecturer.firstName} ${course.lecturer.lastName}` : '---'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Release Notes */}
+              <div className="lg:col-span-8">
+                <div className="h-full rounded-3xl bg-white border border-slate-100 p-6 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-2 h-full bg-primary/20"></div>
+                  <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <FileText className="h-3 w-3" /> Smart Diff / Release Notes
+                  </p>
+                  <div className="max-h-[140px] overflow-y-auto pr-2 custom-scrollbar">
+                    <pre className="text-sm text-slate-600 font-mono whitespace-pre-wrap leading-relaxed">
+                      {course.changeSummary || 'The system detected no significant structural changes for this version.'}
+                    </pre>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Version details body */}
-          <div className="px-6 py-5 grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Version info */}
-            <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/70">Version</p>
-              <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-lg text-amber-900 dark:text-amber-200">v{course.version}</span>
-                {course.versionTag ? (
-                  <span className="px-2.5 py-0.5 bg-amber-200 text-amber-800 rounded-full text-xs font-bold font-mono">
-                    &ldquo;{course.versionTag}&rdquo;
-                  </span>
-                ) : (
-                  <span className="text-xs text-muted-foreground italic">No tag set</span>
-                )}
-              </div>
-              {course.parentId && (
-                <p className="text-xs text-muted-foreground">Part of a versioned lineage</p>
-              )}
-            </div>
-
-            {/* Author */}
-            <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/70">Submitted By</p>
-              <p className="font-bold text-sm text-amber-900 dark:text-amber-200">
-                {course.lecturer ? `${course.lecturer.firstName} ${course.lecturer.lastName}` : '—'}
-              </p>
-              <p className="text-xs text-muted-foreground">Course Creator</p>
-            </div>
-
-            {/* Curriculum count */}
-            <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/70">Curriculum</p>
-              <p className="font-bold text-sm text-amber-900 dark:text-amber-200">
-                {(course._count?.modules ?? course.modules?.length ?? 0)} modules
-              </p>
-              <p className="text-xs text-muted-foreground">Review the Curriculum Loop tab below</p>
-            </div>
-          </div>
-
-          {/* Change summary — only shown if filled */}
-          {course.changeSummary && (
-            <div className="px-6 pb-5">
-              <div className="p-4 bg-white/70 dark:bg-black/20 rounded-xl border border-amber-200 dark:border-amber-800/40">
-                <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/70 mb-2">What Changed (Release Notes)</p>
-                <pre className="text-sm text-amber-900 dark:text-amber-200 font-mono whitespace-pre-wrap leading-relaxed">
-                  {course.changeSummary}
-                </pre>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -1309,40 +1453,8 @@ export const CourseBuilder: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Version Tag & Change Summary — Always editable for versions, even if pending */}
-                {course.parentId && (
-                  <div className="space-y-4 p-5 bg-muted/30 border-2 border-dashed rounded-2xl animate-in fade-in duration-300">
-                    <div className="space-y-2">
-                      <Label htmlFor="c-version-tag" className="flex items-center gap-2 font-bold text-primary">
-                        <span className="font-mono text-[10px] px-1.5 py-0.5 bg-primary text-white rounded">v{course.version}</span>
-                        Version Tag / Release Name
-                      </Label>
-                      <Input
-                        id="c-version-tag"
-                        disabled={course.status === 'PUBLISHED' || course.status === 'ARCHIVED'}
-                        value={identityForm.versionTag}
-                        onChange={(e) => setIdentityForm({...identityForm, versionTag: e.target.value})}
-                        placeholder='e.g. "2025 Compliance Refresh"'
-                        className="font-mono h-10"
-                      />
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="c-change-summary" className="font-bold text-primary">What changed in this version? (Release Notes)</Label>
-                      <Textarea
-                        id="c-change-summary"
-                        disabled={course.status === 'PUBLISHED' || course.status === 'ARCHIVED'}
-                        value={identityForm.changeSummary}
-                        onChange={(e) => setIdentityForm({...identityForm, changeSummary: e.target.value})}
-                        placeholder={"• Bullet points of changes..."}
-                        className="min-h-[100px] font-mono text-sm resize-none"
-                      />
-                      <p className="text-[10px] text-muted-foreground">
-                        Metadata and release notes can be refined even while the version is under review.
-                      </p>
-                    </div>
-                  </div>
-                )}
+                <div className="h-px bg-slate-100 my-4" />
 
                 <div className="space-y-3">
                   <Label className="text-sm font-bold">Target Departments</Label>
@@ -1422,6 +1534,91 @@ export const CourseBuilder: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Version Governance & History */}
+            {course.parentId && (
+              <div className="p-8 rounded-[2.5rem] bg-slate-50/50 border border-slate-200/60 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="h-12 w-12 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-slate-100">
+                    <HistoryIcon className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 tracking-tight">Version Governance</h3>
+                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Blueprint Lineage & Audit Trail</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+                  {/* Left: Editor */}
+                  <div className="lg:col-span-7 space-y-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="font-black text-slate-700 text-xs uppercase tracking-widest flex items-center gap-3">
+                          <span className="h-2 w-2 rounded-full bg-primary animate-pulse"></span>
+                          Active Version Metadata
+                        </Label>
+                        <Badge variant="outline" className="font-mono text-[10px] py-0 px-2 bg-white">v{course.version}</Badge>
+                      </div>
+                      
+                      <div className="p-1 bg-white rounded-2xl shadow-sm border border-slate-100">
+                        <Input 
+                          placeholder="Release Name (e.g. 2025 Compliance Refresh)"
+                          value={identityForm.versionTag}
+                          onChange={(e) => setIdentityForm({...identityForm, versionTag: e.target.value})}
+                          className="h-12 border-none bg-transparent font-mono text-sm focus-visible:ring-0 px-4"
+                          disabled={isReadonly && course.status !== 'PENDING_APPROVAL'}
+                        />
+                        <div className="h-px bg-slate-100 mx-4" />
+                        <Textarea 
+                          placeholder="What changed in this version? Detailed release notes..."
+                          value={identityForm.changeSummary}
+                          onChange={(e) => setIdentityForm({...identityForm, changeSummary: e.target.value})}
+                          className="min-h-[160px] border-none bg-transparent font-mono text-sm focus-visible:ring-0 p-4 resize-none"
+                          disabled={isReadonly && course.status !== 'PENDING_APPROVAL'}
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-400 italic px-2">
+                        * These metadata fields can be refined even while the course is in "Pending Approval" state.
+                      </p>
+                    </div>
+                  </div>
+
+                      {/* Right: Lineage Timeline */}
+                      <div className="lg:col-span-5 flex flex-col h-full">
+                        <div className="flex items-center justify-between mb-6">
+                          <div className="flex items-center gap-2">
+                            <Layers className="h-3 w-3 text-slate-400" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Release Timeline</span>
+                          </div>
+                          <Badge variant="outline" className="text-[9px] font-mono bg-slate-100/50 border-slate-200">
+                            {lineageVersions.length} {lineageVersions.length === 1 ? 'Snapshot' : 'Snapshots'}
+                          </Badge>
+                        </div>
+
+                        <div className="relative flex-1 max-h-[520px] overflow-y-auto pr-4 custom-scrollbar">
+                          {/* The Track */}
+                          <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-slate-200"></div>
+
+                          <div className="relative pl-10 space-y-6">
+                            {lineageVersions.map((v) => (
+                              <VersionTimelineItem 
+                                key={v.id} 
+                                v={v} 
+                                isCurrent={v.id === course.id} 
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {lineageVersions.length > 5 && (
+                          <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-center">
+                            <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">End of Audit Stream</p>
+                          </div>
+                        )}
+                      </div>
+                </div>
+              </div>
+            )}
           </div>
 
         </TabsContent>

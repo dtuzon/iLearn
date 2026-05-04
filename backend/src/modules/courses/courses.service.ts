@@ -388,9 +388,19 @@ export class CoursesService {
       orderBy: { version: 'desc' },
       include: {
         lecturer: { select: { firstName: true, lastName: true } },
-        approvedBy: { select: { firstName: true, lastName: true } }
+        approvedBy: { select: { firstName: true, lastName: true } },
+        modules: {
+          select: {
+            title: true,
+            type: true,
+            sequenceOrder: true
+          },
+          orderBy: { sequenceOrder: 'asc' }
+        },
+        _count: {
+          select: { modules: true }
+        }
       }
-
     });
   }
 

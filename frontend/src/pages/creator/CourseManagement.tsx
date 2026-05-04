@@ -39,7 +39,12 @@ import {
   CopyPlus, 
   History, 
   RefreshCw, 
-  Eye 
+  Eye,
+  ChevronDown,
+  ChevronUp,
+  ListTree,
+  MessageSquare,
+  ArrowLeft
 } from 'lucide-react';
 
 import { 
@@ -78,6 +83,7 @@ export const CourseManagement: React.FC = () => {
   // History State
   const [historyCourse, setHistoryCourse] = useState<Course | null>(null);
   const [versions, setVersions] = useState<Course[]>([]);
+  const [expandedVersionId, setExpandedVersionId] = useState<string | null>(null);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
   // Create Dialog State
@@ -651,45 +657,130 @@ export const CourseManagement: React.FC = () => {
 
                   </TableHeader>
                   <TableBody>
-                    {versions.map((v) => (
-                      <TableRow key={v.id} className={cn(v.status === 'PUBLISHED' && "bg-success/5 font-bold")}>
-                        <TableCell className="font-mono">v{v.version}</TableCell>
-                        <TableCell>
-                          <div className="max-w-[150px] truncate">
-                            {v.versionTag ? (
-                              <span className="text-xs font-mono font-bold bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
-                                {v.versionTag}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-muted-foreground italic">---</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>{getStatusBadge(v.status)}</TableCell>
-                        <TableCell className="text-xs">
-                          {v.lecturer ? `${v.lecturer.firstName} ${v.lecturer.lastName}` : 'System'}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {new Date(v.updatedAt).toLocaleDateString()}
-                        </TableCell>
+                    {versions.map((v) => {
+                      const isExpanded = expandedVersionId === v.id;
+                      return (
+                        <React.Fragment key={v.id}>
+                          <TableRow 
+                            className={`group cursor-pointer transition-colors ${v.status === 'PUBLISHED' ? 'bg-success/5 hover:bg-success/10 font-bold' : 'hover:bg-muted/50'}`}
+                            onClick={() => setExpandedVersionId(isExpanded ? null : v.id)}
+                          >
+                            <TableCell className="font-mono">
+                              <div className="flex items-center gap-2">
+                                {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                                v{v.version}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {v.versionTag ? (
+                                <Badge variant="outline" className="font-mono text-[10px] bg-muted/30">
+                                  {v.versionTag}
+                                </Badge>
+                              ) : <span className="text-muted-foreground italic text-xs">---</span>}
+                            </TableCell>
+                            <TableCell>
+                              {v.status === 'PUBLISHED' ? (
+                                <Badge variant="success" className="text-[10px] font-black uppercase">LIVE</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] font-black uppercase bg-muted/50">{v.status}</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {v.lecturer ? `${v.lecturer.firstName} ${v.lecturer.lastName}` : '---'}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {new Date(v.updatedAt).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-primary/5"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/creator/courses/${v.id}`);
+                                  }}
+                                  title="View Snapshot"
+                                >
+                                  <Eye className="h-4 w-4 text-primary" />
+                                </Button>
+                                {v.status !== 'PUBLISHED' && v.status !== 'DRAFT' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 gap-2 font-bold text-xs"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRestore(v.id);
+                                    }}
+                                  >
+                                    <RefreshCw className="h-3 w-3" /> Restore
+                                  </Button>
+                                )}
+                                {v.status === 'PUBLISHED' && (
+                                  <Badge variant="outline" className="bg-success/20 text-success border-success/30 font-black text-[10px]">
+                                    Active Live Version
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
 
-                        <TableCell className="text-right px-6">
-                          {v.status === 'ARCHIVED' && (
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="h-8 text-xs font-bold"
-                              onClick={() => handleRestore(v.id)}
-                            >
-                              <RefreshCw className="mr-2 h-3 w-3" /> Restore
-                            </Button>
+                          {/* Expanded Details Section */}
+                          {isExpanded && (
+                            <TableRow className="bg-muted/30 border-t-0">
+                              <TableCell colSpan={6} className="p-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-top-2 duration-300">
+                                  {/* Left: Release Notes */}
+                                  <div className="space-y-3">
+                                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary">
+                                      <MessageSquare className="h-3 w-3" /> Release Notes
+                                    </div>
+                                    <div className="p-4 bg-background rounded-xl border border-slate-200 shadow-sm min-h-[100px]">
+                                      <pre className="text-sm text-slate-600 font-mono whitespace-pre-wrap leading-relaxed">
+                                        {v.changeSummary || "No detailed release notes provided for this version."}
+                                      </pre>
+                                    </div>
+                                  </div>
+
+                                  {/* Right: Curriculum Snapshot */}
+                                  <div className="space-y-3">
+                                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary">
+                                      <ListTree className="h-3 w-3" /> Curriculum Blueprint
+                                    </div>
+                                    <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                                      {v.modules && v.modules.length > 0 ? (
+                                        v.modules.map((m: any) => (
+                                          <div key={m.sequenceOrder} className="flex items-center gap-3 p-2 bg-background rounded-lg border border-slate-100 text-xs">
+                                            <span className="font-mono font-bold text-primary w-4">{m.sequenceOrder + 1}</span>
+                                            <span className="flex-1 font-bold truncate">{m.title}</span>
+                                            <Badge variant="outline" className="text-[9px] uppercase py-0">{m.type.replace(/_/g, ' ')}</Badge>
+                                          </div>
+                                        ))
+                                      ) : (
+                                        <p className="text-xs text-muted-foreground italic">No modules found in this blueprint.</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="mt-6 pt-4 border-t border-slate-200 flex justify-end">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-primary font-bold hover:bg-primary/5"
+                                    onClick={() => navigate(`/creator/courses/${v.id}`)}
+                                  >
+                                    Open Full Deep-Inspect Mode <ArrowLeft className="ml-2 h-4 w-4 rotate-180" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
                           )}
-                          {v.status === 'PUBLISHED' && (
-                            <Badge variant="success">Active Live Version</Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                        </React.Fragment>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -704,3 +795,5 @@ export const CourseManagement: React.FC = () => {
     </div>
   );
 };
+
+export default CourseManagement;
