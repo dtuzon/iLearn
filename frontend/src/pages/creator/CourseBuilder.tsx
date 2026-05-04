@@ -1660,6 +1660,7 @@ export const CourseBuilder: React.FC = () => {
 
       <VideoUploadModal
         isOpen={videoModalState.isOpen}
+        currentVideoUrl={course?.modules?.find(m => m.id === videoModalState.moduleId)?.contentUrlOrText || undefined}
         onClose={() => setVideoModalState({ ...videoModalState, isOpen: false })}
         onUploadSuccess={handleVideoUploadSuccess}
       />

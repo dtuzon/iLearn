@@ -14,14 +14,15 @@ import { Upload, Video, CheckCircle2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../api/client';
 
-interface VideoUploadModalProps {
   isOpen: boolean;
+  currentVideoUrl?: string;
   onClose: () => void;
   onUploadSuccess: (videoUrl: string) => void;
 }
 
 export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({ 
   isOpen, 
+  currentVideoUrl,
   onClose, 
   onUploadSuccess 
 }) => {
@@ -93,24 +94,40 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
 
         <div className="py-6">
           {!file ? (
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-muted-foreground/20 rounded-2xl p-10 flex flex-col items-center justify-center gap-3 hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group"
-            >
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Upload className="h-6 w-6 text-primary" />
+            <div className="space-y-4">
+              {currentVideoUrl && (
+                <div className="rounded-xl overflow-hidden bg-black/5 border border-primary/10">
+                  <video 
+                    src={currentVideoUrl} 
+                    controls 
+                    className="w-full max-h-[250px] object-contain"
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                  <div className="p-3 bg-muted/30 text-xs font-bold text-center text-muted-foreground border-t border-primary/10">
+                    Current Active Video
+                  </div>
+                </div>
+              )}
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-muted-foreground/20 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group"
+              >
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Upload className="h-6 w-6 text-primary" />
+                </div>
+                <div className="text-center">
+                  <p className="font-bold text-sm">{currentVideoUrl ? 'Upload a Replacement Video' : 'Click or Drag to Upload'}</p>
+                  <p className="text-xs text-muted-foreground mt-1">MP4, WebM up to 100MB</p>
+                </div>
+                <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="video/mp4,video/webm" 
+                  className="hidden" 
+                />
               </div>
-              <div className="text-center">
-                <p className="font-bold text-sm">Click or Drag to Upload</p>
-                <p className="text-xs text-muted-foreground mt-1">MP4, WebM up to 100MB</p>
-              </div>
-              <input 
-                type="file" 
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept="video/mp4,video/webm" 
-                className="hidden" 
-              />
             </div>
           ) : (
             <div className="space-y-4">
