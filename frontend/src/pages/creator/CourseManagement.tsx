@@ -9,36 +9,36 @@ import { Textarea } from '../../components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from '../../components/ui/dropdown-menu';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
   DialogTrigger
 } from '../../components/ui/dialog';
-import { 
-  Plus, 
-  MoreVertical, 
-  Edit3, 
-  Trash2, 
-  BookOpen, 
-  Layers, 
-  Loader2, 
+import {
+  Plus,
+  MoreVertical,
+  Edit3,
+  Trash2,
+  BookOpen,
+  Layers,
+  Loader2,
   Settings2,
-  Clock, 
-  CopyPlus, 
-  History, 
-  RefreshCw, 
+  Clock,
+  CopyPlus,
+  History,
+  RefreshCw,
   Eye,
   ChevronDown,
   ChevronUp,
@@ -47,12 +47,12 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
-import { 
-  Tabs as ShadcnTabs, 
-  TabsList as ShadcnTabsList, 
-  TabsTrigger as ShadcnTabsTrigger 
+import {
+  Tabs as ShadcnTabs,
+  TabsList as ShadcnTabsList,
+  TabsTrigger as ShadcnTabsTrigger
 } from '../../components/ui/tabs';
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -60,7 +60,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle 
+  AlertDialogTitle
 } from '../../components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
@@ -246,7 +246,7 @@ export const CourseManagement: React.FC = () => {
           <h1 className="text-3xl font-extrabold tracking-tight text-primary">Course Studio</h1>
           <p className="text-muted-foreground text-lg italic">Design, build, and deploy premium corporate learning experiences.</p>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <ShadcnTabs value={activeTab} onValueChange={setActiveTab} className={cn("transition-all", isAdminOrManager ? "w-[500px]" : "w-[400px]")}>
             <ShadcnTabsList className={cn("grid w-full h-11 bg-muted/50 p-1", isAdminOrManager ? "grid-cols-3" : "grid-cols-2")}>
@@ -276,11 +276,11 @@ export const CourseManagement: React.FC = () => {
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <Label htmlFor="title">Course Title *</Label>
-                    <Input 
-                      id="title" 
+                    <Input
+                      id="title"
                       required
                       value={newCourse.title}
-                      onChange={(e) => setNewCourse({...newCourse, title: e.target.value})}
+                      onChange={(e) => setNewCourse({ ...newCourse, title: e.target.value })}
                       placeholder="e.g. Masterclass: Advanced Insurance Underwriting"
                       className="h-11"
                     />
@@ -288,10 +288,10 @@ export const CourseManagement: React.FC = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="description">Executive Summary</Label>
-                    <Textarea 
-                      id="description" 
+                    <Textarea
+                      id="description"
                       value={newCourse.description}
-                      onChange={(e) => setNewCourse({...newCourse, description: e.target.value})}
+                      onChange={(e) => setNewCourse({ ...newCourse, description: e.target.value })}
                       placeholder="A brief overview of the course objectives..."
                       className="min-h-[100px]"
                     />
@@ -300,22 +300,22 @@ export const CourseManagement: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="passingGrade">Passing Grade (%) *</Label>
-                      <Input 
-                        id="passingGrade" 
+                      <Input
+                        id="passingGrade"
                         type="number"
                         min="0"
                         max="100"
                         required
                         value={newCourse.passingGrade}
-                        onChange={(e) => setNewCourse({...newCourse, passingGrade: parseInt(e.target.value) || 0})}
+                        onChange={(e) => setNewCourse({ ...newCourse, passingGrade: parseInt(e.target.value) || 0 })}
                         className="h-11"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label>Target Audience</Label>
-                      <Select 
-                        value={newCourse.targetAudience} 
-                        onValueChange={(val) => setNewCourse({...newCourse, targetAudience: val})}
+                      <Select
+                        value={newCourse.targetAudience}
+                        onValueChange={(val) => setNewCourse({ ...newCourse, targetAudience: val })}
                       >
                         <SelectTrigger className="h-11">
                           <SelectValue placeholder="Select Audience" />
@@ -334,7 +334,7 @@ export const CourseManagement: React.FC = () => {
                     <div className="grid grid-cols-2 gap-2 p-3 border rounded-lg bg-muted/5 max-h-[120px] overflow-y-auto">
                       {departments.map((dept) => (
                         <div key={dept.id} className="flex items-center space-x-2">
-                          <Checkbox 
+                          <Checkbox
                             id={`new-dept-${dept.id}`}
                             checked={newCourse.targetDepartments.includes(dept.name)}
                             onCheckedChange={(checked) => {
@@ -351,7 +351,7 @@ export const CourseManagement: React.FC = () => {
                               }
                             }}
                           />
-                          <Label 
+                          <Label
                             htmlFor={`new-dept-${dept.id}`}
                             className="text-xs font-medium leading-none cursor-pointer"
                           >
@@ -379,7 +379,7 @@ export const CourseManagement: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="bg-gradient-to-br from-primary/5 to-transparent border-primary/10">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Total Curriculum</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
             <BookOpen className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
@@ -389,7 +389,7 @@ export const CourseManagement: React.FC = () => {
         </Card>
         <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-purple-500/10">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Total Components</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Modules</CardTitle>
             <Layers className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
@@ -445,8 +445,8 @@ export const CourseManagement: React.FC = () => {
                   </TableRow>
                 ) : (
                   courses.map((course, index) => (
-                    <TableRow 
-                      key={course.id} 
+                    <TableRow
+                      key={course.id}
                       className={cn(
                         "hover:bg-primary/5 transition-colors cursor-pointer group",
                         index % 2 === 0 ? "bg-background" : "bg-muted/10",
@@ -483,8 +483,8 @@ export const CourseManagement: React.FC = () => {
                       </TableCell>
                       <TableCell className="text-right px-6">
                         <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="default" 
+                          <Button
+                            variant="default"
                             size="sm"
                             className={cn(
                               "shadow-sm group-hover:translate-x-1 transition-transform",
@@ -505,7 +505,7 @@ export const CourseManagement: React.FC = () => {
                           </Button>
 
 
-                          
+
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -515,7 +515,7 @@ export const CourseManagement: React.FC = () => {
                             <DropdownMenuContent align="end" className="w-56">
                               <DropdownMenuLabel>Intelligence & Control</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              
+
                               {course.status === 'PUBLISHED' && (
                                 <DropdownMenuItem onClick={(e) => {
                                   e.stopPropagation();
@@ -605,14 +605,14 @@ export const CourseManagement: React.FC = () => {
               Edit Published Course?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This course is currently live. To protect active learner progress, we will create a new **Draft version (v{(courseToVersion?.version || 0) + 1})** for you to edit. 
+              This course is currently live. To protect active learner progress, we will create a new **Draft version (v{(courseToVersion?.version || 0) + 1})** for you to edit.
               <br /><br />
               The live version will remain unchanged until your new draft is approved and published.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleCreateDraftVersion}
               disabled={isVersioning}
               className="bg-primary hover:bg-primary/90"
@@ -661,7 +661,7 @@ export const CourseManagement: React.FC = () => {
                       const isExpanded = expandedVersionId === v.id;
                       return (
                         <React.Fragment key={v.id}>
-                          <TableRow 
+                          <TableRow
                             className={`group cursor-pointer transition-colors ${v.status === 'PUBLISHED' ? 'bg-success/5 hover:bg-success/10 font-bold' : 'hover:bg-muted/50'}`}
                             onClick={() => setExpandedVersionId(isExpanded ? null : v.id)}
                           >
@@ -766,9 +766,9 @@ export const CourseManagement: React.FC = () => {
                                 </div>
 
                                 <div className="mt-6 pt-4 border-t border-slate-200 flex justify-end">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     className="text-primary font-bold hover:bg-primary/5"
                                     onClick={() => navigate(`/creator/courses/${v.id}`)}
                                   >

@@ -10,16 +10,16 @@ import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 
-import { 
-  ArrowLeft, 
-  Loader2, 
-  Plus, 
+import {
+  ArrowLeft,
+  Loader2,
+  Plus,
   FileText,
-  ClipboardCheck, 
-  Settings, 
-  Award, 
-  Layers, 
-  Play, 
+  ClipboardCheck,
+  Settings,
+  Award,
+  Layers,
+  Play,
   CheckCircle2,
   CheckCircle,
   XCircle,
@@ -61,13 +61,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { useAuth } from '../../context/AuthContext';
 
 
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
-  DialogHeader, 
-  DialogTitle 
+  DialogHeader,
+  DialogTitle
 } from '../../components/ui/dialog';
 import {
   AlertDialog,
@@ -80,7 +80,7 @@ import {
   AlertDialogTitle,
 } from '../../components/ui/alert-dialog';
 import {
-  DndContext, 
+  DndContext,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
@@ -123,17 +123,17 @@ interface SortableModuleItemProps {
 }
 
 
-const SortableModuleItem: React.FC<SortableModuleItemProps> = ({ 
-  module, 
-  index, 
-  getModuleIcon, 
-  setQuizBuilderState, 
+const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
+  module,
+  index,
+  getModuleIcon,
+  setQuizBuilderState,
   setVideoModalState,
   setWorkshopModalState,
   setEvaluationModalState,
   setRichTextModalState,
   setLiveSessionModalState,
-  setEditingModule, 
+  setEditingModule,
   handleDeleteModule,
 
 
@@ -159,7 +159,7 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
     <div ref={setNodeRef} style={style} className="relative group">
       {/* Timeline Dot */}
       <div className="absolute -left-[33px] top-5 h-4 w-4 rounded-full border-2 border-primary bg-background shadow-sm z-10 group-hover:scale-125 transition-transform" />
-      
+
       <Card className={`ml-4 border-none shadow-sm hover:shadow-md transition-all duration-300 ${isDragging ? 'shadow-xl' : 'group-hover:translate-x-1'}`}>
         <CardContent className="p-0">
           <div className="flex flex-col md:flex-row md:items-center justify-between p-5 gap-4">
@@ -180,13 +180,13 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3">
               {!readonly ? (
                 <>
                   {(module.type === 'PRE_QUIZ' || module.type === 'POST_QUIZ') && (
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       className="font-bold border-primary/20 hover:border-primary/50 hover:bg-primary/5"
                       onClick={() => setQuizBuilderState({
@@ -198,10 +198,10 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
                       <Settings className="mr-2 h-3.5 w-3.5" /> Manage Quiz
                     </Button>
                   )}
-                  
+
                   {module.type === 'VIDEO' && (
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       className="font-bold border-secondary/20 hover:border-secondary/50 hover:bg-secondary/5"
                       onClick={() => setVideoModalState({
@@ -214,8 +214,8 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
                   )}
 
                   {module.type === 'WORKSHOP' && (
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       className="font-bold border-green-500/20 hover:border-green-500/50 hover:bg-green-500/5"
                       onClick={() => setWorkshopModalState({
@@ -228,8 +228,8 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
                   )}
 
                   {module.type === 'EVALUATION' && (
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       className="font-bold border-blue-500/20 hover:border-blue-500/50 hover:bg-blue-500/5"
                       onClick={() => setEvaluationModalState({
@@ -243,8 +243,8 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
                   )}
 
                   {module.type === 'ONLINE_EVALUATION' && (
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       className="font-bold border-purple-500/20 hover:border-purple-500/50 hover:bg-purple-500/5"
                       onClick={() => setEvaluationModalState({
@@ -258,8 +258,8 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
                   )}
 
                   {(module.type === 'INTRODUCTION' || module.type === 'CLOSING') && (
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       className="font-bold border-primary/20 hover:border-primary/50 hover:bg-primary/5"
                       onClick={() => setRichTextModalState({
@@ -272,8 +272,8 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
                   )}
 
                   {module.type === 'LIVE_SESSION' && (
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       className="font-bold border-primary/20 hover:border-primary/50 hover:bg-primary/5"
                       onClick={() => setLiveSessionModalState({
@@ -287,18 +287,18 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
 
 
 
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="text-muted-foreground hover:text-primary"
                     onClick={() => setEditingModule(module)}
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
 
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="text-muted-foreground hover:text-destructive"
                     onClick={() => handleDeleteModule(module.id)}
                   >
@@ -316,21 +316,21 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
   );
 };
 
-export 
-interface VersionTimelineItemProps {
+export
+  interface VersionTimelineItemProps {
   v: Course;
   isCurrent: boolean;
 }
 
 const VersionTimelineItem: React.FC<VersionTimelineItemProps> = ({ v, isCurrent }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
   return (
     <div className="relative group animate-in fade-in duration-500">
       {/* The node */}
       <div className={`absolute -left-[30px] top-1 h-[20px] w-[20px] rounded-full border-4 bg-white z-10 transition-all ${isCurrent ? 'border-primary shadow-[0_0_15px_rgba(234,179,8,0.3)]' : 'border-slate-300 group-hover:border-slate-400'}`}></div>
-      
-      <div 
+
+      <div
         className={`space-y-2 p-3 rounded-2xl transition-all cursor-pointer ${isCurrent ? 'bg-primary/5 border border-primary/10' : 'hover:bg-white hover:shadow-sm hover:border-slate-100 border border-transparent'}`}
         onClick={() => !isCurrent && setIsExpanded(!isExpanded)}
       >
@@ -345,7 +345,7 @@ const VersionTimelineItem: React.FC<VersionTimelineItemProps> = ({ v, isCurrent 
             {v.updatedAt ? new Date(v.updatedAt).toLocaleDateString() : '---'}
           </span>
         </div>
-        
+
         <div className="flex items-center justify-between gap-2">
           <p className={`text-sm font-bold tracking-tight truncate ${isCurrent ? 'text-slate-900' : 'text-slate-600'}`}>
             {v.versionTag || 'Unlabeled Release'}
@@ -376,11 +376,11 @@ export const CourseBuilder: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isReadonly = course?.status === 'PUBLISHED' || 
-                    course?.status === 'PENDING_APPROVAL' ||
-                    course?.status === 'ARCHIVED' || 
-                    course?.status === 'RETIRED' || 
-                    (user?.role === 'COURSE_CREATOR' && course?.lecturerId !== user?.id);
+  const isReadonly = course?.status === 'PUBLISHED' ||
+    course?.status === 'PENDING_APPROVAL' ||
+    course?.status === 'ARCHIVED' ||
+    course?.status === 'RETIRED' ||
+    (user?.role === 'COURSE_CREATOR' && course?.lecturerId !== user?.id);
 
 
 
@@ -538,9 +538,9 @@ export const CourseBuilder: React.FC = () => {
 
   const handleOpenApprovalDialog = async () => {
     if (!course) return;
-    
+
     let autoSummary = '';
-    
+
     // If it's a versioned course and doesn't have a summary yet, generate one
     if (course.parentId && !identityForm.changeSummary) {
       setApprovalDialog(prev => ({ ...prev, isOpen: true, isGeneratingDiff: true }));
@@ -618,7 +618,7 @@ export const CourseBuilder: React.FC = () => {
   };
 
   const [isAddingModule, setIsAddingModule] = useState(false);
-  const [newModule, setNewModule] = useState<{title: string, type: string, facilitators: string[]}>({
+  const [newModule, setNewModule] = useState<{ title: string, type: string, facilitators: string[] }>({
     title: '',
     type: 'VIDEO',
     facilitators: []
@@ -723,7 +723,7 @@ export const CourseBuilder: React.FC = () => {
 
     try {
       await Promise.all(
-        newModules.map((m, idx) => 
+        newModules.map((m, idx) =>
           coursesApi.updateModule(courseId!, m.id, { sequenceOrder: idx + 1 })
         )
       );
@@ -915,9 +915,9 @@ export const CourseBuilder: React.FC = () => {
 
             <div className="flex items-center gap-2 text-muted-foreground">
               <Layers className="h-4 w-4" />
-              <span className="text-sm font-bold text-primary uppercase tracking-widest">{isReadonly ? 'Blueprint View' : 'Authoring Studio'}</span>
+              <span className="text-sm font-bold text-primary uppercase tracking-widest">{isReadonly ? 'Blueprint View' : 'Course Studio'}</span>
               <span className="text-muted-foreground/30">•</span>
-              <span className="text-sm font-bold text-primary uppercase tracking-widest">{(course._count?.modules ?? course.modules?.length ?? 0)} Components</span>
+              <span className="text-sm font-bold text-primary uppercase tracking-widest">{(course._count?.modules ?? course.modules?.length ?? 0)} Modules</span>
             </div>
 
           </div>
@@ -928,15 +928,15 @@ export const CourseBuilder: React.FC = () => {
             <>
               {course.status === 'DRAFT' && (
                 <div className="flex gap-2">
-                   <Button 
+                  <Button
                     variant="outline"
                     className="h-10 px-4 bg-orange-500 text-white hover:bg-orange-600 border-none font-bold shadow-md shadow-orange-500/20"
                     onClick={() => toast.info('Sequence saved to local memory.')}
                   >
                     <Save className="mr-2 h-4 w-4" /> Save Sequence
                   </Button>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="h-10 px-4 shadow-lg shadow-primary/20"
                     onClick={handleOpenApprovalDialog}
                   >
@@ -983,9 +983,9 @@ export const CourseBuilder: React.FC = () => {
             </div>
           )}
           {isReadonly && course.status !== 'PUBLISHED' && (
-             <Badge variant="outline" className="h-10 px-4 flex items-center gap-2 text-sm bg-muted text-muted-foreground border-none">
-                <Eye className="h-4 w-4" /> Read Only Mode
-             </Badge>
+            <Badge variant="outline" className="h-10 px-4 flex items-center gap-2 text-sm bg-muted text-muted-foreground border-none">
+              <Eye className="h-4 w-4" /> Read Only Mode
+            </Badge>
           )}
         </div>
 
@@ -1253,20 +1253,20 @@ export const CourseBuilder: React.FC = () => {
                     <p className="text-sm">Start building your curriculum loop by adding your first component.</p>
                   </div>
                 ) : (
-                  <DndContext 
-                    sensors={sensors} 
-                    collisionDetection={closestCenter} 
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
                     onDragEnd={handleDragEnd}
                   >
-                    <SortableContext 
-                      items={(course.modules || []).map(m => m.id)} 
+                    <SortableContext
+                      items={(course.modules || []).map(m => m.id)}
                       strategy={verticalListSortingStrategy}
                       disabled={isReadonly}
                     >
                       {(course.modules || []).map((module, index) => (
-                        <SortableModuleItem 
-                          key={module.id} 
-                          module={module} 
+                        <SortableModuleItem
+                          key={module.id}
+                          module={module}
                           index={index}
                           getModuleIcon={getModuleIcon}
                           setQuizBuilderState={setQuizBuilderState}
@@ -1298,18 +1298,18 @@ export const CourseBuilder: React.FC = () => {
                     <form onSubmit={handleAddModule} className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="m-title" className="text-xs font-bold uppercase tracking-wider">Identity</Label>
-                        <Input 
-                          id="m-title" 
-                          required 
+                        <Input
+                          id="m-title"
+                          required
                           value={newModule.title}
-                          onChange={(e) => setNewModule({...newModule, title: e.target.value})}
+                          onChange={(e) => setNewModule({ ...newModule, title: e.target.value })}
                           placeholder="e.g. Introduction to Policy"
                           className="h-10 bg-background/50"
                         />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Component Type</Label>
-                        <Select value={newModule.type} onValueChange={(val) => setNewModule({...newModule, type: val})}>
+                        <Select value={newModule.type} onValueChange={(val) => setNewModule({ ...newModule, type: val })}>
                           <SelectTrigger className="h-10 bg-background/50 font-bold">
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
@@ -1327,8 +1327,8 @@ export const CourseBuilder: React.FC = () => {
 
                         </Select>
                       </div>
-                      <Button 
-                        type="submit" 
+                      <Button
+                        type="submit"
                         className="w-full h-10 font-bold shadow-lg shadow-primary/20"
                         disabled={isAddingModule}
                       >
@@ -1347,8 +1347,8 @@ export const CourseBuilder: React.FC = () => {
 
         <TabsContent value="certificate">
 
-          <CertificateBuilder 
-            courseId={courseId!} 
+          <CertificateBuilder
+            courseId={courseId!}
             initialData={{
               backgroundUrl: (course as any).certificateBackgroundUrl,
               designConfig: (course as any).certificateDesignConfig
@@ -1390,13 +1390,13 @@ export const CourseBuilder: React.FC = () => {
                       {!isReadonly && !identityForm.thumbnailUrl && (
                         <Label htmlFor="thumb-upload" className="absolute inset-0 cursor-pointer" />
                       )}
-                      <input 
-                        id="thumb-upload" 
-                        type="file" 
-                        accept="image/*" 
-                        className="hidden" 
+                      <input
+                        id="thumb-upload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
                         disabled={isReadonly || isUploadingThumbnail}
-                        onChange={handleThumbnailUpload} 
+                        onChange={handleThumbnailUpload}
                       />
                     </div>
                     <div className="flex-1 space-y-2">
@@ -1424,11 +1424,11 @@ export const CourseBuilder: React.FC = () => {
                         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Locked</span>
                       )}
                     </Label>
-                    <Input 
-                      id="c-title" 
+                    <Input
+                      id="c-title"
                       disabled={isReadonly || !!course.parentId}
                       value={identityForm.title}
-                      onChange={(e) => setIdentityForm({...identityForm, title: e.target.value})}
+                      onChange={(e) => setIdentityForm({ ...identityForm, title: e.target.value })}
                     />
                     {course.parentId && (
                       <p className="text-xs text-muted-foreground">The course title is the canonical name for this lineage and cannot be changed per-version.</p>
@@ -1436,10 +1436,10 @@ export const CourseBuilder: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                     <Label>Target Audience</Label>
-                    <Select 
+                    <Select
                       disabled={isReadonly}
-                      value={identityForm.targetAudience} 
-                      onValueChange={(val) => setIdentityForm({...identityForm, targetAudience: val})}
+                      value={identityForm.targetAudience}
+                      onValueChange={(val) => setIdentityForm({ ...identityForm, targetAudience: val })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select audience" />
@@ -1459,7 +1459,7 @@ export const CourseBuilder: React.FC = () => {
                 <div className="space-y-3">
                   <Label className="text-sm font-bold">Target Departments</Label>
                   <p className="text-xs text-muted-foreground mb-2">Limit course visibility to specific departments. Select none to keep visible to all.</p>
-                  <MultiSelect 
+                  <MultiSelect
                     placeholder="Search and select departments..."
                     options={departments.map(d => ({ label: d.name, value: d.name }))}
                     selected={identityForm.targetDepartments}
@@ -1472,11 +1472,11 @@ export const CourseBuilder: React.FC = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="c-desc">Executive Summary / Description</Label>
-                  <Textarea 
-                    id="c-desc" 
+                  <Textarea
+                    id="c-desc"
                     disabled={isReadonly}
                     value={identityForm.description}
-                    onChange={(e) => setIdentityForm({...identityForm, description: e.target.value})}
+                    onChange={(e) => setIdentityForm({ ...identityForm, description: e.target.value })}
                     className="min-h-[100px]"
                   />
                 </div>
@@ -1505,9 +1505,9 @@ export const CourseBuilder: React.FC = () => {
                       Automatically trigger a follow-up evaluation 6 months after course completion to measure K.A.S.H. impact.
                     </p>
                   </div>
-                  <Switch 
+                  <Switch
                     disabled={isReadonly}
-                    checked={course.requires180DayEval} 
+                    checked={course.requires180DayEval}
                     onCheckedChange={handleToggleEval}
                   />
                 </div>
@@ -1521,13 +1521,13 @@ export const CourseBuilder: React.FC = () => {
                     </p>
                   </div>
                   <div className="w-full md:w-32">
-                    <Input 
-                      type="number" 
-                      min="0" 
-                      max="100" 
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
                       disabled={isReadonly}
                       value={identityForm.passingGrade}
-                      onChange={(e) => setIdentityForm({...identityForm, passingGrade: parseInt(e.target.value) || 0})}
+                      onChange={(e) => setIdentityForm({ ...identityForm, passingGrade: parseInt(e.target.value) || 0 })}
                       className="bg-background font-bold text-center h-11"
                     />
                   </div>
@@ -1568,10 +1568,10 @@ export const CourseBuilder: React.FC = () => {
 
                         <div className="relative pl-10 space-y-8">
                           {lineageVersions.map((v) => (
-                            <VersionTimelineItem 
-                              key={v.id} 
-                              v={v} 
-                              isCurrent={v.id === course.id} 
+                            <VersionTimelineItem
+                              key={v.id}
+                              v={v}
+                              isCurrent={v.id === course.id}
                             />
                           ))}
                         </div>
@@ -1590,7 +1590,7 @@ export const CourseBuilder: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      <QuizBuilder 
+      <QuizBuilder
         courseId={course.id}
         moduleId={quizBuilderState.moduleId}
         moduleTitle={quizBuilderState.moduleTitle}
@@ -1608,18 +1608,18 @@ export const CourseBuilder: React.FC = () => {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-title">Title</Label>
-                <Input 
-                  id="edit-title" 
-                  required 
-                  value={editingModule?.title || ''} 
-                  onChange={(e) => setEditingModule({...editingModule, title: e.target.value})}
+                <Input
+                  id="edit-title"
+                  required
+                  value={editingModule?.title || ''}
+                  onChange={(e) => setEditingModule({ ...editingModule, title: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Module Type</Label>
-                <Select 
-                  value={editingModule?.type} 
-                  onValueChange={(val) => setEditingModule({...editingModule, type: val})}
+                <Select
+                  value={editingModule?.type}
+                  onValueChange={(val) => setEditingModule({ ...editingModule, type: val })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select type" />
@@ -1651,13 +1651,13 @@ export const CourseBuilder: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      <VideoUploadModal 
+      <VideoUploadModal
         isOpen={videoModalState.isOpen}
         onClose={() => setVideoModalState({ ...videoModalState, isOpen: false })}
         onUploadSuccess={handleVideoUploadSuccess}
       />
 
-      <WorkshopActivityBuilder 
+      <WorkshopActivityBuilder
         courseId={courseId!}
         moduleId={workshopModalState.moduleId}
         isOpen={workshopModalState.isOpen}
@@ -1666,7 +1666,7 @@ export const CourseBuilder: React.FC = () => {
       />
 
 
-      <EvaluationTemplatePicker 
+      <EvaluationTemplatePicker
         courseId={courseId!}
         moduleId={evaluationModalState.moduleId}
         category={evaluationModalState.category}
@@ -1676,7 +1676,7 @@ export const CourseBuilder: React.FC = () => {
       />
 
 
-      <RichTextModuleBuilder 
+      <RichTextModuleBuilder
         courseId={courseId!}
         moduleId={richTextModalState.moduleId}
         isOpen={richTextModalState.isOpen}
@@ -1684,7 +1684,7 @@ export const CourseBuilder: React.FC = () => {
         onUpdate={() => fetchCourse(true)}
       />
 
-      <LiveSessionBuilder 
+      <LiveSessionBuilder
         courseId={courseId!}
         moduleId={liveSessionModalState.moduleId}
         isOpen={liveSessionModalState.isOpen}
