@@ -1,9 +1,16 @@
 import { prisma } from '../../lib/prisma';
-import { CourseStatus } from '@prisma/client';
+import { CourseStatus, Role, EnrollmentStatus } from '@prisma/client';
 
 export class LearningPathsService {
-  static async getAll() {
+  static async getAll(role?: string) {
+    const where: any = {};
+    
+    if (role === Role.EMPLOYEE) {
+      where.status = CourseStatus.PUBLISHED;
+    }
+
     return prisma.learningPath.findMany({
+      where,
       include: {
         pathCourses: {
           include: {
@@ -145,7 +152,13 @@ export class LearningPathsService {
 
   static async getUserEnrollments(userId: string) {
     return prisma.learningPathEnrollment.findMany({
-      where: { userId },
+      where: { 
+        userId,
+        OR: [
+          { learningPath: { status: { not: CourseStatus.RETIRED } } },
+          { status: EnrollmentStatus.COMPLETED }
+        ]
+      },
       include: {
         learningPath: {
           include: {

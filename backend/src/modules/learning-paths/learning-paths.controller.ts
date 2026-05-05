@@ -3,9 +3,10 @@ import { LearningPathsService } from './learning-paths.service';
 import { StorageService } from '../../lib/services/storage.service';
 
 export class LearningPathsController {
-  static async getAll(req: Request, res: Response) {
+  static async getAll(req: any, res: Response) {
     try {
-      const paths = await LearningPathsService.getAll();
+      const role = req.user?.role;
+      const paths = await LearningPathsService.getAll(role);
       res.json(paths);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

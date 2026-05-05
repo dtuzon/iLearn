@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import { EnrollmentStatus, Role } from '@prisma/client';
+import { EnrollmentStatus, Role, CourseStatus } from '@prisma/client';
 import { CertificatesService } from '../certificates/certificates.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { sendEmail, sendBulkEmails } from '../../lib/email';
@@ -10,7 +10,13 @@ import { sendEmail, sendBulkEmails } from '../../lib/email';
 export class EnrollmentsService {
   static async getMyEnrollments(userId: string) {
     return prisma.enrollment.findMany({
-      where: { userId },
+      where: { 
+        userId,
+        OR: [
+          { course: { status: { not: CourseStatus.RETIRED } } },
+          { status: EnrollmentStatus.COMPLETED }
+        ]
+      },
       include: {
         course: {
           include: {

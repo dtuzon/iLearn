@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import { Role, CourseStatus } from '@prisma/client';
+import { Role, CourseStatus, EnrollmentStatus } from '@prisma/client';
 import { EnrollmentsService } from '../enrollments/enrollments.service';
 
 
@@ -11,13 +11,24 @@ export class CoursesService {
     const isPending = tab === 'pending';
 
     if (role === Role.EMPLOYEE) {
-      // Employees: Show latest active published courses or enrolled ones
+      // Employees: Show latest active published courses or enrolled ones (excluding retired unless completed)
       return prisma.course.findMany({
         where: {
           isLatest: true,
           OR: [
             { status: CourseStatus.PUBLISHED },
-            { enrollments: { some: { userId } } }
+            { 
+              AND: [
+                { status: CourseStatus.RETIRED },
+                { enrollments: { some: { userId, status: EnrollmentStatus.COMPLETED } } }
+              ]
+            },
+            { 
+              AND: [
+                { status: CourseStatus.PUBLISHED },
+                { enrollments: { some: { userId } } }
+              ]
+            }
           ]
         },
         include: {
