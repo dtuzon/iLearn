@@ -42,6 +42,7 @@ export const CoursePlayer: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
   const [quizResult, setQuizResult] = useState<{ score: number, passed: boolean, message: string } | null>(null);
+  const [batchLock, setBatchLock] = useState<any>(null);
 
 
 
@@ -56,6 +57,14 @@ export const CoursePlayer: React.FC = () => {
 
       setCourse(courseData);
       setEnrollment(progressData);
+      
+      if (progressData.batchLock) {
+        setBatchLock(progressData.batchLock);
+        setIsLoading(false);
+        return;
+      }
+
+      setBatchLock(null);
       setQuizResult(null);
       setQuizAnswers({});
 
@@ -168,6 +177,40 @@ export const CoursePlayer: React.FC = () => {
   }
 
   if (!course) return <div>Course not found</div>;
+
+  if (batchLock) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 space-y-8 animate-in fade-in duration-700">
+        <div className="relative">
+          <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
+          <Lock className="h-32 w-32 text-primary relative z-10" />
+        </div>
+        
+        <div className="text-center space-y-4 max-w-lg mx-auto">
+          <h2 className="text-5xl font-black italic uppercase tracking-tighter text-primary">Content Locked</h2>
+          <p className="text-muted-foreground text-xl font-medium leading-relaxed px-4">
+            {batchLock.message}
+          </p>
+        </div>
+
+        <div className="bg-background/80 backdrop-blur-sm border-2 border-dashed border-primary/20 p-8 rounded-[2.5rem] flex flex-col items-center gap-4">
+          <Calendar className="h-8 w-8 text-primary" />
+          <div className="text-center">
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Estimated Unlock</p>
+            <p className="text-2xl font-black text-foreground">{new Date(batchLock.unlockDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+          </div>
+        </div>
+
+        <Button 
+          variant="outline" 
+          onClick={() => navigate('/learning/my-courses')}
+          className="h-12 px-8 rounded-2xl font-black uppercase tracking-widest text-xs border-primary/20 hover:bg-primary hover:text-white transition-all"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" /> Return to Dashboard
+        </Button>
+      </div>
+    );
+  }
 
   // Course Completed View
   if (!displayedModule && enrollment?.status === 'COMPLETED') {

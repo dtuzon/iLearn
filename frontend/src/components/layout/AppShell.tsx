@@ -21,7 +21,8 @@ import {
   LifeBuoy,
   User,
   ShieldCheck,
-  UserPlus
+  UserPlus,
+  LayoutGrid
 } from 'lucide-react';
 
 
@@ -196,6 +197,7 @@ export const AppShell: React.FC = () => {
                   Administration
                 </div>
                 {user?.role === 'ADMINISTRATOR' && <NavLink to="/admin/users" icon={Users}>User Management</NavLink>}
+                <NavLink to="/admin/batches" icon={LayoutGrid}>Manage Batches</NavLink>
                 <NavLink to="/admin/enrollments" icon={UserPlus}>Manage Enrollments</NavLink>
                 {user?.role === 'ADMINISTRATOR' && (
                   <>

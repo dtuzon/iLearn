@@ -137,6 +137,7 @@ model User {
   activitySubmissions ActivitySubmission[]
   assignedSubmissions ActivitySubmission[] @relation("AssignedSubmissions")
   evaluationResponses EvaluationResponse[]
+  batchCheckers       BatchChecker[]
 
 
   
@@ -309,6 +310,8 @@ model Course {
   behavioralEvaluations BehavioralEvaluation[]
   learningPathCourses LearningPathCourse[]
   attachments         CourseAttachment[]
+  batches             Batch[]
+  batchCourseSchedules BatchCourseSchedule[]
 
 
   @@map("courses")
@@ -472,6 +475,9 @@ model Enrollment {
   courseId String
   course   Course @relation(fields: [courseId], references: [id])
 
+  batchId            String?
+  batch              Batch?           @relation(fields: [batchId], references: [id])
+
   moduleProgress     ModuleProgress[]
 
   evaluation180DayTriggered Boolean @default(false)
@@ -593,6 +599,7 @@ model LearningPath {
   enrollments       LearningPathEnrollment[]
   certificates      LearningPathCertificate[]
   certificateTemplate CertificateTemplate?
+  batches           Batch[]
   
   @@map("learning_paths")
 }
@@ -645,6 +652,9 @@ model LearningPathEnrollment {
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   learningPath   LearningPath   @relation(fields: [learningPathId], references: [id], onDelete: Cascade)
 
+  batchId        String?
+  batch          Batch?         @relation(fields: [batchId], references: [id])
+
   @@unique([userId, learningPathId]) // Prevent double enrollment
   @@map("learning_path_enrollments")
 }
@@ -663,4 +673,55 @@ model Announcement {
   author      User      @relation(fields: [authorId], references: [id])
 
   @@map("announcements")
+}
+
+model Batch {
+  id               String    @id @default(cuid())
+  name             String    // e.g., "Q3 K.A.S.H Onboarding"
+  startDate        DateTime
+  endDate          DateTime
+  status           String    @default("UPCOMING") // UPCOMING, ACTIVE, COMPLETED
+
+  // Target Content (Can wrap a single Course or a Learning Path)
+  courseId         String?
+  course           Course?   @relation(fields: [courseId], references: [id])
+  learningPathId   String?
+  learningPath     LearningPath? @relation(fields: [learningPathId], references: [id])
+
+  // Relations
+  enrollments             Enrollment[]
+  learningPathEnrollments LearningPathEnrollment[]
+  courseSchedules         BatchCourseSchedule[] 
+  activityCheckers        BatchChecker[] 
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@map("batches")
+}
+
+// Allows overriding start/end dates for specific courses WITHIN a Learning Path batch
+model BatchCourseSchedule {
+  id        String    @id @default(cuid())
+  batchId   String
+  batch     Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course    @relation(fields: [courseId], references: [id])
+  startDate DateTime?
+  endDate   DateTime?
+
+  @@unique([batchId, courseId])
+  @@map("batch_course_schedules")
+}
+
+// Maps which staff members are responsible for checking/grading this batch
+model BatchChecker {
+  id        String   @id @default(cuid())
+  batchId   String
+  batch     Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  userId    String   // The supervisor/manager acting as the checker
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([batchId, userId])
+  @@map("batch_checkers")
 }

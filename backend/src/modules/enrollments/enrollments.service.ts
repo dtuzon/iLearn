@@ -58,6 +58,13 @@ export class EnrollmentsService {
         }
       },
       include: {
+        batch: {
+          include: {
+            courseSchedules: {
+              where: { courseId }
+            }
+          }
+        },
         moduleProgress: {
           include: { module: true }
         },
@@ -73,6 +80,37 @@ export class EnrollmentsService {
     });
 
     if (!enrollment) throw new Error('Enrollment not found');
+
+    // BATCH LOCK LOGIC
+    if (enrollment.batch) {
+      const now = new Date();
+      const batch = enrollment.batch;
+      const schedule = batch.courseSchedules[0]; // Specific schedule for this course in this batch
+
+      // 1. Check overall batch start
+      if (now < batch.startDate) {
+        return {
+          ...enrollment,
+          batchLock: {
+            isLocked: true,
+            unlockDate: batch.startDate,
+            message: `This course unlocks on ${batch.startDate.toLocaleDateString()} as part of the ${batch.name} cohort.`
+          }
+        };
+      }
+
+      // 2. Check granular course schedule within batch (e.g. for Learning Paths)
+      if (schedule && schedule.startDate && now < schedule.startDate) {
+        return {
+          ...enrollment,
+          batchLock: {
+            isLocked: true,
+            unlockDate: schedule.startDate,
+            message: `According to your batch schedule, this specific course unlocks on ${schedule.startDate.toLocaleDateString()}.`
+          }
+        };
+      }
+    }
 
     return enrollment;
   }
