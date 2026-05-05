@@ -135,8 +135,8 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
     try {
       const payload = {
         ...formData,
-        courseId: formData.contentType === 'COURSE' ? formData.contentId : null,
-        learningPathId: formData.contentType === 'PATH' ? formData.contentId : null
+        courseId: formData.contentType === 'COURSE' && formData.contentId ? formData.contentId : null,
+        learningPathId: formData.contentType === 'PATH' && formData.contentId ? formData.contentId : null
       };
 
       if (batchId) {
