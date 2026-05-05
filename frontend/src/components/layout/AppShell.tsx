@@ -22,7 +22,8 @@ import {
   User,
   ShieldCheck,
   UserPlus,
-  LayoutGrid
+  LayoutGrid,
+  Zap
 } from 'lucide-react';
 
 
@@ -255,6 +256,15 @@ export const AppShell: React.FC = () => {
                   Compliance
                 </div>
                 <NavLink to="/approvals/activities" icon={ClipboardCheck}>Activity Approvals</NavLink>
+              </>
+            )}
+
+            {(user?.role === 'SUPERVISOR' || user?.role === 'DEPARTMENT_HEAD' || user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
+              <>
+                <div className="mt-6 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest opacity-70">
+                  Cohort Grading
+                </div>
+                <NavLink to="/checker/portal" icon={Zap}>Live Grading Portal</NavLink>
               </>
             )}
 

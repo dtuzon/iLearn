@@ -13,6 +13,7 @@ import { EvaluationTemplates } from './pages/admin/EvaluationTemplates';
 import { ManageBulletin } from './pages/admin/ManageBulletin';
 import { EnrollmentManager } from './pages/admin/EnrollmentManager';
 import { ManageBatches } from './pages/admin/ManageBatches';
+import { GradingPortal } from './pages/checker/GradingPortal';
 
 
 
@@ -100,6 +101,11 @@ function App() {
                 }>
                   <Route path="team-evaluations" element={<TeamEvaluations />} />
                   <Route path="team-management" element={<TeamManagement />} />
+                </Route>
+
+                {/* Checker Routes */}
+                <Route path="/checker">
+                  <Route path="portal" element={<GradingPortal />} />
                 </Route>
 
                 {/* Shared Approval Routes */}

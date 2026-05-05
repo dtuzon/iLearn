@@ -23,6 +23,7 @@ import announcementsRouter from './modules/announcements/announcements.router';
 import dashboardRouter from './modules/dashboard/dashboard.router';
 import catalogRouter from './modules/catalog/catalog.router';
 import batchesRouter from './modules/batches/batches.router';
+import activitiesRouter from './modules/activities/activities.router';
 
 
 
@@ -70,6 +71,7 @@ app.use('/api/announcements', announcementsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/catalog', catalogRouter);
 app.use('/api/batches', batchesRouter);
+app.use('/api/activities', activitiesRouter);
 
 
 

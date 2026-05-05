@@ -31,6 +31,7 @@ enum ModuleType {
   INTRODUCTION
   CLOSING
   LIVE_SESSION
+  ASSIGNMENT
 }
 
 
@@ -56,8 +57,10 @@ enum CourseStatus {
 
 enum SubmissionStatus {
   PENDING
+  PENDING_REVIEW
   APPROVED
   REJECTED
+  NEEDS_REVISION
 }
 
 enum CheckerType {
@@ -380,12 +383,17 @@ model ActivitySubmission {
   id            String   @id @default(cuid())
   moduleId      String
   userId        String
+  batchId       String?
+  batch         Batch?   @relation(fields: [batchId], references: [id])
+
   fileUrl       String?
   textResponse  String?
-  status        SubmissionStatus @default(PENDING)
+  status        SubmissionStatus @default(PENDING_REVIEW)
+  score         Float?
   feedback      String? 
   submittedAt   DateTime @default(now())
-  reviewedAt    DateTime?
+  gradedAt      DateTime?
+  gradedById    String?
   
   assignedCheckerId String?
   assignedChecker   User?    @relation("AssignedSubmissions", fields: [assignedCheckerId], references: [id])
@@ -693,6 +701,7 @@ model Batch {
   learningPathEnrollments LearningPathEnrollment[]
   courseSchedules         BatchCourseSchedule[] 
   activityCheckers        BatchChecker[] 
+  activitySubmissions     ActivitySubmission[]
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
