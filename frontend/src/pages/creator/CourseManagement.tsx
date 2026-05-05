@@ -216,7 +216,7 @@ export const CourseManagement: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'PUBLISHED': return <Badge className="bg-success/10 text-success border-none px-3 py-1">LIVE</Badge>;
-      case 'PENDING_APPROVAL': return <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 border-none px-3 py-1 animate-pulse">PENDING</Badge>;
+      case 'PENDING_APPROVAL': return <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-none px-3 py-1 animate-pulse">PENDING</Badge>;
       case 'DRAFT': return <Badge variant="outline" className="text-muted-foreground border-dashed px-3 py-1">DRAFT</Badge>;
       case 'ARCHIVED': return <Badge variant="outline" className="bg-muted text-muted-foreground border-none px-3 py-1">ARCHIVED</Badge>;
       case 'RETIRED': return <Badge variant="destructive" className="px-3 py-1">RETIRED</Badge>;
@@ -387,31 +387,32 @@ export const CourseManagement: React.FC = () => {
             <p className="text-xs text-muted-foreground">Active course structures</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-purple-500/10">
+        <Card className="bg-gradient-to-br from-secondary/20 to-transparent border-secondary/20">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">Total Modules</CardTitle>
-            <Layers className="h-4 w-4 text-purple-500" />
+            <Layers className="h-4 w-4 text-secondary-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalModules}</div>
             <p className="text-xs text-muted-foreground">Modules across all courses</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-yellow-500/5 to-transparent border-yellow-500/10">
+        <Card className="bg-gradient-to-br from-amber-500/5 to-transparent border-amber-500/10">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
+            <Clock className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pendingCount}</div>
             <p className="text-xs text-muted-foreground">Courses awaiting approval</p>
             {pendingCount > 0 && isAdminOrManager && (
-              <button
-                className="text-xs text-yellow-600 font-bold mt-1 hover:underline"
+              <Button
+                variant="link"
+                className="text-xs text-amber-600 font-bold mt-1 h-auto p-0 hover:text-amber-700 hover:underline"
                 onClick={() => setActiveTab('pending')}
               >
                 View pending &rarr;
-              </button>
+              </Button>
             )}
           </CardContent>
         </Card>

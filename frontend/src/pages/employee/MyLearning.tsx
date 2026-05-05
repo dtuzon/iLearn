@@ -59,7 +59,7 @@ export const MyLearning: React.FC = () => {
     }
     if (diffDays <= 3) {
       return (
-        <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none flex items-center gap-1 shadow-lg shadow-orange-500/20">
+        <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none flex items-center gap-1 shadow-lg shadow-amber-500/20">
           <Clock className="h-3 w-3" />
           DUE IN {diffDays === 0 ? 'TODAY' : `${diffDays}d`}
         </Badge>

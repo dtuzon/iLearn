@@ -170,20 +170,21 @@ export const EvaluationPlayer: React.FC<EvaluationPlayerProps> = ({
                   {q.type === EvalQuestionType.RATING_1_TO_5 && (
                     <div className="flex justify-between items-center gap-2 max-w-md">
                       {[1, 2, 3, 4, 5].map((num) => (
-                        <button
+                        <Button
+                          variant="ghost"
                           key={num}
                           type="button"
                           onClick={() => handleAnswerChange(q.id, num)}
                           className={cn(
-                            "flex-1 flex flex-col items-center justify-center p-3 border-2 rounded-xl transition-all duration-200",
+                            "h-auto flex-1 flex flex-col items-center justify-center p-3 border-2 rounded-xl transition-all duration-200",
                             answers[q.id] === num 
-                              ? "border-primary bg-primary/5 text-primary shadow-inner scale-105" 
+                              ? "border-primary bg-primary/5 text-primary shadow-inner scale-105 hover:bg-primary/10" 
                               : "border-muted-foreground/10 hover:bg-muted/50 text-muted-foreground hover:scale-105"
                           )}
                         >
                           <Star className={cn("h-5 w-5 mb-1", answers[q.id] === num ? "fill-primary" : "fill-transparent")} />
                           <span className="text-sm font-black">{num}</span>
-                        </button>
+                        </Button>
                       ))}
                     </div>
                   )}

@@ -8,6 +8,7 @@ import {
   DialogFooter
 } from '../ui/dialog';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { Progress } from '../ui/progress';
 import { Upload, Video, CheckCircle2, X } from 'lucide-react';
 
@@ -121,7 +122,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                   <p className="font-bold text-sm">{currentVideoUrl ? 'Upload a Replacement Video' : 'Click or Drag to Upload'}</p>
                   <p className="text-xs text-muted-foreground mt-1">MP4, WebM up to 100MB</p>
                 </div>
-                <input 
+                <Input 
                   type="file" 
                   ref={fileInputRef}
                   onChange={handleFileChange}

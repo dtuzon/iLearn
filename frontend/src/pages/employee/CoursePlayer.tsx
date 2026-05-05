@@ -224,7 +224,7 @@ export const CoursePlayer: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-6">
         <div className="relative">
-          <CheckCircle2 className="h-24 w-24 text-green-500 animate-in zoom-in-50 duration-500" />
+          <CheckCircle2 className="h-24 w-24 text-emerald-500 animate-in zoom-in-50 duration-500" />
           {!allApproved && (
             <div className="absolute -top-2 -right-2">
               <AlertCircle className="h-8 w-8 text-warning fill-warning/20" />
@@ -327,13 +327,14 @@ export const CoursePlayer: React.FC = () => {
               const isLocked = m.sequenceOrder > furthestOrderReached;
 
               return (
-                <button
+                <Button
+                  variant="ghost"
                   key={m.id}
                   disabled={isLocked}
                   onClick={() => handleModuleNavigate(m)}
                   className={cn(
-                    "w-full flex items-start gap-3 p-3 rounded-xl transition-all text-left group border border-transparent",
-                    isCurrent ? "bg-primary/10 border-primary/20 text-primary shadow-sm" : 
+                    "w-full flex items-start gap-3 p-3 rounded-xl transition-all text-left group border border-transparent h-auto justify-start whitespace-normal",
+                    isCurrent ? "bg-primary/10 border-primary/20 text-primary shadow-sm hover:bg-primary/20" : 
                     isLocked ? "opacity-40 cursor-not-allowed" : 
                     "hover:bg-muted/50"
                   )}
@@ -341,7 +342,7 @@ export const CoursePlayer: React.FC = () => {
                   <div className={cn(
                     "mt-0.5 rounded-full p-1.5 shrink-0",
                     isCurrent ? "bg-primary text-white" : 
-                    isCompleted ? "bg-green-100 text-green-600" : 
+                    isCompleted ? "bg-emerald-100 text-emerald-600" : 
                     isLocked ? "bg-muted text-muted-foreground" : 
                     "bg-muted text-primary"
                   )}>
@@ -363,7 +364,7 @@ export const CoursePlayer: React.FC = () => {
                       {m.title}
                     </p>
                   </div>
-                </button>
+                </Button>
               );
             })}
           </CardContent>
@@ -375,7 +376,7 @@ export const CoursePlayer: React.FC = () => {
           <div className="flex items-center justify-center gap-2">
             <div className={cn(
               "h-2 w-2 rounded-full",
-              enrollment.status === 'COMPLETED' ? "bg-green-500" : "bg-primary animate-pulse"
+              enrollment.status === 'COMPLETED' ? "bg-emerald-500" : "bg-primary animate-pulse"
             )} />
             <span className="text-[11px] font-black uppercase tracking-tighter text-foreground">
               {enrollment.status.replace('_', ' ')}
@@ -471,9 +472,9 @@ export const CoursePlayer: React.FC = () => {
             <div className="flex items-center gap-3">
               {displayedModule.type === 'VIDEO' && <Video className="h-6 w-6 text-destructive" />}
               {(displayedModule.type === 'PRE_QUIZ' || displayedModule.type === 'POST_QUIZ') && <HelpCircle className="h-6 w-6 text-primary" />}
-              {(displayedModule.type === 'WORKSHOP' || displayedModule.type === 'ASSIGNMENT') && <BookOpen className="h-6 w-6 text-green-600" />}
+              {(displayedModule.type === 'WORKSHOP' || displayedModule.type === 'ASSIGNMENT') && <BookOpen className="h-6 w-6 text-emerald-600" />}
               {displayedModule.type === 'EVALUATION' && <ClipboardCheck className="h-6 w-6 text-secondary-foreground" />}
-              {displayedModule.type === 'LIVE_SESSION' && <Video className="h-6 w-6 text-orange-500" />}
+              {displayedModule.type === 'LIVE_SESSION' && <Video className="h-6 w-6 text-amber-500" />}
               <CardTitle>{displayedModule.title}</CardTitle>
 
             </div>
@@ -512,10 +513,10 @@ export const CoursePlayer: React.FC = () => {
                   <div className="flex flex-col items-center justify-center py-10 space-y-6 text-center animate-in fade-in zoom-in duration-300">
                     <div className={cn(
                       "p-4 rounded-full",
-                      quizResult.passed ? "bg-green-500/10" : "bg-destructive/10"
+                      quizResult.passed ? "bg-emerald-500/10" : "bg-destructive/10"
                     )}>
                       {quizResult.passed ? (
-                        <CheckCircle2 className="h-16 w-16 text-green-500" />
+                        <CheckCircle2 className="h-16 w-16 text-emerald-500" />
                       ) : (
                         <AlertCircle className="h-16 w-16 text-destructive" />
                       )}

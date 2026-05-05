@@ -141,14 +141,15 @@ export const GradingPortal: React.FC = () => {
               </div>
             ) : (
               batches.map(batch => (
-                <button
+                <Button
+                  variant="outline"
                   key={batch.id}
                   onClick={() => setSelectedBatch(batch)}
                   className={cn(
-                    "w-full text-left p-4 rounded-[1.5rem] transition-all duration-300 relative group overflow-hidden border-2",
+                    "w-full h-auto text-left p-4 rounded-[1.5rem] transition-all duration-300 relative group overflow-hidden border-2 flex flex-col items-start gap-0 whitespace-normal",
                     selectedBatch?.id === batch.id 
-                      ? "bg-primary border-primary text-primary-foreground shadow-xl shadow-primary/20 scale-[1.02]" 
-                      : "bg-background border-muted hover:border-primary/50"
+                      ? "bg-primary border-primary text-primary-foreground shadow-xl shadow-primary/20 scale-[1.02] hover:bg-primary/90" 
+                      : "bg-background border-muted hover:border-primary/50 hover:bg-muted/5"
                   )}
                 >
                   <div className="relative z-10">
@@ -175,7 +176,7 @@ export const GradingPortal: React.FC = () => {
                   {selectedBatch?.id === batch.id && (
                     <div className="absolute right-0 top-0 h-full w-1/2 bg-white/10 skew-x-12 transform translate-x-10" />
                   )}
-                </button>
+                </Button>
               ))
             )}
           </div>
@@ -189,7 +190,7 @@ export const GradingPortal: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <h2 className="text-3xl font-black italic uppercase tracking-tighter text-primary flex items-center gap-3">
-                  <Zap className="h-8 w-8 animate-pulse text-yellow-500" />
+                  <Zap className="h-8 w-8 animate-pulse text-amber-500" />
                   Live Grading Feed
                 </h2>
                 <p className="text-sm text-muted-foreground font-medium">
@@ -198,7 +199,7 @@ export const GradingPortal: React.FC = () => {
               </div>
               <div className="flex gap-4">
                  <div className="bg-primary/5 px-6 py-3 rounded-2xl border border-primary/10 flex items-center gap-3">
-                    <div className="h-2 w-2 rounded-full bg-green-500 animate-ping" />
+                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
                     <span className="text-[10px] font-black uppercase tracking-widest text-primary">Real-Time Sync Active</span>
                  </div>
               </div>
@@ -224,7 +225,7 @@ export const GradingPortal: React.FC = () => {
                 ) : (
                   submissions.map((submission) => (
                     <Card key={submission.id} className="animate-in slide-in-from-top-4 duration-500 rounded-[2rem] border-none shadow-xl overflow-hidden bg-background/50 backdrop-blur-md">
-                      <div className="h-1.5 w-full bg-yellow-500" />
+                      <div className="h-1.5 w-full bg-amber-500" />
                       <CardContent className="p-8 space-y-8">
                         {/* Header: Student Info */}
                         <div className="flex justify-between items-start">
@@ -301,7 +302,7 @@ export const GradingPortal: React.FC = () => {
                                   <XCircle className="h-4 w-4" /> Reject
                                 </Button>
                                 <Button 
-                                  className="h-12 rounded-xl gap-2 font-black bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20"
+                                  className="h-12 rounded-xl gap-2 font-black bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 text-white"
                                   onClick={() => handleGrade(submission.id, 'APPROVED')}
                                 >
                                   <CheckCircle2 className="h-4 w-4" /> Approve

@@ -13,7 +13,7 @@ export class BatchesController {
 
   static async getById(req: Request, res: Response) {
     try {
-      const batch = await BatchesService.getById(req.params.id);
+      const batch = await BatchesService.getById(req.params.id as string);
       if (!batch) return res.status(404).json({ message: 'Batch not found' });
       res.json(batch);
     } catch (error: any) {
@@ -32,7 +32,7 @@ export class BatchesController {
 
   static async update(req: Request, res: Response) {
     try {
-      const batch = await BatchesService.update(req.params.id, req.body);
+      const batch = await BatchesService.update(req.params.id as string, req.body);
       res.json(batch);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -42,7 +42,7 @@ export class BatchesController {
   static async assignLearners(req: Request, res: Response) {
     try {
       const { userIds } = req.body;
-      await BatchesService.assignLearners(req.params.id, userIds);
+      await BatchesService.assignLearners(req.params.id as string, userIds);
       res.status(204).send();
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -51,7 +51,7 @@ export class BatchesController {
 
   static async delete(req: Request, res: Response) {
     try {
-      await BatchesService.delete(req.params.id);
+      await BatchesService.delete(req.params.id as string);
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });

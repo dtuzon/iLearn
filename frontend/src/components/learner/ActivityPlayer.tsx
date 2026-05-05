@@ -9,6 +9,7 @@ import {
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { Input } from '../ui/input';
 
 import { 
   Loader2, 
@@ -210,10 +211,10 @@ export const ActivityPlayer: React.FC<ActivityPlayerProps> = ({ module, onComple
               <div className="space-y-2">
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Upload File</Label>
                 <div className="border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center gap-2 hover:bg-muted/50 transition-colors relative group">
-                  <input 
+                  <Input 
                     type="file" 
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full p-0 m-0"
                   />
                   <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                     <FileUp className="h-6 w-6 text-primary" />

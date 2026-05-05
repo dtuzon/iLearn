@@ -218,7 +218,7 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
                     <Button
                       variant={(module.activityInstructions || module.activityTemplateUrl) ? "default" : "outline"}
                       size="sm"
-                      className={`font-bold ${!(module.activityInstructions || module.activityTemplateUrl) ? 'border-green-500/20 hover:border-green-500/50 hover:bg-green-500/5' : ''}`}
+                      className={`font-bold ${!(module.activityInstructions || module.activityTemplateUrl) ? 'border-emerald-500/20 hover:border-emerald-500/50 hover:bg-emerald-500/5' : ''}`}
                       onClick={() => setWorkshopModalState({
                         isOpen: true,
                         moduleId: module.id
@@ -844,7 +844,7 @@ export const CourseBuilder: React.FC = () => {
     switch (type) {
       case 'PRE_QUIZ': return <ClipboardCheck className="h-6 w-6 text-primary" />;
       case 'VIDEO': return <Play className="h-6 w-6 text-secondary" />;
-      case 'WORKSHOP': return <BookOpen className="h-6 w-6 text-green-500" />;
+      case 'WORKSHOP': return <BookOpen className="h-6 w-6 text-emerald-500" />;
       case 'POST_QUIZ': return <Award className="h-6 w-6 text-primary" />;
       case 'EVALUATION': return <FileText className="h-6 w-6 text-blue-500" />;
       case 'ONLINE_EVALUATION': return <Award className="h-6 w-6 text-purple-500" />;
@@ -1445,7 +1445,7 @@ export const CourseBuilder: React.FC = () => {
                       {!isReadonly && !identityForm.thumbnailUrl && (
                         <Label htmlFor="thumb-upload" className="absolute inset-0 cursor-pointer" />
                       )}
-                      <input
+                      <Input
                         id="thumb-upload"
                         type="file"
                         accept="image/*"

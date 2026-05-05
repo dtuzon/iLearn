@@ -11,6 +11,12 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from '../../components/ui/tabs';
+import { 
   Select, 
   SelectContent, 
   SelectItem, 
@@ -28,12 +34,15 @@ import {
   CheckCircle2, 
   ChevronRight, 
   ChevronLeft,
+  Building2, 
+  ShieldCheck,
   Search,
   BookOpen,
   Layers,
   Clock,
   UserPlus
 } from 'lucide-react';
+import { departmentsApi } from '../../api/departments.api';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Badge } from '../../components/ui/badge';
@@ -69,6 +78,7 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
   const [courses, setCourses] = useState<any[]>([]);
   const [paths, setPaths] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
   const [searchUser, setSearchUser] = useState('');
   const [selectedPathContent, setSelectedPathContent] = useState<any | null>(null);
 
@@ -76,14 +86,16 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
     const fetchData = async () => {
       setIsLoadingData(true);
       try {
-        const [courseData, pathData, userData] = await Promise.all([
+        const [courseData, pathData, userData, deptData] = await Promise.all([
           catalogApi.getDiscovery({ type: 'courses' }),
           learningPathsApi.getAll(),
-          usersApi.getAll()
+          usersApi.getAll(),
+          departmentsApi.getAll()
         ]);
         setCourses(courseData);
         setPaths(pathData);
         setUsers(userData);
+        setDepartments(deptData);
 
         if (batchId) {
           const batch = await batchesApi.getById(batchId);
@@ -184,6 +196,24 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
         courseSchedules: [...prev.courseSchedules, { courseId, startDate: '', endDate: '', [field]: value }]
       };
     });
+  };
+
+  const addAllFromDept = (deptId: string) => {
+    const deptUserIds = users.filter(u => u.departmentId === deptId && u.role === 'EMPLOYEE').map(u => u.id);
+    setFormData(prev => ({
+      ...prev,
+      learnerIds: Array.from(new Set([...prev.learnerIds, ...deptUserIds]))
+    }));
+    toast.info(`Added ${deptUserIds.length} learners from department`);
+  };
+
+  const addAllFromRole = (role: string) => {
+    const roleUserIds = users.filter(u => u.role === role).map(u => u.id);
+    setFormData(prev => ({
+      ...prev,
+      learnerIds: Array.from(new Set([...prev.learnerIds, ...roleUserIds]))
+    }));
+    toast.info(`Added ${roleUserIds.length} learners with role ${role}`);
   };
 
   return (
@@ -386,44 +416,103 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
               {/* Step 5: Learner Assignment */}
               {((step === 4 && formData.contentType === 'COURSE') || (step === 5 && formData.contentType === 'PATH')) && (
                 <div className="space-y-6">
-                   <div className="flex items-center justify-between mb-4">
+                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-lg font-black italic uppercase tracking-tighter">Assign Cohort Members</h3>
-                    <Badge variant="secondary" className="font-black h-7 rounded-xl px-4">
+                    <Badge variant="secondary" className="font-black h-7 rounded-xl px-4 animate-in zoom-in">
                       {formData.learnerIds.length} Learners Selected
                     </Badge>
                   </div>
 
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search employees to add to this batch..." 
-                      className="pl-10 h-12 rounded-2xl border-primary/10"
-                      value={searchUser}
-                      onChange={e => setSearchUser(e.target.value)}
-                    />
-                  </div>
+                  <Tabs defaultValue="individuals" className="w-full">
+                    <TabsList className="grid grid-cols-2 w-full h-11 p-1 bg-muted/50 rounded-xl mb-6">
+                      <TabsTrigger value="individuals" className="rounded-lg font-bold">By Individual</TabsTrigger>
+                      <TabsTrigger value="groups" className="rounded-lg font-bold">By Group</TabsTrigger>
+                    </TabsList>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {filteredUsers.filter(u => u.role === 'EMPLOYEE').map(user => (
-                      <div 
-                        key={user.id}
-                        onClick={() => toggleLearner(user.id)}
-                        className={cn(
-                          "p-3 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all",
-                          formData.learnerIds.includes(user.id) ? "border-emerald-500 bg-emerald-50 shadow-sm" : "border-muted-foreground/10 hover:border-emerald-200"
-                        )}
-                      >
-                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center font-bold text-xs uppercase">
-                          {user.firstName?.[0]}{user.lastName?.[0]}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold truncate leading-none">{user.firstName} {user.lastName}</p>
-                          <p className="text-[10px] text-muted-foreground mt-1 uppercase font-black">{user.department?.name || 'GENERIC'}</p>
-                        </div>
-                        {formData.learnerIds.includes(user.id) && <UserPlus className="h-4 w-4 text-emerald-600" />}
+                    <TabsContent value="individuals" className="space-y-6 animate-in fade-in duration-300">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                          placeholder="Search employees to add to this batch..." 
+                          className="pl-10 h-12 rounded-2xl border-primary/10"
+                          value={searchUser}
+                          onChange={e => setSearchUser(e.target.value)}
+                        />
                       </div>
-                    ))}
-                  </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {filteredUsers.filter(u => u.role === 'EMPLOYEE').map(user => (
+                          <div 
+                            key={user.id}
+                            onClick={() => toggleLearner(user.id)}
+                            className={cn(
+                              "p-3 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all",
+                              formData.learnerIds.includes(user.id) ? "border-emerald-500 bg-emerald-50 shadow-sm" : "border-muted-foreground/10 hover:border-emerald-200"
+                            )}
+                          >
+                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center font-bold text-xs uppercase">
+                              {user.firstName?.[0]}{user.lastName?.[0]}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold truncate leading-none">{user.firstName} {user.lastName}</p>
+                              <p className="text-[10px] text-muted-foreground mt-1 uppercase font-black">{user.department?.name || 'GENERIC'}</p>
+                            </div>
+                            {formData.learnerIds.includes(user.id) && <UserPlus className="h-4 w-4 text-emerald-600" />}
+                          </div>
+                        ))}
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="groups" className="space-y-8 animate-in fade-in duration-300">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Department Selectors */}
+                        <div className="space-y-4">
+                          <h4 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-primary">
+                            <Building2 className="h-4 w-4" />
+                            By Department
+                          </h4>
+                          <div className="space-y-2">
+                            {departments.map(dept => (
+                              <div key={dept.id} className="flex items-center justify-between p-3 rounded-xl border bg-muted/20 hover:bg-muted/30 transition-colors group">
+                                <span className="font-bold text-xs">{dept.name}</span>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-8 rounded-lg font-black text-[10px] uppercase hover:bg-primary hover:text-primary-foreground"
+                                  onClick={() => addAllFromDept(dept.id)}
+                                >
+                                  Add All
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Role Selectors */}
+                        <div className="space-y-4">
+                          <h4 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-primary">
+                            <ShieldCheck className="h-4 w-4" />
+                            By System Role
+                          </h4>
+                          <div className="space-y-2">
+                            {['EMPLOYEE', 'SUPERVISOR', 'DEPARTMENT_HEAD', 'COURSE_CREATOR'].map(role => (
+                              <div key={role} className="flex items-center justify-between p-3 rounded-xl border bg-muted/20 hover:bg-muted/30 transition-colors group">
+                                <span className="font-bold text-xs">{role.replace('_', ' ')}</span>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-8 rounded-lg font-black text-[10px] uppercase hover:bg-primary hover:text-primary-foreground"
+                                  onClick={() => addAllFromRole(role)}
+                                >
+                                  Add All
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </div>
               )}
             </div>

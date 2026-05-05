@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '../ui/label';
 
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { Loader2, Save, FileText, Plus, Trash2, UploadCloud, File as FileIcon } from 'lucide-react';
 
 import ReactQuill from 'react-quill-new';
@@ -160,7 +161,7 @@ export const RichTextModuleBuilder: React.FC<RichTextModuleBuilderProps> = ({
                       Add Material
                     </div>
                   </Label>
-                  <input 
+                  <Input 
                     id="module-file-upload" 
                     type="file" 
                     className="hidden" 
