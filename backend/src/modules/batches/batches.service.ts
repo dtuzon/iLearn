@@ -31,10 +31,10 @@ export class BatchesService {
           include: { user: true }
         },
         enrollments: {
-          include: { user: true }
+          include: { user: { include: { department: true } } }
         },
         learningPathEnrollments: {
-          include: { user: true }
+          include: { user: { include: { department: true } } }
         }
       }
     });

@@ -292,7 +292,7 @@ export const ManageBatches: React.FC = () => {
 
                 <div className="flex items-center justify-between">
                   <div className="flex -space-x-3">
-                    {batch.activityCheckers?.map((checker, i) => (
+                    {batch.activityCheckers?.map((checker) => (
                       <Avatar key={checker.id} className="border-4 border-background h-10 w-10 ring-2 ring-primary/5 shadow-sm">
                         <AvatarImage src={checker.user?.thumbnailUrl || undefined} />
                         <AvatarFallback className="bg-primary/10 text-primary font-black text-[10px]">
@@ -445,35 +445,37 @@ export const ManageBatches: React.FC = () => {
                   </div>
 
                   {/* COURSE PACING (PATHS ONLY) */}
-                  {viewingBatch.learningPathId && viewingBatch.courseSchedules && viewingBatch.courseSchedules.length > 0 && (
+                  {viewingBatch.learningPathId && viewingBatch.learningPath?.pathCourses && viewingBatch.learningPath.pathCourses.length > 0 && (
                     <div className="space-y-6">
                       <h3 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-3">
                          <ClipboardList className="h-6 w-6 text-primary" />
                          Learning Path Pacing
                        </h3>
                        <div className="space-y-4">
-                         {viewingBatch.courseSchedules.map((schedule: any, _i: number) => (
-                           <div key={schedule.id} className="flex items-center gap-6 p-6 rounded-[2rem] bg-muted/30 border border-primary/5">
+                         {viewingBatch.learningPath.pathCourses.map((pathCourse: any, _i: number) => {
+                           const override = viewingBatch.courseSchedules?.find((s: any) => s.courseId === pathCourse.courseId);
+                           return (
+                           <div key={pathCourse.id} className="flex items-center gap-6 p-6 rounded-[2rem] bg-muted/30 border border-primary/5">
                               <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-lg italic">
                                 {_i + 1}
                               </div>
                               <div className="flex-1">
-                                <p className="font-bold text-sm">{schedule.course.title}</p>
+                                <p className="font-bold text-sm">{pathCourse.course.title}</p>
                                 <div className="flex gap-4 mt-2">
                                    <div className="flex items-center gap-1.5">
                                       <Calendar className="h-3 w-3 text-muted-foreground" />
                                       <span className="text-[10px] font-black uppercase text-muted-foreground">Unlock:</span>
-                                      <span className="text-[10px] font-bold">{schedule.startDate ? format(new Date(schedule.startDate), 'MMM dd') : 'Batch Start'}</span>
+                                      <span className="text-[10px] font-bold">{override?.startDate ? format(new Date(override.startDate), 'MMM dd') : 'Batch Start'}</span>
                                    </div>
                                    <div className="flex items-center gap-1.5">
                                       <Clock className="h-3 w-3 text-muted-foreground" />
                                       <span className="text-[10px] font-black uppercase text-muted-foreground">Deadline:</span>
-                                      <span className="text-[10px] font-bold">{schedule.endDate ? format(new Date(schedule.endDate), 'MMM dd') : 'Batch End'}</span>
+                                      <span className="text-[10px] font-bold">{override?.endDate ? format(new Date(override.endDate), 'MMM dd') : 'Batch End'}</span>
                                    </div>
                                 </div>
                               </div>
                            </div>
-                         ))}
+                         )})}
                        </div>
                     </div>
                   )}

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
   DialogContent, 
-  DialogHeader, 
   DialogTitle, 
   DialogDescription,
   DialogFooter
@@ -16,13 +15,7 @@ import {
   TabsList, 
   TabsTrigger 
 } from '../../components/ui/tabs';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '../../components/ui/select';
+
 import { catalogApi } from '../../api/catalog.api';
 import { learningPathsApi } from '../../api/learning-paths.api';
 import { usersApi } from '../../api/users.api';
@@ -30,10 +23,8 @@ import { batchesApi } from '../../api/batches.api';
 import { 
   Loader2, 
   Calendar, 
-  Users, 
   CheckCircle2, 
   ChevronRight, 
-  ChevronLeft,
   Building2, 
   ShieldCheck,
   Search,
@@ -142,11 +133,17 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
   const handleSave = async () => {
     setIsSubmitting(true);
     try {
+      const payload = {
+        ...formData,
+        courseId: formData.contentType === 'COURSE' ? formData.contentId : null,
+        learningPathId: formData.contentType === 'PATH' ? formData.contentId : null
+      };
+
       if (batchId) {
-        await batchesApi.update(batchId, formData);
+        await batchesApi.update(batchId, payload);
         toast.success('Batch updated successfully');
       } else {
-        const batch = await batchesApi.create(formData);
+        const batch = await batchesApi.create(payload);
         if (formData.learnerIds.length > 0) {
           await batchesApi.assignLearners(batch.id, formData.learnerIds);
         }

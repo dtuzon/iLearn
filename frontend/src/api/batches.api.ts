@@ -9,7 +9,7 @@ export interface Batch {
   courseId?: string;
   learningPathId?: string;
   course?: { title: string };
-  learningPath?: { title: string };
+  learningPath?: { title: string; pathCourses?: any[] };
   courseSchedules?: any[];
   activityCheckers?: any[];
   enrollments?: any[];
