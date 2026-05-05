@@ -132,14 +132,14 @@ export class BatchesService {
         if (batch.courseId) {
           await tx.enrollment.upsert({
             where: { userId_courseId: { userId, courseId: batch.courseId } },
-            update: { batchId },
-            create: { userId, courseId: batch.courseId, batchId }
+            update: { batchId, dueDate: batch.endDate },
+            create: { userId, courseId: batch.courseId, batchId, dueDate: batch.endDate, status: 'NOT_STARTED' }
           });
         } else if (batch.learningPathId) {
           await tx.learningPathEnrollment.upsert({
             where: { userId_learningPathId: { userId, learningPathId: batch.learningPathId } },
-            update: { batchId },
-            create: { userId, learningPathId: batch.learningPathId, batchId }
+            update: { batchId, dueDate: batch.endDate },
+            create: { userId, learningPathId: batch.learningPathId, batchId, dueDate: batch.endDate, status: 'NOT_STARTED' }
           });
         }
       }
