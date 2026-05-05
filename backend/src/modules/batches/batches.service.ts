@@ -20,7 +20,8 @@ export class BatchesService {
         learningPath: {
           include: {
             pathCourses: {
-              include: { course: true }
+              include: { course: true },
+              orderBy: { order: 'asc' }
             }
           }
         },
@@ -116,6 +117,17 @@ export class BatchesService {
     if (!batch) throw new Error('Batch not found');
 
     return prisma.$transaction(async (tx) => {
+      // 1. Un-assign current learners from this batch
+      await tx.enrollment.updateMany({
+        where: { batchId },
+        data: { batchId: null }
+      });
+      await tx.learningPathEnrollment.updateMany({
+        where: { batchId },
+        data: { batchId: null }
+      });
+
+      // 2. Re-assign the selected learners
       for (const userId of userIds) {
         if (batch.courseId) {
           await tx.enrollment.upsert({

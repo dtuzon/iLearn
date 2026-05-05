@@ -141,12 +141,11 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
 
       if (batchId) {
         await batchesApi.update(batchId, payload);
+        await batchesApi.assignLearners(batchId, formData.learnerIds);
         toast.success('Batch updated successfully');
       } else {
         const batch = await batchesApi.create(payload);
-        if (formData.learnerIds.length > 0) {
-          await batchesApi.assignLearners(batch.id, formData.learnerIds);
-        }
+        await batchesApi.assignLearners(batch.id, formData.learnerIds);
         toast.success('Batch created successfully');
       }
       onSuccess();
