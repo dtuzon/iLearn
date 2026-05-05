@@ -41,7 +41,7 @@ export interface Course {
 export interface CourseModule {
   id: string;
   title: string;
-  type: 'PRE_QUIZ' | 'VIDEO' | 'WORKSHOP' | 'POST_QUIZ' | 'EVALUATION' | 'ONLINE_EVALUATION' | 'INTRODUCTION' | 'CLOSING' | 'LIVE_SESSION';
+  type: 'PRE_QUIZ' | 'VIDEO' | 'WORKSHOP' | 'POST_QUIZ' | 'EVALUATION' | 'ONLINE_EVALUATION' | 'INTRODUCTION' | 'CLOSING' | 'LIVE_SESSION' | 'ASSIGNMENT';
 
   sequenceOrder: number;
   contentUrlOrText: string | null;

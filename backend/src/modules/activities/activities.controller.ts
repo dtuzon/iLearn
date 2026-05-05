@@ -24,7 +24,7 @@ export class ActivitiesController {
 
   static async getBatchSubmissions(req: AuthenticatedRequest, res: Response) {
     try {
-      const submissions = await ActivitiesService.getBatchSubmissions(req.params.batchId, req.user!.userId);
+      const submissions = await ActivitiesService.getBatchSubmissions(req.params.batchId as string, req.user!.userId);
       res.json(submissions);
     } catch (error: any) {
       res.status(403).json({ message: error.message });
@@ -33,7 +33,7 @@ export class ActivitiesController {
 
   static async grade(req: AuthenticatedRequest, res: Response) {
     try {
-      const updated = await ActivitiesService.gradeSubmission(req.params.id, req.user!.userId, req.body);
+      const updated = await ActivitiesService.gradeSubmission(req.params.id as string, req.user!.userId, req.body);
       res.json(updated);
     } catch (error: any) {
       res.status(400).json({ message: error.message });

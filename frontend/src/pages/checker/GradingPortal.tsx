@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { activitiesApi, ActivitySubmission } from '../../api/activities.api';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
+import { activitiesApi } from '../../api/activities.api';
+import type { ActivitySubmission } from '../../api/activities.api';
+import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
@@ -9,13 +10,10 @@ import {
   CheckCircle2, 
   XCircle, 
   Clock, 
-  Search, 
-  User, 
-  BookOpen, 
-  MessageSquare, 
+  MessageSquare,
   FileText,
   ExternalLink,
-  ChevronRight,
+  BookOpen,
   Zap,
   Loader2,
   LayoutDashboard,
@@ -224,7 +222,7 @@ export const GradingPortal: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  submissions.map((submission, index) => (
+                  submissions.map((submission) => (
                     <Card key={submission.id} className="animate-in slide-in-from-top-4 duration-500 rounded-[2rem] border-none shadow-xl overflow-hidden bg-background/50 backdrop-blur-md">
                       <div className="h-1.5 w-full bg-yellow-500" />
                       <CardContent className="p-8 space-y-8">

@@ -14,7 +14,7 @@ import { Label } from '../../components/ui/label';
 import { Progress } from '../../components/ui/progress';
 import { Alert, AlertTitle, AlertDescription } from '../../components/ui/alert';
 
-import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, Clock, Video, HelpCircle, BookOpen, ClipboardCheck, UploadCloud, File as FileIcon, Lock, PlayCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, Clock, Video, HelpCircle, BookOpen, ClipboardCheck, UploadCloud, File as FileIcon, Lock, PlayCircle, Calendar } from 'lucide-react';
 
 
 import { toast } from 'sonner';
@@ -471,7 +471,7 @@ export const CoursePlayer: React.FC = () => {
             <div className="flex items-center gap-3">
               {displayedModule.type === 'VIDEO' && <Video className="h-6 w-6 text-destructive" />}
               {(displayedModule.type === 'PRE_QUIZ' || displayedModule.type === 'POST_QUIZ') && <HelpCircle className="h-6 w-6 text-primary" />}
-              {displayedModule.type === 'WORKSHOP' && <BookOpen className="h-6 w-6 text-green-600" />}
+              {(displayedModule.type === 'WORKSHOP' || displayedModule.type === 'ASSIGNMENT') && <BookOpen className="h-6 w-6 text-green-600" />}
               {displayedModule.type === 'EVALUATION' && <ClipboardCheck className="h-6 w-6 text-secondary-foreground" />}
               {displayedModule.type === 'LIVE_SESSION' && <Video className="h-6 w-6 text-orange-500" />}
               <CardTitle>{displayedModule.title}</CardTitle>
@@ -583,8 +583,8 @@ export const CoursePlayer: React.FC = () => {
             )}
 
 
-            {/* WORKSHOP VIEW */}
-            {displayedModule.type === 'WORKSHOP' && (
+            {/* WORKSHOP & ASSIGNMENT VIEW */}
+            {(displayedModule.type === 'WORKSHOP' || displayedModule.type === 'ASSIGNMENT') && (
               <ActivityPlayer 
                 module={displayedModule} 
                 onComplete={handleCompleteModule} 
