@@ -231,3 +231,47 @@ export function activitySubmissionCheckerEmail(opts: {
   `;
   return shell(AMBER, '📋 New Activity Submission', 'Action required — grading portal', body);
 }
+
+// ─── Batch Schedule Updates ───────────────────────────────────────────────────
+
+export function batchScheduleUpdateEmployeeEmail(opts: {
+  firstName: string;
+  batchName: string;
+  contentTitle: string;
+  frontendUrl: string;
+}): string {
+  const body = `
+    ${greeting(opts.firstName)}
+    <p style="margin:0 0 4px;font-size:15px;color:#475569;">The learning schedule for your upcoming training cohort has been updated by the Learning Manager.</p>
+    ${trainingCard([
+      { label: 'Batch',    value: opts.batchName },
+      { label: 'Training', value: opts.contentTitle },
+    ])}
+    <p style="font-size:13px;color:#64748b;margin:0;">Please review the updated sequence and start dates in your dashboard to ensure you stay on track.</p>
+    ${ctaButton('Review Schedule', `${opts.frontendUrl}/learning/my-courses`, INDIGO)}
+  `;
+  return shell(INDIGO, '🗓️ Schedule Updated', 'Important changes to your training timeline.', body);
+}
+
+export function batchScheduleUpdateManagerEmail(opts: {
+  managerFirstName: string;
+  managerRole: 'Supervisor' | 'Department Head';
+  employeeFirstName: string;
+  employeeLastName: string;
+  batchName: string;
+  contentTitle: string;
+  frontendUrl: string;
+}): string {
+  const body = `
+    ${greeting(opts.managerFirstName)}
+    <p style="margin:0 0 4px;font-size:15px;color:#475569;">The learning schedule for a member of your team has been updated.</p>
+    ${trainingCard([
+      { label: 'Learner',  value: `${opts.employeeFirstName} ${opts.employeeLastName}` },
+      { label: 'Batch',    value: opts.batchName },
+      { label: 'Training', value: opts.contentTitle },
+    ])}
+    <p style="font-size:13px;color:#64748b;margin:0;">Please ensure your team member's availability aligns with these recent schedule adjustments.</p>
+    ${ctaButton('View Team Management', `${opts.frontendUrl}/supervisor/team-management`, INDIGO)}
+  `;
+  return shell(INDIGO, `🗓️ Team Schedule Update`, `${opts.managerRole} notification — ${COMPANY}`, body);
+}

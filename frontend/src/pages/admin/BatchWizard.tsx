@@ -15,6 +15,7 @@ import {
   TabsList, 
   TabsTrigger 
 } from '../../components/ui/tabs';
+import { Switch } from '../../components/ui/switch';
 
 import { catalogApi } from '../../api/catalog.api';
 import { learningPathsApi } from '../../api/learning-paths.api';
@@ -31,8 +32,13 @@ import {
   BookOpen,
   Layers,
   Clock,
-  UserPlus
+  UserPlus,
+  GripVertical,
+  Bell
 } from 'lucide-react';
+import { DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { departmentsApi } from '../../api/departments.api';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -40,6 +46,41 @@ import { Badge } from '../../components/ui/badge';
 import { Card } from '../../components/ui/card';
 import { cn } from '../../lib/utils';
 import { ScrollArea } from '../../components/ui/scroll-area';
+
+const SortableCourseCard = ({ pc, index, formData, updateCourseSchedule }: any) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: pc.courseId });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : 1,
+    position: isDragging ? 'relative' as const : 'static' as const
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex gap-3 items-stretch">
+      <div {...attributes} {...listeners} className="flex items-center justify-center p-3 rounded-2xl bg-muted/20 hover:bg-muted/40 border border-primary/5 cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-primary transition-colors shrink-0 shadow-sm">
+        <GripVertical className="h-5 w-5" />
+      </div>
+      <Card className={cn("flex-1 p-5 border-primary/10 shadow-sm rounded-2xl flex flex-col md:flex-row gap-4 md:items-center transition-shadow", isDragging && "shadow-lg border-primary/30 ring-2 ring-primary/20")}>
+        <div className="flex items-center gap-4 flex-1">
+          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs">{index + 1}</div>
+          <span className="font-bold text-sm">{pc.course.title}</span>
+        </div>
+        <div className="flex gap-2">
+          <Input type="date" className="h-10 text-xs rounded-xl" placeholder="Unlock Date"
+            value={formData.courseSchedules.find((s: any) => s.courseId === pc.courseId)?.startDate || ''}
+            onChange={e => updateCourseSchedule(pc.courseId, 'startDate', e.target.value)}
+          />
+          <Input type="date" className="h-10 text-xs rounded-xl" placeholder="Deadline"
+            value={formData.courseSchedules.find((s: any) => s.courseId === pc.courseId)?.endDate || ''}
+            onChange={e => updateCourseSchedule(pc.courseId, 'endDate', e.target.value)}
+          />
+        </div>
+      </Card>
+    </div>
+  );
+};
 
 interface BatchWizardProps {
   batchId: string | null;
@@ -62,8 +103,15 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
     status: 'UPCOMING',
     checkerIds: [] as string[],
     learnerIds: [] as string[],
-    courseSchedules: [] as { courseId: string; startDate: string; endDate: string }[]
+    notifyScheduleChanges: false,
+    courseSchedules: [] as { courseId: string; startDate: string; endDate: string; order?: number }[]
   });
+
+  const [sortedCourses, setSortedCourses] = useState<any[]>([]);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   // Resources
   const [courses, setCourses] = useState<any[]>([]);
@@ -72,7 +120,6 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
   const [departments, setDepartments] = useState<any[]>([]);
   const [searchChecker, setSearchChecker] = useState('');
   const [searchLearner, setSearchLearner] = useState('');
-  const [selectedPathContent, setSelectedPathContent] = useState<any | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -104,12 +151,21 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
               courseId: s.courseId,
               startDate: s.startDate ? format(new Date(s.startDate), 'yyyy-MM-dd') : '',
               endDate: s.endDate ? format(new Date(s.endDate), 'yyyy-MM-dd') : ''
-            })) || []
+            })) || [],
+            notifyScheduleChanges: false
           });
           
           if (batch.learningPathId) {
              const lp = pathData.find(p => p.id === batch.learningPathId);
-             setSelectedPathContent(lp);
+             if (lp && lp.pathCourses) {
+               // Restore sorted order if available
+               const scheduledCourses = [...lp.pathCourses].sort((a, b) => {
+                 const orderA = batch.courseSchedules?.find((s: any) => s.courseId === a.courseId)?.order ?? 999;
+                 const orderB = batch.courseSchedules?.find((s: any) => s.courseId === b.courseId)?.order ?? 999;
+                 return orderA - orderB;
+               });
+               setSortedCourses(scheduledCourses);
+             }
           }
         }
       } catch (error) {
@@ -137,7 +193,16 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
       const payload = {
         ...formData,
         courseId: formData.contentType === 'COURSE' && formData.contentId ? formData.contentId : null,
-        learningPathId: formData.contentType === 'PATH' && formData.contentId ? formData.contentId : null
+        learningPathId: formData.contentType === 'PATH' && formData.contentId ? formData.contentId : null,
+        // Send the full ordered array
+        courseSchedules: formData.contentType === 'PATH' ? sortedCourses.map((c: any) => {
+          const existing = formData.courseSchedules.find(s => s.courseId === c.courseId);
+          return {
+            courseId: c.courseId,
+            startDate: existing?.startDate || null,
+            endDate: existing?.endDate || null
+          };
+        }) : formData.courseSchedules
       };
 
       if (batchId) {
@@ -310,7 +375,9 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
                         key={item.id}
                         onClick={() => {
                           setFormData({ ...formData, contentId: item.id });
-                          if (formData.contentType === 'PATH') setSelectedPathContent(item);
+                          if (formData.contentType === 'PATH') {
+                            setSortedCourses([...(item.pathCourses || [])]);
+                          }
                         }}
                         className={cn(
                           "p-4 cursor-pointer border-2 transition-all duration-300 rounded-[1.5rem] flex items-center gap-4 group",
@@ -467,25 +534,38 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
                     </h3>
                     <p className="text-xs text-muted-foreground font-medium italic">Define custom timelines for each course in this path. Leave blank to follow overall batch dates.</p>
                   </div>
+                  <div className="flex items-center justify-between p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                        <Bell className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <Label className="text-sm font-bold text-emerald-900">Notify learners of schedule changes</Label>
+                        <p className="text-[11px] text-emerald-700/70 font-medium mt-0.5">Automated emails will be sent to the employee, their supervisor, and department head.</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={formData.notifyScheduleChanges}
+                      onCheckedChange={val => setFormData({ ...formData, notifyScheduleChanges: val })}
+                      className="data-[state=checked]:bg-emerald-600"
+                    />
+                  </div>
+
                   <div className="space-y-4">
-                    {selectedPathContent?.pathCourses?.map((pc: any, i: number) => (
-                      <Card key={pc.id} className="p-5 border-primary/10 shadow-sm rounded-2xl flex flex-col md:flex-row gap-4 md:items-center">
-                        <div className="flex items-center gap-4 flex-1">
-                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs">{i + 1}</div>
-                          <span className="font-bold text-sm">{pc.course.title}</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <Input type="date" className="h-10 text-xs rounded-xl" placeholder="Unlock Date"
-                            value={formData.courseSchedules.find(s => s.courseId === pc.courseId)?.startDate || ''}
-                            onChange={e => updateCourseSchedule(pc.courseId, 'startDate', e.target.value)}
-                          />
-                          <Input type="date" className="h-10 text-xs rounded-xl" placeholder="Deadline"
-                            value={formData.courseSchedules.find(s => s.courseId === pc.courseId)?.endDate || ''}
-                            onChange={e => updateCourseSchedule(pc.courseId, 'endDate', e.target.value)}
-                          />
-                        </div>
-                      </Card>
-                    ))}
+                    <DndContext sensors={sensors} onDragEnd={(event: any) => {
+                      const { active, over } = event;
+                      if (over && active.id !== over.id) {
+                        const oldIndex = sortedCourses.findIndex(s => s.courseId === active.id);
+                        const newIndex = sortedCourses.findIndex(s => s.courseId === over.id);
+                        setSortedCourses(arrayMove(sortedCourses, oldIndex, newIndex));
+                      }
+                    }}>
+                      <SortableContext items={sortedCourses.map(c => c.courseId)} strategy={verticalListSortingStrategy}>
+                        {sortedCourses.map((pc: any, i: number) => (
+                          <SortableCourseCard key={pc.courseId} pc={pc} index={i} formData={formData} updateCourseSchedule={updateCourseSchedule} />
+                        ))}
+                      </SortableContext>
+                    </DndContext>
                   </div>
                 </div>
               )}

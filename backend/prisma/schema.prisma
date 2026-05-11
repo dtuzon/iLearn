@@ -761,6 +761,7 @@ model BatchCourseSchedule {
   course    Course    @relation(fields: [courseId], references: [id])
   startDate DateTime?
   endDate   DateTime?
+  order     Int       @default(0) // custom sequence within this specific batch
 
   @@unique([batchId, courseId])
   @@map("batch_course_schedules")

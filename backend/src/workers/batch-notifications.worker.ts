@@ -6,6 +6,8 @@ import {
   batchEnrollmentManagerEmail,
   batchReminderEmployeeEmail,
   batchReminderManagerEmail,
+  batchScheduleUpdateEmployeeEmail,
+  batchScheduleUpdateManagerEmail,
 } from '../lib/email-templates';
 import { differenceInDays, startOfDay } from 'date-fns';
 
@@ -192,6 +194,56 @@ export async function sendBatchEnrollmentConfirmation(
           to: deptHead.email,
           subject: `[Elevate] Department Member Enrolled: "${contentTitle}"`,
           html: batchEnrollmentManagerEmail({ managerFirstName: deptHead.firstName ?? '', managerRole: 'Department Head', employeeFirstName: user.firstName, employeeLastName: user.lastName, batchName, contentTitle, startDate: formattedStart, endDate: formattedEnd, frontendUrl }),
+        });
+      }
+    }
+  }
+
+  await sendBulkEmails(emails);
+}
+
+// ─── Immediate Schedule Update Notification (called directly, not by cron) ───
+
+export async function sendBatchScheduleUpdateNotifications(
+  batchName: string,
+  contentTitle: string,
+  users: any[]
+) {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+  const emails: { to: string; subject: string; html: string }[] = [];
+  const alreadyNotified = new Set<string>();
+
+  for (const user of users) {
+    if (!user.email) continue;
+
+    emails.push({
+      to: user.email,
+      subject: `[Elevate] Schedule Update: "${contentTitle}"`,
+      html: batchScheduleUpdateEmployeeEmail({ firstName: user.firstName, batchName, contentTitle, frontendUrl }),
+    });
+
+    const supervisor = user.immediateSuperior;
+    if (supervisor?.email && !alreadyNotified.has(supervisor.email)) {
+      alreadyNotified.add(supervisor.email);
+      emails.push({
+        to: supervisor.email,
+        subject: `[Elevate] Team Schedule Update: "${contentTitle}"`,
+        html: batchScheduleUpdateManagerEmail({ managerFirstName: supervisor.firstName, managerRole: 'Supervisor', employeeFirstName: user.firstName, employeeLastName: user.lastName, batchName, contentTitle, frontendUrl }),
+      });
+    }
+
+    if (user.department?.headUserId) {
+      const deptHead = await prisma.user.findUnique({
+        where: { id: user.department.headUserId },
+        select: { email: true, firstName: true, lastName: true },
+      });
+      if (deptHead?.email && !alreadyNotified.has(deptHead.email)) {
+        alreadyNotified.add(deptHead.email);
+        emails.push({
+          to: deptHead.email,
+          subject: `[Elevate] Department Schedule Update: "${contentTitle}"`,
+          html: batchScheduleUpdateManagerEmail({ managerFirstName: deptHead.firstName ?? '', managerRole: 'Department Head', employeeFirstName: user.firstName, employeeLastName: user.lastName, batchName, contentTitle, frontendUrl }),
         });
       }
     }

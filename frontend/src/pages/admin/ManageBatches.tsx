@@ -4,12 +4,12 @@ import type { Batch } from '../../api/batches.api';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
-import { 
-  Plus, 
-  Calendar, 
-  Users, 
-  MoreVertical, 
-  Trash2, 
+import {
+  Plus,
+  Calendar,
+  Users,
+  MoreVertical,
+  Trash2,
   Edit2,
   BookOpen,
   Clock,
@@ -23,45 +23,45 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from '../../components/ui/dropdown-menu';
 import { BatchWizard } from './BatchWizard';
-import { 
-  Tabs, 
-  TabsList, 
-  TabsTrigger 
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger
 } from '../../components/ui/tabs';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '../../components/ui/select';
 import { Input } from '../../components/ui/input';
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetTitle, 
-  SheetDescription 
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetDescription
 } from '../../components/ui/sheet';
 import { cn } from '../../lib/utils';
-import { 
-  Avatar, 
-  AvatarFallback, 
-  AvatarImage 
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage
 } from '../../components/ui/avatar';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '../../components/ui/table';
 import { ScrollArea } from '../../components/ui/scroll-area';
 
@@ -73,7 +73,7 @@ export const ManageBatches: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [activeTab, setActiveTab] = useState('ACTIVE');
-  
+
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [viewingBatch, setViewingBatch] = useState<Batch | null>(null);
 
@@ -106,21 +106,21 @@ export const ManageBatches: React.FC = () => {
 
   const filteredBatches = batches.filter(batch => {
     const matchesSearch = batch.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = typeFilter === 'ALL' || 
-                       (typeFilter === 'COURSE' && batch.courseId) || 
-                       (typeFilter === 'PATH' && batch.learningPathId);
-    
+    const matchesType = typeFilter === 'ALL' ||
+      (typeFilter === 'COURSE' && batch.courseId) ||
+      (typeFilter === 'PATH' && batch.learningPathId);
+
     // Lifecycle status logic
     const now = new Date();
     const start = new Date(batch.startDate);
     const end = new Date(batch.endDate);
-    
+
     let status = 'UPCOMING';
     if (now > end) status = 'COMPLETED';
     else if (now >= start) status = 'ACTIVE';
-    
+
     const matchesTab = activeTab === status;
-    
+
     return matchesSearch && matchesType && matchesTab;
   });
 
@@ -134,12 +134,12 @@ export const ManageBatches: React.FC = () => {
 
   const handleViewDetails = async (batch: Batch) => {
     try {
-       // Fetch full details including rosters
-       const fullBatch = await batchesApi.getById(batch.id);
-       setViewingBatch(fullBatch);
-       setIsDetailsOpen(true);
+      // Fetch full details including rosters
+      const fullBatch = await batchesApi.getById(batch.id);
+      setViewingBatch(fullBatch);
+      setIsDetailsOpen(true);
     } catch (error) {
-       toast.error('Failed to load batch details');
+      toast.error('Failed to load batch details');
     }
   };
 
@@ -152,9 +152,9 @@ export const ManageBatches: React.FC = () => {
             <LayoutGrid className="h-10 w-10 text-primary" />
             Batch Command Center
           </h1>
-          <p className="text-muted-foreground text-lg font-medium">Lifecycle management for scheduled cohorts and dedicated STAFF.</p>
+          <p className="text-muted-foreground text-lg font-medium">Lifecycle management for scheduled batch training.</p>
         </div>
-        <Button 
+        <Button
           onClick={() => {
             setSelectedBatchId(null);
             setIsWizardOpen(true);
@@ -171,8 +171,8 @@ export const ManageBatches: React.FC = () => {
         <div className="p-4 flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground opacity-50" />
-            <Input 
-              placeholder="Search by cohort name..."
+            <Input
+              placeholder="Search by batch name..."
               className="h-14 pl-12 rounded-2xl border-primary/5 bg-muted/20 text-lg font-bold"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -193,19 +193,19 @@ export const ManageBatches: React.FC = () => {
           </div>
         </div>
         <div className="px-4 pb-0 border-t border-primary/5">
-           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="bg-transparent h-auto p-0 gap-8">
-                <TabsTrigger value="ACTIVE" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 pb-4 pt-4 text-sm font-black italic uppercase tracking-widest transition-all">
-                  Active Cohorts
-                </TabsTrigger>
-                <TabsTrigger value="UPCOMING" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 pb-4 pt-4 text-sm font-black italic uppercase tracking-widest transition-all">
-                  Upcoming
-                </TabsTrigger>
-                <TabsTrigger value="COMPLETED" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 pb-4 pt-4 text-sm font-black italic uppercase tracking-widest transition-all">
-                  Completed
-                </TabsTrigger>
-              </TabsList>
-           </Tabs>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="bg-transparent h-auto p-0 gap-8">
+              <TabsTrigger value="ACTIVE" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 pb-4 pt-4 text-sm font-black italic uppercase tracking-widest transition-all">
+                Active Batches
+              </TabsTrigger>
+              <TabsTrigger value="UPCOMING" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 pb-4 pt-4 text-sm font-black italic uppercase tracking-widest transition-all">
+                Upcoming
+              </TabsTrigger>
+              <TabsTrigger value="COMPLETED" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 pb-4 pt-4 text-sm font-black italic uppercase tracking-widest transition-all">
+                Completed
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </Card>
 
@@ -230,7 +230,7 @@ export const ManageBatches: React.FC = () => {
                 "h-2.5 w-full",
                 activeTab === 'ACTIVE' ? "bg-emerald-500" : activeTab === 'UPCOMING' ? "bg-orange-500" : "bg-muted"
               )} />
-              
+
               <CardHeader className="p-8 pb-4">
                 <div className="flex justify-between items-start mb-6">
                   <Badge variant="outline" className="font-black text-[9px] uppercase tracking-[0.2em] border-primary/20 text-primary/60 px-3 py-1 rounded-lg">
@@ -243,7 +243,7 @@ export const ManageBatches: React.FC = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="rounded-[1.5rem] p-2 shadow-2xl border-none bg-background/95 backdrop-blur-lg">
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         className="gap-3 rounded-xl cursor-pointer p-3 font-bold"
                         onClick={() => {
                           setSelectedBatchId(batch.id);
@@ -252,7 +252,7 @@ export const ManageBatches: React.FC = () => {
                       >
                         <Edit2 className="h-4 w-4 text-primary" /> Edit Configuration
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         className="gap-3 rounded-xl cursor-pointer p-3 font-bold text-destructive"
                         onClick={() => handleDelete(batch.id)}
                       >
@@ -261,7 +261,7 @@ export const ManageBatches: React.FC = () => {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                
+
                 <div className="space-y-2">
                   <CardTitle className="text-2xl font-black tracking-tight leading-tight group-hover:text-primary transition-colors line-clamp-2 min-h-[4rem]">
                     {batch.name}
@@ -275,19 +275,19 @@ export const ManageBatches: React.FC = () => {
 
               <CardContent className="p-8 pt-0 space-y-8">
                 <div className="flex gap-4 p-4 bg-muted/30 rounded-3xl border border-primary/5">
-                   <div className="flex-1 space-y-1">
-                      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
-                        <Calendar className="h-3 w-3" /> Start
-                      </p>
-                      <p className="text-xs font-black">{format(new Date(batch.startDate), 'MMM dd, yyyy')}</p>
-                   </div>
-                   <div className="w-px bg-border/50" />
-                   <div className="flex-1 space-y-1">
-                      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
-                        <Clock className="h-3 w-3" /> End
-                      </p>
-                      <p className="text-xs font-black">{format(new Date(batch.endDate), 'MMM dd, yyyy')}</p>
-                   </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                      <Calendar className="h-3 w-3" /> Start
+                    </p>
+                    <p className="text-xs font-black">{format(new Date(batch.startDate), 'MMM dd, yyyy')}</p>
+                  </div>
+                  <div className="w-px bg-border/50" />
+                  <div className="flex-1 space-y-1">
+                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                      <Clock className="h-3 w-3" /> End
+                    </p>
+                    <p className="text-xs font-black">{format(new Date(batch.endDate), 'MMM dd, yyyy')}</p>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -296,7 +296,7 @@ export const ManageBatches: React.FC = () => {
                       <Avatar key={checker.id} className="border-4 border-background h-10 w-10 ring-2 ring-primary/5 shadow-sm">
                         <AvatarImage src={checker.user?.thumbnailUrl || undefined} />
                         <AvatarFallback className="bg-primary/10 text-primary font-black text-[10px]">
-                           {checker.user?.firstName?.[0]}{checker.user?.lastName?.[0]}
+                          {checker.user?.firstName?.[0]}{checker.user?.lastName?.[0]}
                         </AvatarFallback>
                       </Avatar>
                     ))}
@@ -314,7 +314,7 @@ export const ManageBatches: React.FC = () => {
                   </div>
                 </div>
 
-                <Button 
+                <Button
                   onClick={() => handleViewDetails(batch)}
                   variant="outline"
                   className="w-full h-14 rounded-2xl border-primary/10 font-black italic uppercase tracking-wider group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 gap-2 shadow-sm"
@@ -373,42 +373,42 @@ export const ManageBatches: React.FC = () => {
                   {/* STAFF ROSTER */}
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
-                       <h3 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-3">
-                         <UserCheck className="h-6 w-6 text-primary" />
-                         Dedicated Staff Checkers
-                       </h3>
+                      <h3 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-3">
+                        <UserCheck className="h-6 w-6 text-primary" />
+                        Dedicated Staff Checkers
+                      </h3>
                     </div>
                     <div className="flex flex-wrap gap-4">
-                       {viewingBatch.activityCheckers?.map(checker => (
-                         <div key={checker.id} className="flex items-center gap-3 p-3 pr-6 rounded-2xl border bg-background shadow-sm">
-                            <Avatar className="h-10 w-10">
-                               <AvatarImage src={checker.user?.thumbnailUrl || undefined} />
-                               <AvatarFallback>{checker.user?.firstName?.[0]}{checker.user?.lastName?.[0]}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                               <p className="text-sm font-black leading-none">{checker.user?.firstName} {checker.user?.lastName}</p>
-                               <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mt-1">{checker.user?.role}</p>
-                            </div>
-                         </div>
-                       ))}
-                       {(!viewingBatch.activityCheckers || viewingBatch.activityCheckers.length === 0) && (
-                         <p className="text-muted-foreground italic text-sm">No specific checkers assigned. Defaults to global workflow.</p>
-                       )}
+                      {viewingBatch.activityCheckers?.map(checker => (
+                        <div key={checker.id} className="flex items-center gap-3 p-3 pr-6 rounded-2xl border bg-background shadow-sm">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={checker.user?.thumbnailUrl || undefined} />
+                            <AvatarFallback>{checker.user?.firstName?.[0]}{checker.user?.lastName?.[0]}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-black leading-none">{checker.user?.firstName} {checker.user?.lastName}</p>
+                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mt-1">{checker.user?.role}</p>
+                          </div>
+                        </div>
+                      ))}
+                      {(!viewingBatch.activityCheckers || viewingBatch.activityCheckers.length === 0) && (
+                        <p className="text-muted-foreground italic text-sm">No specific checkers assigned. Defaults to global workflow.</p>
+                      )}
                     </div>
                   </div>
 
                   {/* LEARNER ROSTER */}
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
-                       <h3 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-3">
-                         <Users className="h-6 w-6 text-primary" />
-                         Enrolled Payload
-                       </h3>
-                       <Badge variant="secondary" className="font-black h-8 rounded-xl px-4">
-                         {(viewingBatch.enrollments?.length || 0) + (viewingBatch.learningPathEnrollments?.length || 0)} Learners
-                       </Badge>
+                      <h3 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-3">
+                        <Users className="h-6 w-6 text-primary" />
+                        Enrolled Payload
+                      </h3>
+                      <Badge variant="secondary" className="font-black h-8 rounded-xl px-4">
+                        {(viewingBatch.enrollments?.length || 0) + (viewingBatch.learningPathEnrollments?.length || 0)} Learners
+                      </Badge>
                     </div>
-                    
+
                     <div className="rounded-[2rem] border overflow-hidden">
                       <Table>
                         <TableHeader className="bg-muted/50">
@@ -448,35 +448,36 @@ export const ManageBatches: React.FC = () => {
                   {viewingBatch.learningPathId && viewingBatch.learningPath?.pathCourses && viewingBatch.learningPath.pathCourses.length > 0 && (
                     <div className="space-y-6">
                       <h3 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-3">
-                         <ClipboardList className="h-6 w-6 text-primary" />
-                         Learning Path Pacing
-                       </h3>
-                       <div className="space-y-4">
-                         {viewingBatch.learningPath.pathCourses.map((pathCourse: any, _i: number) => {
-                           const override = viewingBatch.courseSchedules?.find((s: any) => s.courseId === pathCourse.courseId);
-                           return (
-                           <div key={pathCourse.id} className="flex items-center gap-6 p-6 rounded-[2rem] bg-muted/30 border border-primary/5">
+                        <ClipboardList className="h-6 w-6 text-primary" />
+                        Learning Path Pacing
+                      </h3>
+                      <div className="space-y-4">
+                        {viewingBatch.learningPath.pathCourses.map((pathCourse: any, _i: number) => {
+                          const override = viewingBatch.courseSchedules?.find((s: any) => s.courseId === pathCourse.courseId);
+                          return (
+                            <div key={pathCourse.id} className="flex items-center gap-6 p-6 rounded-[2rem] bg-muted/30 border border-primary/5">
                               <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-lg italic">
                                 {_i + 1}
                               </div>
                               <div className="flex-1">
                                 <p className="font-bold text-sm">{pathCourse.course.title}</p>
                                 <div className="flex gap-4 mt-2">
-                                   <div className="flex items-center gap-1.5">
-                                      <Calendar className="h-3 w-3 text-muted-foreground" />
-                                      <span className="text-[10px] font-black uppercase text-muted-foreground">Unlock:</span>
-                                      <span className="text-[10px] font-bold">{override?.startDate ? format(new Date(override.startDate), 'MMM dd') : 'Batch Start'}</span>
-                                   </div>
-                                   <div className="flex items-center gap-1.5">
-                                      <Clock className="h-3 w-3 text-muted-foreground" />
-                                      <span className="text-[10px] font-black uppercase text-muted-foreground">Deadline:</span>
-                                      <span className="text-[10px] font-bold">{override?.endDate ? format(new Date(override.endDate), 'MMM dd') : 'Batch End'}</span>
-                                   </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <Calendar className="h-3 w-3 text-muted-foreground" />
+                                    <span className="text-[10px] font-black uppercase text-muted-foreground">Unlock:</span>
+                                    <span className="text-[10px] font-bold">{override?.startDate ? format(new Date(override.startDate), 'MMM dd') : 'Batch Start'}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <Clock className="h-3 w-3 text-muted-foreground" />
+                                    <span className="text-[10px] font-black uppercase text-muted-foreground">Deadline:</span>
+                                    <span className="text-[10px] font-bold">{override?.endDate ? format(new Date(override.endDate), 'MMM dd') : 'Batch End'}</span>
+                                  </div>
                                 </div>
                               </div>
-                           </div>
-                         )})}
-                       </div>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -487,13 +488,13 @@ export const ManageBatches: React.FC = () => {
       </Sheet>
 
       {isWizardOpen && (
-        <BatchWizard 
-          batchId={selectedBatchId} 
-          onClose={() => setIsWizardOpen(false)} 
+        <BatchWizard
+          batchId={selectedBatchId}
+          onClose={() => setIsWizardOpen(false)}
           onSuccess={() => {
             setIsWizardOpen(false);
             fetchBatches();
-          }} 
+          }}
         />
       )}
     </div>

@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import { sendBatchEnrollmentConfirmation } from '../../workers/batch-notifications.worker';
+import { sendBatchEnrollmentConfirmation, sendBatchScheduleUpdateNotifications } from '../../workers/batch-notifications.worker';
 
 export class BatchesService {
   static async getAll() {
@@ -68,7 +68,7 @@ export class BatchesService {
   }
 
   static async update(id: string, data: any) {
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // 1. Update basic info
       const batch = await tx.batch.update({
         where: { id },
@@ -86,11 +86,12 @@ export class BatchesService {
       if (data.courseSchedules) {
         await tx.batchCourseSchedule.deleteMany({ where: { batchId: id } });
         await tx.batchCourseSchedule.createMany({
-          data: data.courseSchedules.map((s: any) => ({
+          data: data.courseSchedules.map((s: any, idx: number) => ({
             batchId: id,
             courseId: s.courseId,
             startDate: s.startDate ? new Date(s.startDate) : null,
-            endDate: s.endDate ? new Date(s.endDate) : null
+            endDate: s.endDate ? new Date(s.endDate) : null,
+            order: s.order ?? idx
           }))
         });
       }
@@ -108,6 +109,36 @@ export class BatchesService {
 
       return batch;
     });
+
+    // 4. Trigger Email Notifications if requested
+    if (data.notifyScheduleChanges) {
+      // Fetch the updated batch with its enrollments
+      const updatedBatch = await prisma.batch.findUnique({
+        where: { id },
+        include: {
+          course: { select: { title: true } },
+          learningPath: { select: { title: true } },
+          enrollments: { include: { user: { include: { department: true, immediateSuperior: true } } } },
+          learningPathEnrollments: { include: { user: { include: { department: true, immediateSuperior: true } } } }
+        }
+      });
+
+      if (updatedBatch) {
+        const contentTitle = updatedBatch.course?.title ?? updatedBatch.learningPath?.title ?? updatedBatch.name;
+        const enrolledUsers = [
+          ...updatedBatch.enrollments.map(e => e.user),
+          ...updatedBatch.learningPathEnrollments.map(e => e.user)
+        ];
+
+        if (enrolledUsers.length > 0) {
+          sendBatchScheduleUpdateNotifications(updatedBatch.name, contentTitle, enrolledUsers).catch(err => {
+            console.error('Failed to send batch schedule update notifications:', err);
+          });
+        }
+      }
+    }
+
+    return result;
   }
 
   static async assignLearners(batchId: string, userIds: string[]) {
