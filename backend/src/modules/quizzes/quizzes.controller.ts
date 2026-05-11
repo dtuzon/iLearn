@@ -75,4 +75,31 @@ export class QuizzesController {
       res.status(400).json({ message: error.message });
     }
   }
+
+  static async getEssaySubmissions(req: Request, res: Response) {
+    try {
+      const { moduleId } = req.params;
+      const submissions = await QuizzesService.getEssaySubmissions(moduleId as string);
+      res.json(submissions);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  static async gradeEssay(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { submissionId } = req.params;
+      const { score, feedback } = req.body;
+      if (score === undefined || score === null) return res.status(400).json({ message: 'score is required' });
+      const result = await QuizzesService.gradeEssay(
+        submissionId as string,
+        req.user!.userId,
+        Number(score),
+        feedback || ''
+      );
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }

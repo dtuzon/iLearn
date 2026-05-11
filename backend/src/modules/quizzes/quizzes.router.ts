@@ -53,4 +53,20 @@ router.put(
   QuizzesController.syncQuestions
 );
 
+// Essay grading routes
+router.get(
+  '/:moduleId/essays',
+  authenticate,
+  authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER, Role.SUPERVISOR, Role.DEPARTMENT_HEAD, Role.COURSE_CREATOR]),
+  QuizzesController.getEssaySubmissions
+);
+
+router.patch(
+  '/essays/:submissionId/grade',
+  authenticate,
+  authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER, Role.SUPERVISOR, Role.DEPARTMENT_HEAD, Role.COURSE_CREATOR]),
+  auditLog('GRADE_ESSAY'),
+  QuizzesController.gradeEssay
+);
+
 export default router;

@@ -10,6 +10,8 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Label } from '../../components/ui/label';
+import { Input } from '../../components/ui/input';
+import { Textarea } from '../../components/ui/textarea';
 
 import { Progress } from '../../components/ui/progress';
 import { Alert, AlertTitle, AlertDescription } from '../../components/ui/alert';
@@ -137,30 +139,31 @@ export const CoursePlayer: React.FC = () => {
 
   const handleSubmitQuiz = async () => {
     if (!displayedModule) return;
-    
-    // Check if all answered
-    if (Object.keys(quizAnswers).length < quizQuestions.length) {
-      toast.error('Please answer all questions before submitting.');
-      return;
+
+    // For each question, check we have an answer
+    for (const q of quizQuestions) {
+      if (q.type === 'ESSAY') continue; // essay is optional to fill during validation
+      const hasAnswer =
+        quizAnswers[q.id] !== undefined && quizAnswers[q.id] !== '';
+      if (!hasAnswer) {
+        toast.error('Please answer all questions before submitting.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
     try {
-      const answers = Object.entries(quizAnswers).map(([qId, oId]) => ({
-        questionId: qId,
-        optionId: oId
-      }));
+      // Build typed answer array
+      const answers = quizQuestions.map((q) => {
+        const raw = quizAnswers[q.id] ?? '';
+        if (q.type === 'ENUMERATION') return { questionId: q.id, enumerationText: raw };
+        if (q.type === 'ESSAY')       return { questionId: q.id, essayText: raw };
+        return { questionId: q.id, optionId: raw }; // MC / TF
+      });
 
-      const result = await quizzesApi.submitQuiz(displayedModule.id, answers);
+      const result = await quizzesApi.submitQuiz(displayedModule.id, answers as any);
       setQuizResult(result);
-      
-      if (result.passed) {
-        toast.success(result.message);
-      } else {
-        toast.error(result.message);
-      }
-
-
+      result.passed ? toast.success(result.message) : toast.error(result.message);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to submit quiz');
     } finally {
@@ -555,27 +558,68 @@ export const CoursePlayer: React.FC = () => {
                 ) : (
                   <div className="space-y-8">
                      {quizQuestions.map((q, idx) => (
-                       <div key={q.id} className="space-y-4 p-4 border rounded-lg bg-muted/20">
-                         <h4 className="font-medium text-lg">{idx + 1}. {q.questionText}</h4>
-                         <RadioGroup 
-                           value={quizAnswers[q.id]} 
-                           onValueChange={(val) => setQuizAnswers({...quizAnswers, [q.id]: val})}
-                           className="space-y-3"
-                         >
-                           {q.options.map((opt) => (
-                             <div key={opt.id} className="flex items-center space-x-3 p-3 rounded-md hover:bg-background border cursor-pointer transition-colors">
-                               <RadioGroupItem value={opt.id} id={opt.id} />
-                               <Label htmlFor={opt.id} className="flex-1 cursor-pointer font-normal">{opt.optionText}</Label>
+                       <div key={q.id} className="space-y-4 p-5 border rounded-2xl bg-muted/20">
+                         <div className="flex items-start gap-3">
+                           <span className="text-primary/40 font-mono text-sm shrink-0 mt-0.5">#{idx + 1}</span>
+                           <h4 className="font-semibold text-base leading-snug">{q.questionText}</h4>
+                         </div>
+
+                         {/* Multiple Choice */}
+                         {(q.type === 'MULTIPLE_CHOICE' || !q.type) && (
+                           <RadioGroup value={quizAnswers[q.id]} onValueChange={val => setQuizAnswers({ ...quizAnswers, [q.id]: val })} className="space-y-2">
+                             {q.options.map(opt => (
+                               <div key={opt.id} className="flex items-center space-x-3 p-3 rounded-xl hover:bg-background border cursor-pointer transition-colors">
+                                 <RadioGroupItem value={opt.id} id={opt.id} />
+                                 <Label htmlFor={opt.id} className="flex-1 cursor-pointer font-normal">{opt.optionText}</Label>
+                               </div>
+                             ))}
+                           </RadioGroup>
+                         )}
+
+                         {/* True / False */}
+                         {q.type === 'TRUE_FALSE' && (
+                           <RadioGroup value={quizAnswers[q.id]} onValueChange={val => setQuizAnswers({ ...quizAnswers, [q.id]: val })} className="flex gap-3">
+                             {q.options.map(opt => (
+                               <div key={opt.id} className={cn('flex items-center gap-2 p-4 rounded-xl border-2 cursor-pointer flex-1 justify-center font-bold transition-all', quizAnswers[q.id] === opt.id ? 'border-primary bg-primary/5' : 'border-muted-foreground/20 hover:border-primary/40')}>
+                                 <RadioGroupItem value={opt.id} id={opt.id} />
+                                 <Label htmlFor={opt.id} className="cursor-pointer font-bold">{opt.optionText}</Label>
+                               </div>
+                             ))}
+                           </RadioGroup>
+                         )}
+
+                         {/* Enumeration */}
+                         {q.type === 'ENUMERATION' && (
+                           <div className="space-y-2">
+                             <p className="text-xs text-muted-foreground">Enter all answers separated by commas (e.g., Manila, Cebu, Davao)</p>
+                             <Input placeholder="Answer 1, Answer 2, Answer 3..." value={quizAnswers[q.id] || ''} onChange={e => setQuizAnswers({ ...quizAnswers, [q.id]: e.target.value })} className="h-11 border-primary/10" />
+                           </div>
+                         )}
+
+                         {/* Essay */}
+                         {q.type === 'ESSAY' && (
+                           <div className="space-y-2">
+                             {q.essayPrompt && (
+                               <div className="text-sm text-muted-foreground italic bg-muted/30 p-3 rounded-xl border border-dashed">📋 {q.essayPrompt}</div>
+                             )}
+                             <div className="flex items-center gap-3">
+                               <p className="text-xs text-rose-600 font-medium">✍️ This answer will be reviewed by your checker.</p>
+                               {q.maxScore != null && (
+                                 <span className="text-[10px] font-black uppercase tracking-widest bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full border border-rose-200">
+                                   Max {q.maxScore} pts
+                                 </span>
+                               )}
                              </div>
-                           ))}
-                         </RadioGroup>
+                             <Textarea placeholder="Write your answer here..." value={quizAnswers[q.id] || ''} onChange={e => setQuizAnswers({ ...quizAnswers, [q.id]: e.target.value })} className="min-h-[120px] border-primary/10 resize-none" rows={5} />
+                           </div>
+                         )}
                        </div>
                      ))}
-                     
+
                      {quizQuestions.length === 0 && (
                        <div className="text-center py-12 text-muted-foreground">
-                          <HelpCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                          <p>No questions found for this quiz.</p>
+                         <HelpCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                         <p>No questions found for this quiz.</p>
                        </div>
                      )}
                   </div>

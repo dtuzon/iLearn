@@ -70,7 +70,8 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
   const [paths, setPaths] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
-  const [searchUser, setSearchUser] = useState('');
+  const [searchChecker, setSearchChecker] = useState('');
+  const [searchLearner, setSearchLearner] = useState('');
   const [selectedPathContent, setSelectedPathContent] = useState<any | null>(null);
 
   useEffect(() => {
@@ -156,8 +157,11 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
     }
   };
 
-  const filteredUsers = users.filter(u => 
-    `${u.firstName} ${u.lastName} ${u.username}`.toLowerCase().includes(searchUser.toLowerCase())
+  const filteredCheckers = users.filter(u =>
+    `${u.firstName} ${u.lastName} ${u.username}`.toLowerCase().includes(searchChecker.toLowerCase())
+  );
+  const filteredLearners = users.filter(u =>
+    `${u.firstName} ${u.lastName} ${u.username}`.toLowerCase().includes(searchLearner.toLowerCase())
   );
 
   const toggleChecker = (userId: string) => {
@@ -331,63 +335,108 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
                 </div>
               )}
 
-              {/* Step 3: Granular Scheduling (Paths Only) */}
-              {step === 3 && formData.contentType === 'PATH' && (
+              {/* Step 3: Learner Assignment */}
+              {step === 3 && (
                 <div className="space-y-6">
-                  <div className="bg-primary/5 p-6 rounded-3xl border border-primary/10">
-                    <h3 className="font-black italic uppercase text-primary flex items-center gap-2 mb-1">
-                      <Clock className="h-5 w-5" /> Paced Roadmapping
-                    </h3>
-                    <p className="text-xs text-muted-foreground font-medium italic">Define custom timelines for each course in this path. Leave blank to follow overall batch dates.</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-black italic uppercase tracking-tighter">Assign Cohort Members</h3>
+                    <Badge variant="secondary" className="font-black h-7 rounded-xl px-4 animate-in zoom-in">
+                      {formData.learnerIds.length} Learners Selected
+                    </Badge>
                   </div>
 
-                  <div className="space-y-4">
-                    {selectedPathContent?.pathCourses?.map((pc: any, i: number) => (
-                      <Card key={pc.id} className="p-5 border-primary/10 shadow-sm rounded-2xl flex flex-col md:flex-row gap-4 md:items-center">
-                        <div className="flex items-center gap-4 flex-1">
-                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs">
-                            {i + 1}
+                  <Tabs defaultValue="individuals" className="w-full">
+                    <TabsList className="grid grid-cols-2 w-full h-11 p-1 bg-muted/50 rounded-xl mb-6">
+                      <TabsTrigger value="individuals" className="rounded-lg font-bold">By Individual</TabsTrigger>
+                      <TabsTrigger value="groups" className="rounded-lg font-bold">By Group</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="individuals" className="space-y-6 animate-in fade-in duration-300">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search employees to add to this batch..."
+                          className="pl-10 h-12 rounded-2xl border-primary/10"
+                          value={searchLearner}
+                          onChange={e => setSearchLearner(e.target.value)}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {filteredLearners.filter(u => u.role === 'EMPLOYEE').map(user => (
+                          <div
+                            key={user.id}
+                            onClick={() => toggleLearner(user.id)}
+                            className={cn(
+                              "p-3 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all",
+                              formData.learnerIds.includes(user.id) ? "border-emerald-500 bg-emerald-50 shadow-sm" : "border-muted-foreground/10 hover:border-emerald-200"
+                            )}
+                          >
+                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center font-bold text-xs uppercase">
+                              {user.firstName?.[0]}{user.lastName?.[0]}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold truncate leading-none">{user.firstName} {user.lastName}</p>
+                              <p className="text-[10px] text-muted-foreground mt-1 uppercase font-black">{user.department?.name || 'No Department'}</p>
+                            </div>
+                            {formData.learnerIds.includes(user.id) && <UserPlus className="h-4 w-4 text-emerald-600" />}
                           </div>
-                          <span className="font-bold text-sm">{pc.course.title}</span>
+                        ))}
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="groups" className="space-y-8 animate-in fade-in duration-300">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <h4 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-primary">
+                            <Building2 className="h-4 w-4" /> By Department
+                          </h4>
+                          <div className="space-y-2">
+                            {departments.map(dept => (
+                              <div key={dept.id} className="flex items-center justify-between p-3 rounded-xl border bg-muted/20 hover:bg-muted/30 transition-colors">
+                                <span className="font-bold text-xs">{dept.name}</span>
+                                <Button variant="ghost" size="sm" className="h-8 rounded-lg font-black text-[10px] uppercase hover:bg-primary hover:text-primary-foreground" onClick={() => addAllFromDept(dept.id)}>Add All</Button>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Input 
-                            type="date"
-                            className="h-10 text-xs rounded-xl"
-                            placeholder="Unlock Date"
-                            value={formData.courseSchedules.find(s => s.courseId === pc.courseId)?.startDate || ''}
-                            onChange={e => updateCourseSchedule(pc.courseId, 'startDate', e.target.value)}
-                          />
-                          <Input 
-                            type="date"
-                            className="h-10 text-xs rounded-xl"
-                            placeholder="Deadline"
-                            value={formData.courseSchedules.find(s => s.courseId === pc.courseId)?.endDate || ''}
-                            onChange={e => updateCourseSchedule(pc.courseId, 'endDate', e.target.value)}
-                          />
+                        <div className="space-y-4">
+                          <h4 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-primary">
+                            <ShieldCheck className="h-4 w-4" /> By System Role
+                          </h4>
+                          <div className="space-y-2">
+                            {['EMPLOYEE', 'SUPERVISOR', 'DEPARTMENT_HEAD', 'COURSE_CREATOR'].map(role => (
+                              <div key={role} className="flex items-center justify-between p-3 rounded-xl border bg-muted/20 hover:bg-muted/30 transition-colors">
+                                <span className="font-bold text-xs">{role.replace('_', ' ')}</span>
+                                <Button variant="ghost" size="sm" className="h-8 rounded-lg font-black text-[10px] uppercase hover:bg-primary hover:text-primary-foreground" onClick={() => addAllFromRole(role)}>Add All</Button>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </Card>
-                    ))}
-                  </div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </div>
               )}
 
               {/* Step 4: Checkers Assignment */}
-              {((step === 3 && formData.contentType === 'COURSE') || (step === 4 && formData.contentType === 'PATH')) && (
+              {step === 4 && (
                 <div className="space-y-6">
-                   <div className="relative">
+                  <div className="bg-primary/5 p-5 rounded-2xl border border-primary/10 mb-2">
+                    <h3 className="font-black italic uppercase text-primary text-sm">Assign Activity Checkers</h3>
+                    <p className="text-xs text-muted-foreground mt-1">Select the trainers or supervisors who will grade activity submissions for this batch.</p>
+                  </div>
+                  <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search trainers, supervisors, or department heads..." 
+                    <Input
+                      placeholder="Search trainers, supervisors, or department heads..."
                       className="pl-10 h-12 rounded-2xl border-primary/10"
-                      value={searchUser}
-                      onChange={e => setSearchUser(e.target.value)}
+                      value={searchChecker}
+                      onChange={e => setSearchChecker(e.target.value)}
                     />
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {filteredUsers.filter(u => ['ADMINISTRATOR', 'LEARNING_MANAGER', 'SUPERVISOR', 'DEPARTMENT_HEAD', 'COURSE_CREATOR'].includes(u.role)).map(user => (
-                      <div 
+                    {filteredCheckers.filter(u => ['ADMINISTRATOR', 'LEARNING_MANAGER', 'SUPERVISOR', 'DEPARTMENT_HEAD', 'COURSE_CREATOR'].includes(u.role)).map(user => (
+                      <div
                         key={user.id}
                         onClick={() => toggleChecker(user.id)}
                         className={cn(
@@ -409,108 +458,39 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
                 </div>
               )}
 
-              {/* Step 5: Learner Assignment */}
-              {((step === 4 && formData.contentType === 'COURSE') || (step === 5 && formData.contentType === 'PATH')) && (
+              {/* Step 5: Granular Scheduling (Paths Only) */}
+              {step === 5 && formData.contentType === 'PATH' && (
                 <div className="space-y-6">
-                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-black italic uppercase tracking-tighter">Assign Cohort Members</h3>
-                    <Badge variant="secondary" className="font-black h-7 rounded-xl px-4 animate-in zoom-in">
-                      {formData.learnerIds.length} Learners Selected
-                    </Badge>
+                  <div className="bg-primary/5 p-6 rounded-3xl border border-primary/10">
+                    <h3 className="font-black italic uppercase text-primary flex items-center gap-2 mb-1">
+                      <Clock className="h-5 w-5" /> Paced Roadmapping
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-medium italic">Define custom timelines for each course in this path. Leave blank to follow overall batch dates.</p>
                   </div>
-
-                  <Tabs defaultValue="individuals" className="w-full">
-                    <TabsList className="grid grid-cols-2 w-full h-11 p-1 bg-muted/50 rounded-xl mb-6">
-                      <TabsTrigger value="individuals" className="rounded-lg font-bold">By Individual</TabsTrigger>
-                      <TabsTrigger value="groups" className="rounded-lg font-bold">By Group</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="individuals" className="space-y-6 animate-in fade-in duration-300">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          placeholder="Search employees to add to this batch..." 
-                          className="pl-10 h-12 rounded-2xl border-primary/10"
-                          value={searchUser}
-                          onChange={e => setSearchUser(e.target.value)}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {filteredUsers.filter(u => u.role === 'EMPLOYEE').map(user => (
-                          <div 
-                            key={user.id}
-                            onClick={() => toggleLearner(user.id)}
-                            className={cn(
-                              "p-3 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all",
-                              formData.learnerIds.includes(user.id) ? "border-emerald-500 bg-emerald-50 shadow-sm" : "border-muted-foreground/10 hover:border-emerald-200"
-                            )}
-                          >
-                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center font-bold text-xs uppercase">
-                              {user.firstName?.[0]}{user.lastName?.[0]}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold truncate leading-none">{user.firstName} {user.lastName}</p>
-                              <p className="text-[10px] text-muted-foreground mt-1 uppercase font-black">{user.department?.name || 'GENERIC'}</p>
-                            </div>
-                            {formData.learnerIds.includes(user.id) && <UserPlus className="h-4 w-4 text-emerald-600" />}
-                          </div>
-                        ))}
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="groups" className="space-y-8 animate-in fade-in duration-300">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Department Selectors */}
-                        <div className="space-y-4">
-                          <h4 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-primary">
-                            <Building2 className="h-4 w-4" />
-                            By Department
-                          </h4>
-                          <div className="space-y-2">
-                            {departments.map(dept => (
-                              <div key={dept.id} className="flex items-center justify-between p-3 rounded-xl border bg-muted/20 hover:bg-muted/30 transition-colors group">
-                                <span className="font-bold text-xs">{dept.name}</span>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-8 rounded-lg font-black text-[10px] uppercase hover:bg-primary hover:text-primary-foreground"
-                                  onClick={() => addAllFromDept(dept.id)}
-                                >
-                                  Add All
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
+                  <div className="space-y-4">
+                    {selectedPathContent?.pathCourses?.map((pc: any, i: number) => (
+                      <Card key={pc.id} className="p-5 border-primary/10 shadow-sm rounded-2xl flex flex-col md:flex-row gap-4 md:items-center">
+                        <div className="flex items-center gap-4 flex-1">
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs">{i + 1}</div>
+                          <span className="font-bold text-sm">{pc.course.title}</span>
                         </div>
-
-                        {/* Role Selectors */}
-                        <div className="space-y-4">
-                          <h4 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-primary">
-                            <ShieldCheck className="h-4 w-4" />
-                            By System Role
-                          </h4>
-                          <div className="space-y-2">
-                            {['EMPLOYEE', 'SUPERVISOR', 'DEPARTMENT_HEAD', 'COURSE_CREATOR'].map(role => (
-                              <div key={role} className="flex items-center justify-between p-3 rounded-xl border bg-muted/20 hover:bg-muted/30 transition-colors group">
-                                <span className="font-bold text-xs">{role.replace('_', ' ')}</span>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-8 rounded-lg font-black text-[10px] uppercase hover:bg-primary hover:text-primary-foreground"
-                                  onClick={() => addAllFromRole(role)}
-                                >
-                                  Add All
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
+                        <div className="flex gap-2">
+                          <Input type="date" className="h-10 text-xs rounded-xl" placeholder="Unlock Date"
+                            value={formData.courseSchedules.find(s => s.courseId === pc.courseId)?.startDate || ''}
+                            onChange={e => updateCourseSchedule(pc.courseId, 'startDate', e.target.value)}
+                          />
+                          <Input type="date" className="h-10 text-xs rounded-xl" placeholder="Deadline"
+                            value={formData.courseSchedules.find(s => s.courseId === pc.courseId)?.endDate || ''}
+                            onChange={e => updateCourseSchedule(pc.courseId, 'endDate', e.target.value)}
+                          />
                         </div>
-                      </div>
-                    </TabsContent>
-                  </Tabs>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
               )}
+
+
             </div>
           )}
         </ScrollArea>

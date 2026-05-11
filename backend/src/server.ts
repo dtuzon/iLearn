@@ -2,6 +2,7 @@ import app from './app';
 import { initEvaluationWorker } from './workers/evaluation.worker';
 import { initDeadlineWorker } from './workers/deadline.worker';
 import { initEscalationWorker } from './workers/deadline-reminders.worker';
+import { initBatchNotificationWorker } from './workers/batch-notifications.worker';
 
 const PORT = process.env.PORT || 3001;
 
@@ -9,6 +10,7 @@ const PORT = process.env.PORT || 3001;
 initEvaluationWorker();
 initDeadlineWorker();
 initEscalationWorker();
+initBatchNotificationWorker();
 
 
 

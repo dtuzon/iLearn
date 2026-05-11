@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma';
+import { sendBatchEnrollmentConfirmation } from '../../workers/batch-notifications.worker';
 
 export class BatchesService {
   static async getAll() {
@@ -111,12 +112,16 @@ export class BatchesService {
 
   static async assignLearners(batchId: string, userIds: string[]) {
     const batch = await prisma.batch.findUnique({
-      where: { id: batchId }
+      where: { id: batchId },
+      include: {
+        course: { select: { title: true } },
+        learningPath: { select: { title: true } },
+      }
     });
 
     if (!batch) throw new Error('Batch not found');
 
-    return prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       // 1. Un-assign current learners from this batch
       await tx.enrollment.updateMany({
         where: { batchId },
@@ -144,6 +149,25 @@ export class BatchesService {
         }
       }
     });
+
+    // 3. Fire enrollment confirmation emails (non-blocking)
+    if (userIds.length > 0) {
+      const contentTitle = batch.course?.title ?? batch.learningPath?.title ?? batch.name;
+      const enrolledUsers = await prisma.user.findMany({
+        where: { id: { in: userIds } },
+        include: {
+          department: true,
+          immediateSuperior: true,
+        },
+      });
+      sendBatchEnrollmentConfirmation(
+        batch.name,
+        contentTitle,
+        batch.startDate,
+        batch.endDate,
+        enrolledUsers
+      ).catch((e) => console.error('[Batch] Failed to send enrollment confirmation emails:', e));
+    }
   }
 
   static async delete(id: string) {

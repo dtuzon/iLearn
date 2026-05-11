@@ -89,6 +89,13 @@ enum EvalQuestionType {
   YES_NO
 }
 
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  ENUMERATION
+  ESSAY
+}
+
 
 
 
@@ -141,6 +148,7 @@ model User {
   assignedSubmissions ActivitySubmission[] @relation("AssignedSubmissions")
   evaluationResponses EvaluationResponse[]
   batchCheckers       BatchChecker[]
+  essaySubmissions    EssaySubmission[]
 
 
   
@@ -413,14 +421,24 @@ model ActivitySubmission {
 // ─────────────────────────────────────────────
 
 model QuizQuestion {
-  id            String @id @default(cuid())
+  id            String       @id @default(cuid())
   questionText  String
-  sequenceOrder Int    @default(0)
+  sequenceOrder Int          @default(0)
+  type          QuestionType @default(MULTIPLE_CHOICE)
+  // For ESSAY: optional rubric/prompt and max score for checker grading
+  essayPrompt   String?
+  maxScore      Int?         // e.g. 5 → checker grades 1‑5
+
+  // For ENUMERATION: grading strictness options
+  enumCaseSensitive     Boolean @default(false) // false = case-insensitive
+  enumOrderMatters      Boolean @default(false) // false = order-insensitive
+  enumStrictPunctuation Boolean @default(false) // false = strips punctuation before compare
 
   moduleId String
   module   CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
-  options QuizOption[]
+  options          QuizOption[]
+  essaySubmissions EssaySubmission[]
 
   @@map("quiz_questions")
 }
@@ -434,6 +452,26 @@ model QuizOption {
   question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@map("quiz_options")
+}
+
+model EssaySubmission {
+  id         String           @id @default(cuid())
+  questionId String
+  userId     String
+  moduleId   String
+  response   String           @db.Text
+  score      Float?
+  feedback   String?          @db.Text
+  status     SubmissionStatus @default(PENDING_REVIEW)
+  gradedById String?
+  submittedAt DateTime        @default(now())
+  gradedAt    DateTime?
+
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId]) // one answer per learner per question
+  @@map("essay_submissions")
 }
 
 // ─────────────────────────────────────────────
@@ -702,6 +740,11 @@ model Batch {
   courseSchedules         BatchCourseSchedule[] 
   activityCheckers        BatchChecker[] 
   activitySubmissions     ActivitySubmission[]
+
+  // Pre-training notification tracking (prevents duplicate sends)
+  notify30DaySentAt DateTime?
+  notify7DaySentAt  DateTime?
+  notify3DaySentAt  DateTime?
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
