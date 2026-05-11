@@ -39,22 +39,22 @@ export const sendActivityUpdateEmail = async (
       ${actionUrl ? `
         <div style="margin-top: 30px;">
           <a href="${actionUrl}" style="background-color: ${color}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            View in Elevate
+            View in iLearn
           </a>
         </div>
       ` : ''}
 
       <p style="margin-top: 40px; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-        This is an automated notification from the Elevate Learning Management System.
+        This is an automated notification from the iLearn Learning Management System.
       </p>
     </div>
   `;
 
   try {
     await transporter.sendMail({
-      from: `"Elevate LMS" <${process.env.SMTP_USER}>`,
+      from: `"iLearn LMS" <${process.env.SMTP_USER}>`,
       to: userEmail,
-      subject: `[Elevate] ${title} - ${courseName}`,
+      subject: `[iLearn] ${title} - ${courseName}`,
       html
     });
     console.log(`Email sent to ${userEmail} for ${courseName} (${status})`);
@@ -78,7 +78,7 @@ export const sendActivitySubmissionEmail = async (
       <p>Hello,</p>
       <p><strong>${studentName}</strong> has submitted an activity for the course <strong>${courseName}</strong> and it is awaiting your review.</p>
       
-      <p>Please log in to the Elevate LMS to evaluate the submission and provide feedback.</p>
+      <p>Please log in to the iLearn LMS to evaluate the submission and provide feedback.</p>
 
       ${actionUrl ? `
         <div style="margin-top: 30px;">
@@ -89,16 +89,16 @@ export const sendActivitySubmissionEmail = async (
       ` : ''}
 
       <p style="margin-top: 40px; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-        This is an automated notification from the Elevate Learning Management System.
+        This is an automated notification from the iLearn Learning Management System.
       </p>
     </div>
   `;
 
   try {
     await transporter.sendMail({
-      from: `"Elevate LMS" <${process.env.SMTP_USER}>`,
+      from: `"iLearn LMS" <${process.env.SMTP_USER}>`,
       to: checkerEmail,
-      subject: `[Elevate] ${title} - ${studentName}`,
+      subject: `[iLearn] ${title} - ${studentName}`,
       html
     });
     console.log(`Notification email sent to checker ${checkerEmail} for ${studentName}'s submission`);

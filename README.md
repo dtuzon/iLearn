@@ -1,11 +1,11 @@
-# Elevate LMS | Standard Insurance
+# iLearn LMS | Standard Insurance
 
-![Elevate Banner](https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1200&h=400&fit=crop)
+![iLearn Banner](https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1200&h=400&fit=crop)
 
 ## 1. Project Overview & Branding
-**Elevate LMS** is a Tier-1 Learning Experience Platform (LXP) custom-engineered for **Standard Insurance Co., Inc.** It is designed to modernize corporate training through high-fidelity cohort-based learning, automated compliance tracking, and a robust real-time grading infrastructure.
+**iLearn LMS** is a Tier-1 Learning Experience Platform (LXP) custom-engineered for **Standard Insurance Co., Inc.** It is designed to modernize corporate training through high-fidelity cohort-based learning, automated compliance tracking, and a robust real-time grading infrastructure.
 
-Unlike generic LMS solutions, Elevate prioritizes **strict compliance versioning** and **relational integrity**, ensuring that as corporate policies evolve, learner history remains immutable and auditable.
+Unlike generic LMS solutions, iLearn prioritizes **strict compliance versioning** and **relational integrity**, ensuring that as corporate policies evolve, learner history remains immutable and auditable.
 
 ---
 
@@ -26,7 +26,7 @@ The platform leverages a modern, high-performance stack optimized for reliabilit
 ## 3. Core Architectural Workflows
 
 ### 🔄 Content Versioning (Workflow B)
-To maintain the integrity of historic `ModuleProgress` records, Elevate implements a "Immutable Core" versioning system. When a published course is modified:
+To maintain the integrity of historic `ModuleProgress` records, iLearn implements a "Immutable Core" versioning system. When a published course is modified:
 1. The current version is cloned into a `DRAFT` state.
 2. Relational links to historical completions are preserved on the original `isLatest: false` record.
 3. New enrollments are automatically routed to the latest published version, while existing learners can continue their current iteration without data loss.
@@ -44,7 +44,7 @@ The deployment engine allows administrators to push content to thousands of user
 ---
 
 ## 4. Data Mapping & Schema Highlights
-Elevate's data architecture is built for enterprise reporting and organizational hierarchy.
+iLearn's data architecture is built for enterprise reporting and organizational hierarchy.
 
 - **User & Department**: Users are mapped to a `Department` and an `immediateSuperior` (Supervisor), enabling automated reporting lines.
 - **Content Discovery**: `Course` and `LearningPath` entities are enriched with `SkillTag` and `JobPosition` metadata, powering the **Discover** catalog's personalized recommendations.
@@ -103,7 +103,7 @@ SMTP_PASS="..."
    ```
 
 3. **Smart Seeding**:
-   Elevate uses a **Non-Destructive Smart Seeder** that preserves your existing users and departments while refreshing the demo course catalog.
+   iLearn uses a **Non-Destructive Smart Seeder** that preserves your existing users and departments while refreshing the demo course catalog.
    ```bash
    npm run seed
    ```

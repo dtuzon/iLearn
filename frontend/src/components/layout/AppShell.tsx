@@ -94,7 +94,7 @@ export const AppShell: React.FC = () => {
                 <GraduationCap className="h-6 w-6" />
               </div>
               <div className="flex items-center gap-2 whitespace-nowrap">
-                <span className="text-xl font-bold tracking-tight text-foreground">Elevate</span>
+                <span className="text-xl font-bold tracking-tight text-foreground">iLearn</span>
                 <span className="text-muted-foreground/30 font-light text-xl">|</span>
                 <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider hidden lg:block">Standard Insurance</span>
               </div>
@@ -110,7 +110,7 @@ export const AppShell: React.FC = () => {
             >
               <div className="flex items-center gap-2">
                 <Search className="h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-                <span>Search Elevate...</span>
+                <span>Search iLearn...</span>
               </div>
               <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 sm:flex">
                 <span className="text-xs">⌘</span>K

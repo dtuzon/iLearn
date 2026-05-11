@@ -1,10 +1,10 @@
 /**
  * email-templates.ts
- * Centralised, branded HTML email templates for the Elevate LMS.
+ * Centralised, branded HTML email templates for the iLearn LMS.
  * All templates share the same header/footer shell and colour system.
  */
 
-const BRAND_NAME = 'Elevate LMS';
+const BRAND_NAME = 'iLearn LMS';
 const COMPANY = 'Standard Insurance Co., Inc.';
 const INDIGO = '#4F46E5';
 const AMBER = '#D97706';
@@ -92,7 +92,7 @@ export function batchEnrollmentEmployeeEmail(opts: {
 }): string {
   const body = `
     ${greeting(opts.firstName)}
-    <p style="margin:0 0 4px;font-size:15px;color:#475569;">You have been successfully enrolled in an upcoming training cohort on <strong>Elevate LMS</strong>.</p>
+    <p style="margin:0 0 4px;font-size:15px;color:#475569;">You have been successfully enrolled in an upcoming training cohort on <strong>iLearn LMS</strong>.</p>
     ${trainingCard([
       { label: 'Batch',    value: opts.batchName },
       { label: 'Training', value: opts.contentTitle },
@@ -209,7 +209,7 @@ export function activityResultEmail(opts: {
     ${greeting(opts.firstName)}
     <p style="margin:0 0 16px;font-size:15px;color:#475569;">Your workshop submission for <strong>${opts.courseName}</strong> has been reviewed.</p>
     ${message}
-    ${ctaButton('View in Elevate', `${opts.frontendUrl}/learning/my-courses`, color)}
+    ${ctaButton('View in iLearn', `${opts.frontendUrl}/learning/my-courses`, color)}
   `;
   return shell(color, title, `Workshop submission update — ${opts.courseName}`, body);
 }

@@ -37,7 +37,7 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
     const icsContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//Elevate LMS//Live Session//EN',
+      'PRODID:-//iLearn LMS//Live Session//EN',
       'BEGIN:VEVENT',
       `UID:${module.id}`,
       `DTSTAMP:${formatDate(new Date())}`,

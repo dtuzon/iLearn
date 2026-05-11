@@ -425,7 +425,7 @@ export class EnrollmentsService {
             if (enrollment.user.email) {
               emailPayloads.push({
                 to: enrollment.user.email,
-                subject: `Elevate LMS: New Course Assignment - ${enrollment.course.title}`,
+                subject: `iLearn LMS: New Course Assignment - ${enrollment.course.title}`,
                 html: `
                   <div style="font-family: sans-serif; max-width: 600px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
                     <h2 style="color: #0F172A;">New Course Assigned</h2>
@@ -471,7 +471,7 @@ export class EnrollmentsService {
             if (assignment.user.email) {
               emailPayloads.push({
                 to: assignment.user.email,
-                subject: `Elevate LMS: New Learning Path Assignment - ${assignment.learningPath.title}`,
+                subject: `iLearn LMS: New Learning Path Assignment - ${assignment.learningPath.title}`,
                 html: `
                   <div style="font-family: sans-serif; max-width: 600px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
                     <h2 style="color: #0F172A;">New Learning Path Assigned</h2>

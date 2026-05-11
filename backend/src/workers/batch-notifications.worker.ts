@@ -115,7 +115,7 @@ async function sendBatchNotifications(
 
     emails.push({
       to: user.email,
-      subject: `[Elevate] Training Reminder (${urgencyLabel}): "${contentTitle}"`,
+      subject: `[iLearn] Training Reminder (${urgencyLabel}): "${contentTitle}"`,
       html: batchReminderEmployeeEmail({ firstName: user.firstName, contentTitle, startDate: formattedDate, daysOut, frontendUrl }),
     });
 
@@ -124,7 +124,7 @@ async function sendBatchNotifications(
       alreadyNotified.add(supervisor.email);
       emails.push({
         to: supervisor.email,
-        subject: `[Elevate] Team Training Reminder (${urgencyLabel}): "${contentTitle}"`,
+        subject: `[iLearn] Team Training Reminder (${urgencyLabel}): "${contentTitle}"`,
         html: batchReminderManagerEmail({ managerFirstName: supervisor.firstName, managerRole: 'Supervisor', employeeFirstName: user.firstName, employeeLastName: user.lastName, contentTitle, startDate: formattedDate, daysOut, frontendUrl }),
       });
     }
@@ -138,7 +138,7 @@ async function sendBatchNotifications(
         alreadyNotified.add(deptHead.email);
         emails.push({
           to: deptHead.email,
-          subject: `[Elevate] Department Training Reminder (${urgencyLabel}): "${contentTitle}"`,
+          subject: `[iLearn] Department Training Reminder (${urgencyLabel}): "${contentTitle}"`,
           html: batchReminderManagerEmail({ managerFirstName: deptHead.firstName ?? '', managerRole: 'Department Head', employeeFirstName: user.firstName, employeeLastName: user.lastName, contentTitle, startDate: formattedDate, daysOut, frontendUrl }),
         });
       }
@@ -169,7 +169,7 @@ export async function sendBatchEnrollmentConfirmation(
 
     emails.push({
       to: user.email,
-      subject: `[Elevate] You've Been Enrolled: "${contentTitle}"`,
+      subject: `[iLearn] You've Been Enrolled: "${contentTitle}"`,
       html: batchEnrollmentEmployeeEmail({ firstName: user.firstName, batchName, contentTitle, startDate: formattedStart, endDate: formattedEnd, frontendUrl }),
     });
 
@@ -178,7 +178,7 @@ export async function sendBatchEnrollmentConfirmation(
       alreadyNotified.add(supervisor.email);
       emails.push({
         to: supervisor.email,
-        subject: `[Elevate] Team Member Enrolled: "${contentTitle}"`,
+        subject: `[iLearn] Team Member Enrolled: "${contentTitle}"`,
         html: batchEnrollmentManagerEmail({ managerFirstName: supervisor.firstName, managerRole: 'Supervisor', employeeFirstName: user.firstName, employeeLastName: user.lastName, batchName, contentTitle, startDate: formattedStart, endDate: formattedEnd, frontendUrl }),
       });
     }
@@ -192,7 +192,7 @@ export async function sendBatchEnrollmentConfirmation(
         alreadyNotified.add(deptHead.email);
         emails.push({
           to: deptHead.email,
-          subject: `[Elevate] Department Member Enrolled: "${contentTitle}"`,
+          subject: `[iLearn] Department Member Enrolled: "${contentTitle}"`,
           html: batchEnrollmentManagerEmail({ managerFirstName: deptHead.firstName ?? '', managerRole: 'Department Head', employeeFirstName: user.firstName, employeeLastName: user.lastName, batchName, contentTitle, startDate: formattedStart, endDate: formattedEnd, frontendUrl }),
         });
       }
@@ -219,7 +219,7 @@ export async function sendBatchScheduleUpdateNotifications(
 
     emails.push({
       to: user.email,
-      subject: `[Elevate] Schedule Update: "${contentTitle}"`,
+      subject: `[iLearn] Schedule Update: "${contentTitle}"`,
       html: batchScheduleUpdateEmployeeEmail({ firstName: user.firstName, batchName, contentTitle, frontendUrl }),
     });
 
@@ -228,7 +228,7 @@ export async function sendBatchScheduleUpdateNotifications(
       alreadyNotified.add(supervisor.email);
       emails.push({
         to: supervisor.email,
-        subject: `[Elevate] Team Schedule Update: "${contentTitle}"`,
+        subject: `[iLearn] Team Schedule Update: "${contentTitle}"`,
         html: batchScheduleUpdateManagerEmail({ managerFirstName: supervisor.firstName, managerRole: 'Supervisor', employeeFirstName: user.firstName, employeeLastName: user.lastName, batchName, contentTitle, frontendUrl }),
       });
     }
@@ -242,7 +242,7 @@ export async function sendBatchScheduleUpdateNotifications(
         alreadyNotified.add(deptHead.email);
         emails.push({
           to: deptHead.email,
-          subject: `[Elevate] Department Schedule Update: "${contentTitle}"`,
+          subject: `[iLearn] Department Schedule Update: "${contentTitle}"`,
           html: batchScheduleUpdateManagerEmail({ managerFirstName: deptHead.firstName ?? '', managerRole: 'Department Head', employeeFirstName: user.firstName, employeeLastName: user.lastName, batchName, contentTitle, frontendUrl }),
         });
       }

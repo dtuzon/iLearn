@@ -123,7 +123,7 @@ export const EvaluationTemplates: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', 'elevate-evaluation-template.csv');
+    link.setAttribute('download', 'ilearn-evaluation-template.csv');
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();

@@ -102,7 +102,7 @@ async function main() {
 
   const course1 = await prisma.course.create({
     data: {
-      title: 'Elevate Data Privacy Compliance',
+      title: 'iLearn Data Privacy Compliance',
       description: 'Comprehensive training on Data Privacy Act of 2012 (RA 10173) specifically tailored for insurance practitioners at Standard Insurance.',
       thumbnailUrl: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=800',
       status: CourseStatus.PUBLISHED,
@@ -181,7 +181,7 @@ async function main() {
             sequenceOrder: 1,
             meetingUrl: 'https://teams.microsoft.com/l/meetup-join/example',
             scheduledAt: new Date(Date.now() + 86400000 * 2), // 2 days from now
-            attendanceCode: 'ELEVATE2024'
+            attendanceCode: 'ILEARN2024'
           }
         ]
       }
@@ -287,7 +287,7 @@ async function main() {
   console.log('📢 Publishing Bulletin Board Announcements...');
   await prisma.announcement.create({
     data: {
-      title: 'Welcome to Elevate LMS!',
+      title: 'Welcome to iLearn LMS!',
       content: 'Welcome to the future of professional development at Standard Insurance. Explore our new courses and track your achievements in real-time!',
       imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=800',
       authorId: learningManager.id,
