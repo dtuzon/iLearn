@@ -45,8 +45,17 @@ export const batchesApi = {
     await apiClient.post(`/batches/${id}/assign-learners`, { userIds });
   },
 
-  getAnalytics: async (id: string) => {
-    const response = await apiClient.get(`/batches/${id}/analytics`);
+  getAnalytics: async (id: string, filters?: { departmentId?: string; role?: string; status?: string }) => {
+    let url = `/batches/${id}/analytics`;
+    if (filters) {
+      const params = new URLSearchParams();
+      if (filters.departmentId) params.append('departmentId', filters.departmentId);
+      if (filters.role) params.append('role', filters.role);
+      if (filters.status) params.append('status', filters.status);
+      const queryString = params.toString();
+      if (queryString) url += `?${queryString}`;
+    }
+    const response = await apiClient.get(url);
     return response.data as {
       totalLearners: number;
       completionRate: number;
@@ -54,6 +63,7 @@ export const batchesApi = {
       distribution: { name: string; value: number; fill: string }[];
       topPerformers: { name: string; averageScore: number }[];
       kashMetrics: { domain: string; score: number }[];
+      knowledgeDelta: { preQuizAvg: number; postQuizAvg: number; percentageIncrease: number };
     };
   },
 

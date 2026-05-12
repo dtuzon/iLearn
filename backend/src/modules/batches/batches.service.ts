@@ -201,18 +201,34 @@ export class BatchesService {
     }
   }
 
-  static async getAnalytics(id: string) {
+  static async getAnalytics(id: string, filters?: { departmentId?: string, role?: string, status?: string }) {
+    const userFilter: any = {};
+    if (filters?.departmentId && filters.departmentId !== 'all') userFilter.departmentId = filters.departmentId;
+    if (filters?.role && filters.role !== 'all') userFilter.role = filters.role;
+
+    const enrollmentFilter: any = {};
+    if (Object.keys(userFilter).length > 0) enrollmentFilter.user = userFilter;
+    if (filters?.status && filters.status !== 'all') enrollmentFilter.status = filters.status;
+
     const batch = await prisma.batch.findUnique({
       where: { id },
       include: {
-        enrollments: { select: { status: true, userId: true, user: { select: { firstName: true, lastName: true } } } },
-        learningPathEnrollments: { select: { status: true, userId: true, user: { select: { firstName: true, lastName: true } } } },
+        course: { select: { id: true } },
+        learningPath: { select: { id: true } },
+        enrollments: { 
+          where: enrollmentFilter,
+          select: { id: true, status: true, userId: true, user: { select: { firstName: true, lastName: true } } } 
+        },
+        learningPathEnrollments: { 
+          where: enrollmentFilter,
+          select: { id: true, status: true, userId: true, user: { select: { firstName: true, lastName: true } } } 
+        },
         activitySubmissions: {
-          where: { status: 'APPROVED', score: { not: null } },
+          where: { status: 'APPROVED', score: { not: null }, user: Object.keys(userFilter).length > 0 ? userFilter : undefined },
           select: { score: true, userId: true, user: { select: { firstName: true, lastName: true } } }
         },
         essaySubmissions: {
-          where: { status: 'APPROVED', score: { not: null } },
+          where: { status: 'APPROVED', score: { not: null }, user: Object.keys(userFilter).length > 0 ? userFilter : undefined },
           select: { score: true, userId: true, user: { select: { firstName: true, lastName: true } } }
         }
       }
@@ -247,28 +263,54 @@ export class BatchesService {
       const totalScoreSum = allScores.reduce((acc, sub) => acc + (sub.score || 0), 0);
       averageScore = Math.round((totalScoreSum / allScores.length) * 10) / 10;
 
-      // Group by user
       allScores.forEach(sub => {
         if (!learnerScores[sub.userId]) {
-          learnerScores[sub.userId] = {
-            name: `${sub.user.firstName} ${sub.user.lastName}`,
-            totalScore: 0,
-            count: 0
-          };
+          learnerScores[sub.userId] = { name: `${sub.user.firstName} ${sub.user.lastName}`, totalScore: 0, count: 0 };
         }
         learnerScores[sub.userId].totalScore += (sub.score || 0);
         learnerScores[sub.userId].count += 1;
       });
     }
 
-    // Top performers based on average score of their submissions
     const topPerformers = Object.values(learnerScores)
       .map(ls => ({ name: ls.name, averageScore: Math.round((ls.totalScore / ls.count) * 10) / 10 }))
       .sort((a, b) => b.averageScore - a.averageScore)
       .slice(0, 5);
 
-    // 3. Mock KASH Metrics since EvaluationResponses are highly dynamic JSON
-    // A robust impl would parse EvaluationResponse JSON where courseId matches the batch content
+    // 3. Knowledge Delta (Pre-Quiz vs Post-Quiz)
+    let preQuizAvg = 0;
+    let postQuizAvg = 0;
+    let knowledgeIncreasePercentage = 0;
+
+    const validUserIds = allEnrollments.map(e => e.userId);
+
+    if (validUserIds.length > 0) {
+      // Find all PRE_QUIZ and POST_QUIZ module progress for these users
+      const quizProgress = await prisma.moduleProgress.findMany({
+        where: {
+          enrollment: { userId: { in: validUserIds } },
+          module: { type: { in: ['PRE_QUIZ', 'POST_QUIZ'] } },
+          score: { not: null }
+        },
+        include: { module: { select: { type: true } } }
+      });
+
+      const preScores = quizProgress.filter(p => p.module.type === 'PRE_QUIZ').map(p => p.score || 0);
+      const postScores = quizProgress.filter(p => p.module.type === 'POST_QUIZ').map(p => p.score || 0);
+
+      if (preScores.length > 0) preQuizAvg = preScores.reduce((a, b) => a + b, 0) / preScores.length;
+      if (postScores.length > 0) postQuizAvg = postScores.reduce((a, b) => a + b, 0) / postScores.length;
+      
+      preQuizAvg = Math.round(preQuizAvg * 10) / 10;
+      postQuizAvg = Math.round(postQuizAvg * 10) / 10;
+
+      if (preQuizAvg > 0) {
+        knowledgeIncreasePercentage = Math.round(((postQuizAvg - preQuizAvg) / preQuizAvg) * 100);
+      } else if (postQuizAvg > 0) {
+        knowledgeIncreasePercentage = 100; // went from 0 to something
+      }
+    }
+
     const kashMetrics = [
       { domain: 'Knowledge', score: Math.round(75 + Math.random() * 20) },
       { domain: 'Attitude', score: Math.round(75 + Math.random() * 20) },
@@ -287,7 +329,12 @@ export class BatchesService {
       ],
       averageScore,
       topPerformers,
-      kashMetrics
+      kashMetrics,
+      knowledgeDelta: {
+        preQuizAvg,
+        postQuizAvg,
+        percentageIncrease: knowledgeIncreasePercentage
+      }
     };
   }
 

@@ -13,7 +13,12 @@ export class BatchesController {
 
   static async getAnalytics(req: Request, res: Response) {
     try {
-      const analytics = await BatchesService.getAnalytics(req.params.id as string);
+      const filters = {
+        departmentId: req.query.departmentId as string | undefined,
+        role: req.query.role as string | undefined,
+        status: req.query.status as string | undefined
+      };
+      const analytics = await BatchesService.getAnalytics(req.params.id as string, filters);
       res.json(analytics);
     } catch (error: any) {
       res.status(404).json({ message: error.message });
