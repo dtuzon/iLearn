@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import { sendBatchEnrollmentConfirmation, sendBatchScheduleUpdateNotifications } from '../../workers/batch-notifications.worker';
+import { sendBatchEnrollmentConfirmation, sendBatchScheduleUpdateNotifications, sendBatchCancellationNotifications } from '../../workers/batch-notifications.worker';
 
 export class BatchesService {
   static async getAll() {
@@ -199,6 +199,52 @@ export class BatchesService {
         enrolledUsers
       ).catch((e) => console.error('[Batch] Failed to send enrollment confirmation emails:', e));
     }
+  }
+
+  static async cancel(id: string, reason?: string) {
+    // 1. Fetch batch with all enrolled users and their reporting chain
+    const batch = await prisma.batch.findUnique({
+      where: { id },
+      include: {
+        course: { select: { title: true } },
+        learningPath: { select: { title: true } },
+        enrollments: {
+          include: { user: { include: { department: true, immediateSuperior: true } } }
+        },
+        learningPathEnrollments: {
+          include: { user: { include: { department: true, immediateSuperior: true } } }
+        }
+      }
+    });
+
+    if (!batch) throw new Error('Batch not found');
+    if (batch.status === 'CANCELLED') throw new Error('Batch is already cancelled');
+
+    // 2. Mark the batch as CANCELLED
+    await prisma.batch.update({
+      where: { id },
+      data: { status: 'CANCELLED' }
+    });
+
+    // 3. Detach enrollments from this batch (keep enrollments intact, just remove batch link)
+    await prisma.$transaction([
+      prisma.enrollment.updateMany({ where: { batchId: id }, data: { batchId: null } }),
+      prisma.learningPathEnrollment.updateMany({ where: { batchId: id }, data: { batchId: null } }),
+    ]);
+
+    // 4. Fire cancellation notifications (non-blocking)
+    const contentTitle = batch.course?.title ?? batch.learningPath?.title ?? batch.name;
+    const enrolledUsers = [
+      ...batch.enrollments.map(e => e.user),
+      ...batch.learningPathEnrollments.map(e => e.user),
+    ];
+
+    if (enrolledUsers.length > 0) {
+      sendBatchCancellationNotifications(batch.name, contentTitle, enrolledUsers, reason)
+        .catch(err => console.error('[Batch] Failed to send cancellation notifications:', err));
+    }
+
+    return { message: 'Batch cancelled successfully', affectedLearners: enrolledUsers.length };
   }
 
   static async delete(id: string) {

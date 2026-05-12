@@ -8,6 +8,8 @@ import {
   batchReminderManagerEmail,
   batchScheduleUpdateEmployeeEmail,
   batchScheduleUpdateManagerEmail,
+  batchCancellationEmployeeEmail,
+  batchCancellationManagerEmail,
 } from '../lib/email-templates';
 import { differenceInDays, startOfDay } from 'date-fns';
 
@@ -32,7 +34,7 @@ async function processBatchReminders() {
   const batches = await prisma.batch.findMany({
     where: {
       startDate: { gt: today },
-      status: { in: ['UPCOMING', 'ACTIVE'] },
+      status: { in: ['UPCOMING', 'ACTIVE'] }, // exclude CANCELLED
     },
     include: {
       course: { select: { title: true } },
@@ -250,4 +252,78 @@ export async function sendBatchScheduleUpdateNotifications(
   }
 
   await sendBulkEmails(emails);
+}
+
+// ─── Cancellation Notifications ───────────────────────────────────────────────
+
+export async function sendBatchCancellationNotifications(
+  batchName: string,
+  contentTitle: string,
+  enrolledUsers: any[],
+  reason?: string
+): Promise<void> {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const emails: { to: string; subject: string; html: string }[] = [];
+  const alreadyNotified = new Set<string>();
+
+  for (const user of enrolledUsers) {
+    if (!user?.email) continue;
+    alreadyNotified.add(user.email);
+
+    // 1. Employee
+    emails.push({
+      to: user.email,
+      subject: `[iLearn] Batch Cancelled: "${batchName}"`,
+      html: batchCancellationEmployeeEmail({ firstName: user.firstName, batchName, contentTitle, reason, frontendUrl }),
+    });
+
+    // 2. Immediate Supervisor
+    const supervisor = user.immediateSuperior;
+    if (supervisor?.email && !alreadyNotified.has(supervisor.email)) {
+      alreadyNotified.add(supervisor.email);
+      emails.push({
+        to: supervisor.email,
+        subject: `[iLearn] Team Batch Cancelled: "${batchName}"`,
+        html: batchCancellationManagerEmail({
+          managerFirstName: supervisor.firstName,
+          managerRole: 'Supervisor',
+          employeeFirstName: user.firstName,
+          employeeLastName: user.lastName,
+          batchName,
+          contentTitle,
+          reason,
+          frontendUrl,
+        }),
+      });
+    }
+
+    // 3. Department Head
+    if (user.department?.headUserId) {
+      const deptHead = await prisma.user.findUnique({
+        where: { id: user.department.headUserId },
+        select: { email: true, firstName: true, lastName: true },
+      });
+      if (deptHead?.email && !alreadyNotified.has(deptHead.email)) {
+        alreadyNotified.add(deptHead.email);
+        emails.push({
+          to: deptHead.email,
+          subject: `[iLearn] Department Batch Cancelled: "${batchName}"`,
+          html: batchCancellationManagerEmail({
+            managerFirstName: deptHead.firstName ?? '',
+            managerRole: 'Department Head',
+            employeeFirstName: user.firstName,
+            employeeLastName: user.lastName,
+            batchName,
+            contentTitle,
+            reason,
+            frontendUrl,
+          }),
+        });
+      }
+    }
+  }
+
+  if (emails.length > 0) {
+    await sendBulkEmails(emails);
+  }
 }

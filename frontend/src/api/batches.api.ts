@@ -5,7 +5,7 @@ export interface Batch {
   name: string;
   startDate: string;
   endDate: string;
-  status: 'UPCOMING' | 'ACTIVE' | 'COMPLETED';
+  status: 'UPCOMING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
   courseId?: string;
   learningPathId?: string;
   course?: { title: string };
@@ -43,6 +43,11 @@ export const batchesApi = {
 
   assignLearners: async (id: string, userIds: string[]) => {
     await apiClient.post(`/batches/${id}/assign-learners`, { userIds });
+  },
+
+  cancel: async (id: string, reason?: string) => {
+    const response = await apiClient.patch(`/batches/${id}/cancel`, { reason });
+    return response.data as { message: string; affectedLearners: number };
   },
 
   delete: async (id: string) => {

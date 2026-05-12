@@ -15,6 +15,7 @@ router.get('/:id', BatchesController.getById);
 router.post('/', auditLog('CREATE_BATCH'), BatchesController.create);
 router.put('/:id', auditLog('UPDATE_BATCH'), BatchesController.update);
 router.post('/:id/assign-learners', auditLog('BATCH_ASSIGN_LEARNERS'), BatchesController.assignLearners);
+router.patch('/:id/cancel', auditLog('CANCEL_BATCH'), BatchesController.cancel);
 router.delete('/:id', auditLog('DELETE_BATCH'), BatchesController.delete);
 
 export default router;

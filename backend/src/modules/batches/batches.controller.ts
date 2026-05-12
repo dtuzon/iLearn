@@ -49,6 +49,17 @@ export class BatchesController {
     }
   }
 
+  static async cancel(req: Request, res: Response) {
+    try {
+      const { reason } = req.body;
+      const result = await BatchesService.cancel(req.params.id as string, reason);
+      res.json(result);
+    } catch (error: any) {
+      const status = error.message === 'Batch is already cancelled' ? 409 : 400;
+      res.status(status).json({ message: error.message });
+    }
+  }
+
   static async delete(req: Request, res: Response) {
     try {
       await BatchesService.delete(req.params.id as string);

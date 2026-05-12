@@ -19,7 +19,9 @@ import {
   Filter,
   ArrowUpRight,
   UserCheck,
-  ClipboardList
+  ClipboardList,
+  XCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -49,6 +51,16 @@ import {
   SheetTitle,
   SheetDescription
 } from '../../components/ui/sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '../../components/ui/dialog';
+import { Label } from '../../components/ui/label';
+import { Textarea } from '../../components/ui/textarea';
 import { cn } from '../../lib/utils';
 import {
   Avatar,
@@ -77,6 +89,12 @@ export const ManageBatches: React.FC = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [viewingBatch, setViewingBatch] = useState<Batch | null>(null);
 
+  // Cancel dialog state
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [cancellingBatch, setCancellingBatch] = useState<Batch | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
+
   const fetchBatches = async () => {
     setIsLoading(true);
     try {
@@ -104,20 +122,44 @@ export const ManageBatches: React.FC = () => {
     }
   };
 
+  const openCancelDialog = (batch: Batch) => {
+    setCancellingBatch(batch);
+    setCancelReason('');
+    setIsCancelDialogOpen(true);
+  };
+
+  const handleCancelBatch = async () => {
+    if (!cancellingBatch) return;
+    setIsCancelling(true);
+    try {
+      const result = await batchesApi.cancel(cancellingBatch.id, cancelReason || undefined);
+      toast.success(`Batch cancelled. ${result.affectedLearners} learner(s) notified.`);
+      setIsCancelDialogOpen(false);
+      setCancellingBatch(null);
+      fetchBatches();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to cancel batch');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const filteredBatches = batches.filter(batch => {
     const matchesSearch = batch.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = typeFilter === 'ALL' ||
       (typeFilter === 'COURSE' && batch.courseId) ||
       (typeFilter === 'PATH' && batch.learningPathId);
 
-    // Lifecycle status logic
-    const now = new Date();
-    const start = new Date(batch.startDate);
-    const end = new Date(batch.endDate);
-
-    let status = 'UPCOMING';
-    if (now > end) status = 'COMPLETED';
-    else if (now >= start) status = 'ACTIVE';
+    // Derive lifecycle status unless explicitly CANCELLED in DB
+    let status = batch.status;
+    if (status !== 'CANCELLED') {
+      const now = new Date();
+      const start = new Date(batch.startDate);
+      const end = new Date(batch.endDate);
+      if (now > end) status = 'COMPLETED';
+      else if (now >= start) status = 'ACTIVE';
+      else status = 'UPCOMING';
+    }
 
     const matchesTab = activeTab === status;
 
@@ -128,6 +170,7 @@ export const ManageBatches: React.FC = () => {
     switch (status) {
       case 'ACTIVE': return <Badge className="bg-emerald-500 hover:bg-emerald-600 border-none px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">ACTIVE</Badge>;
       case 'COMPLETED': return <Badge variant="secondary" className="opacity-70 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">COMPLETED</Badge>;
+      case 'CANCELLED': return <Badge className="bg-red-500/10 text-red-600 border border-red-200 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">CANCELLED</Badge>;
       default: return <Badge variant="outline" className="text-orange-500 border-orange-500/20 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">UPCOMING</Badge>;
     }
   };
@@ -204,6 +247,9 @@ export const ManageBatches: React.FC = () => {
               <TabsTrigger value="COMPLETED" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 pb-4 pt-4 text-sm font-black italic uppercase tracking-widest transition-all">
                 Completed
               </TabsTrigger>
+              <TabsTrigger value="CANCELLED" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-red-500 data-[state=active]:text-red-500 rounded-none px-0 pb-4 pt-4 text-sm font-black italic uppercase tracking-widest transition-all">
+                Cancelled
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -242,7 +288,7 @@ export const ManageBatches: React.FC = () => {
                         <MoreVertical className="h-5 w-5" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-[1.5rem] p-2 shadow-2xl border-none bg-background/95 backdrop-blur-lg">
+                  <DropdownMenuContent align="end" className="rounded-[1.5rem] p-2 shadow-2xl border-none bg-background/95 backdrop-blur-lg">
                       <DropdownMenuItem
                         className="gap-3 rounded-xl cursor-pointer p-3 font-bold"
                         onClick={() => {
@@ -252,12 +298,14 @@ export const ManageBatches: React.FC = () => {
                       >
                         <Edit2 className="h-4 w-4 text-primary" /> Edit Configuration
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="gap-3 rounded-xl cursor-pointer p-3 font-bold text-destructive"
-                        onClick={() => handleDelete(batch.id)}
-                      >
-                        <Trash2 className="h-4 w-4" /> Delete Records
-                      </DropdownMenuItem>
+                      {batch.status !== 'CANCELLED' && (
+                        <DropdownMenuItem
+                          className="gap-3 rounded-xl cursor-pointer p-3 font-bold text-destructive"
+                          onClick={() => openCancelDialog(batch)}
+                        >
+                          <XCircle className="h-4 w-4" /> Cancel Batch
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -497,6 +545,57 @@ export const ManageBatches: React.FC = () => {
           }}
         />
       )}
+
+      {/* Cancel Batch Confirmation Dialog */}
+      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <DialogContent className="rounded-[2rem] border-none shadow-2xl max-w-md">
+          <DialogHeader className="space-y-3">
+            <div className="h-14 w-14 rounded-2xl bg-red-100 flex items-center justify-center mx-auto mb-2">
+              <AlertTriangle className="h-7 w-7 text-red-500" />
+            </div>
+            <DialogTitle className="text-center text-2xl font-black tracking-tight">Cancel Batch</DialogTitle>
+            <DialogDescription className="text-center text-sm font-medium text-muted-foreground">
+              You are about to cancel <strong className="text-foreground">{cancellingBatch?.name}</strong>.
+              Enrolled learners, their supervisors, and department heads will be notified by email.
+              Enrollment records are preserved for audit purposes.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+              Cancellation Reason <span className="font-normal normal-case tracking-normal">(optional)</span>
+            </Label>
+            <Textarea
+              placeholder="e.g. Trainer unavailable, rescheduled for next quarter..."
+              className="rounded-2xl border-primary/10 resize-none min-h-[80px] font-medium"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+          </div>
+
+          <DialogFooter className="gap-3 flex-row">
+            <Button
+              variant="outline"
+              className="flex-1 h-12 rounded-2xl font-bold"
+              onClick={() => setIsCancelDialogOpen(false)}
+              disabled={isCancelling}
+            >
+              Keep Batch
+            </Button>
+            <Button
+              className="flex-1 h-12 rounded-2xl font-black bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20"
+              onClick={handleCancelBatch}
+              disabled={isCancelling}
+            >
+              {isCancelling ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Cancelling...</>
+              ) : (
+                <><XCircle className="h-4 w-4 mr-2" /> Confirm Cancel</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

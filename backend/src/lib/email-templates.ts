@@ -275,3 +275,51 @@ export function batchScheduleUpdateManagerEmail(opts: {
   `;
   return shell(INDIGO, `🗓️ Team Schedule Update`, `${opts.managerRole} notification — ${COMPANY}`, body);
 }
+
+// ─── Batch Cancellation ───────────────────────────────────────────────────────
+
+export function batchCancellationEmployeeEmail(opts: {
+  firstName: string;
+  batchName: string;
+  contentTitle: string;
+  reason?: string;
+  frontendUrl: string;
+}): string {
+  const body = `
+    ${greeting(opts.firstName)}
+    <p style="margin:0 0 4px;font-size:15px;color:#475569;">We regret to inform you that a training batch you were enrolled in has been <strong>cancelled</strong>.</p>
+    ${trainingCard([
+      { label: 'Batch',    value: opts.batchName },
+      { label: 'Training', value: opts.contentTitle },
+      ...(opts.reason ? [{ label: 'Reason', value: opts.reason }] : []),
+    ])}
+    <p style="font-size:13px;color:#64748b;margin:0;">Please reach out to your Learning Manager or HR representative if you have any questions. Other training opportunities may still be available to you.</p>
+    ${ctaButton('Browse Learning Catalog', `${opts.frontendUrl}/learning/discover`, RED)}
+  `;
+  return shell(RED, '❌ Batch Cancelled', 'A training cohort has been cancelled.', body);
+}
+
+export function batchCancellationManagerEmail(opts: {
+  managerFirstName: string;
+  managerRole: 'Supervisor' | 'Department Head';
+  employeeFirstName: string;
+  employeeLastName: string;
+  batchName: string;
+  contentTitle: string;
+  reason?: string;
+  frontendUrl: string;
+}): string {
+  const body = `
+    ${greeting(opts.managerFirstName)}
+    <p style="margin:0 0 4px;font-size:15px;color:#475569;">A training batch assigned to a member of your team has been <strong>cancelled</strong>.</p>
+    ${trainingCard([
+      { label: 'Learner',  value: `${opts.employeeFirstName} ${opts.employeeLastName}` },
+      { label: 'Batch',    value: opts.batchName },
+      { label: 'Training', value: opts.contentTitle },
+      ...(opts.reason ? [{ label: 'Reason', value: opts.reason }] : []),
+    ])}
+    <p style="font-size:13px;color:#64748b;margin:0;">Please coordinate with your Learning Manager to ensure the affected employee is re-enrolled in an alternative cohort if required.</p>
+    ${ctaButton('View Team Management', `${opts.frontendUrl}/supervisor/team-management`, RED)}
+  `;
+  return shell(RED, '❌ Team Batch Cancelled', `${opts.managerRole} notification — ${COMPANY}`, body);
+}

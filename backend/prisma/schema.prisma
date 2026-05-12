@@ -729,7 +729,7 @@ model Batch {
   name             String    // e.g., "Q3 K.A.S.H Onboarding"
   startDate        DateTime
   endDate          DateTime
-  status           String    @default("UPCOMING") // UPCOMING, ACTIVE, COMPLETED
+  status           String    @default("UPCOMING") // UPCOMING, ACTIVE, COMPLETED, CANCELLED
 
   // Target Content (Can wrap a single Course or a Learning Path)
   courseId         String?
