@@ -304,7 +304,7 @@ export const ManageBatches: React.FC = () => {
                         <Edit2 className="h-4 w-4 text-primary" /> Edit Configuration
                       </DropdownMenuItem>
 
-                      {batch.status === 'COMPLETED' && (
+                      {activeTab === 'COMPLETED' && (
                         <DropdownMenuItem
                           className="gap-3 rounded-xl cursor-pointer p-3 font-bold text-amber-500"
                           onClick={() => setAnalyticsBatch({ id: batch.id, name: batch.name })}

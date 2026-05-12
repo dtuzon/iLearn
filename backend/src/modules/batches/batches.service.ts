@@ -213,15 +213,15 @@ export class BatchesService {
     const batch = await prisma.batch.findUnique({
       where: { id },
       include: {
-        course: { select: { id: true } },
-        learningPath: { select: { id: true } },
+        course: { select: { id: true, modules: true } },
+        learningPath: { select: { id: true, learningPathCourses: { include: { course: { include: { modules: true } } } } } },
         enrollments: { 
           where: enrollmentFilter,
-          select: { id: true, status: true, userId: true, user: { select: { firstName: true, lastName: true } } } 
+          select: { id: true, status: true, userId: true, enrolledAt: true, user: { select: { firstName: true, lastName: true, role: true, department: { select: { name: true } } } } } 
         },
         learningPathEnrollments: { 
           where: enrollmentFilter,
-          select: { id: true, status: true, userId: true, user: { select: { firstName: true, lastName: true } } } 
+          select: { id: true, status: true, userId: true, enrolledAt: true, user: { select: { firstName: true, lastName: true, role: true, department: { select: { name: true } } } } } 
         },
         activitySubmissions: {
           where: { status: 'APPROVED', score: { not: null }, user: Object.keys(userFilter).length > 0 ? userFilter : undefined },
@@ -318,6 +318,48 @@ export class BatchesService {
       { domain: 'Habits', score: Math.round(75 + Math.random() * 20) }
     ];
 
+    // 4. Learner Breakdown Data
+    const learnerDetails = allEnrollments.map(e => ({
+      id: e.userId,
+      name: `${e.user.firstName} ${e.user.lastName}`,
+      department: e.user.department?.name || 'N/A',
+      role: e.user.role,
+      status: e.status,
+      enrolledAt: e.enrolledAt,
+      averageScore: learnerScores[e.userId] ? Math.round((learnerScores[e.userId].totalScore / learnerScores[e.userId].count) * 10) / 10 : 0
+    }));
+
+    // 5. Content Breakdown Data
+    let allModules: any[] = [];
+    if (batch.course) allModules = batch.course.modules;
+    if (batch.learningPath) {
+      batch.learningPath.learningPathCourses.forEach((lpc: any) => {
+        allModules = [...allModules, ...lpc.course.modules];
+      });
+    }
+
+    const moduleDetails = await Promise.all(allModules.map(async m => {
+      const progress = await prisma.moduleProgress.findMany({
+        where: { moduleId: m.id, enrollment: { userId: { in: validUserIds } }, score: { not: null } },
+        select: { score: true, completed: true }
+      });
+
+      const totalCompleted = await prisma.moduleProgress.count({
+        where: { moduleId: m.id, enrollment: { userId: { in: validUserIds } }, completed: true }
+      });
+
+      const avgScore = progress.length > 0 ? progress.reduce((a, b) => a + (b.score || 0), 0) / progress.length : 0;
+      const compRate = validUserIds.length > 0 ? Math.round((totalCompleted / validUserIds.length) * 100) : 0;
+
+      return {
+        id: m.id,
+        title: m.title,
+        type: m.type,
+        averageScore: Math.round(avgScore * 10) / 10,
+        completionRate: compRate
+      };
+    }));
+
     return {
       totalLearners,
       completionRate: totalLearners > 0 ? Math.round((distribution.COMPLETED / totalLearners) * 100) : 0,
@@ -334,7 +376,9 @@ export class BatchesService {
         preQuizAvg,
         postQuizAvg,
         percentageIncrease: knowledgeIncreasePercentage
-      }
+      },
+      learnerDetails,
+      moduleDetails
     };
   }
 
