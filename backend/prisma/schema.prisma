@@ -467,6 +467,9 @@ model EssaySubmission {
   submittedAt DateTime        @default(now())
   gradedAt    DateTime?
 
+  batchId    String?
+  batch      Batch?           @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  
   question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
   user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -740,6 +743,7 @@ model Batch {
   courseSchedules         BatchCourseSchedule[] 
   activityCheckers        BatchChecker[] 
   activitySubmissions     ActivitySubmission[]
+  essaySubmissions        EssaySubmission[]
 
   // Pre-training notification tracking (prevents duplicate sends)
   notify30DaySentAt DateTime?

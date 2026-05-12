@@ -66,7 +66,7 @@ import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 import { Checkbox } from '../../components/ui/checkbox';
 import { useAuth } from '../../context/AuthContext';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+
 
 export const CourseManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -297,7 +297,7 @@ export const CourseManagement: React.FC = () => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="passingGrade">Passing Grade (%) *</Label>
                       <Input
@@ -310,22 +310,6 @@ export const CourseManagement: React.FC = () => {
                         onChange={(e) => setNewCourse({ ...newCourse, passingGrade: parseInt(e.target.value) || 0 })}
                         className="h-11"
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Target Audience</Label>
-                      <Select
-                        value={newCourse.targetAudience}
-                        onValueChange={(val) => setNewCourse({ ...newCourse, targetAudience: val })}
-                      >
-                        <SelectTrigger className="h-11">
-                          <SelectValue placeholder="Select Audience" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="GENERAL">General</SelectItem>
-                          <SelectItem value="PHASE_1_NEW_HIRE">Phase 1: Newly Hired</SelectItem>
-                          <SelectItem value="PHASE_2_REGULARIZED">Phase 2: Newly Regularized</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
                   </div>
 

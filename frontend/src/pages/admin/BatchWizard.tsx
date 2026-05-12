@@ -195,12 +195,13 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
         courseId: formData.contentType === 'COURSE' && formData.contentId ? formData.contentId : null,
         learningPathId: formData.contentType === 'PATH' && formData.contentId ? formData.contentId : null,
         // Send the full ordered array
-        courseSchedules: formData.contentType === 'PATH' ? sortedCourses.map((c: any) => {
+        courseSchedules: formData.contentType === 'PATH' ? sortedCourses.map((c: any, idx: number) => {
           const existing = formData.courseSchedules.find(s => s.courseId === c.courseId);
           return {
             courseId: c.courseId,
             startDate: existing?.startDate || null,
-            endDate: existing?.endDate || null
+            endDate: existing?.endDate || null,
+            order: idx
           };
         }) : formData.courseSchedules
       };
@@ -345,6 +346,23 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
                         onChange={e => setFormData({ ...formData, endDate: e.target.value })}
                       />
                     </div>
+                  </div>
+                  
+                  <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-between mt-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                        <Bell className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <Label className="text-sm font-bold text-emerald-900">Notify learners of schedule changes</Label>
+                        <p className="text-[10px] text-emerald-700/70 font-medium">Sends automated emails to the employee, supervisor, and dept head.</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={formData.notifyScheduleChanges}
+                      onCheckedChange={val => setFormData({ ...formData, notifyScheduleChanges: val })}
+                      className="data-[state=checked]:bg-emerald-600"
+                    />
                   </div>
                 </div>
               )}
@@ -534,22 +552,7 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
                     </h3>
                     <p className="text-xs text-muted-foreground font-medium italic">Define custom timelines for each course in this path. Leave blank to follow overall batch dates.</p>
                   </div>
-                  <div className="flex items-center justify-between p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                        <Bell className="h-5 w-5 text-emerald-600" />
-                      </div>
-                      <div>
-                        <Label className="text-sm font-bold text-emerald-900">Notify learners of schedule changes</Label>
-                        <p className="text-[11px] text-emerald-700/70 font-medium mt-0.5">Automated emails will be sent to the employee, their supervisor, and department head.</p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={formData.notifyScheduleChanges}
-                      onCheckedChange={val => setFormData({ ...formData, notifyScheduleChanges: val })}
-                      className="data-[state=checked]:bg-emerald-600"
-                    />
-                  </div>
+
 
                   <div className="space-y-4">
                     <DndContext sensors={sensors} onDragEnd={(event: any) => {

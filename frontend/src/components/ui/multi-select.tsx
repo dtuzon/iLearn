@@ -119,6 +119,11 @@ export function MultiSelect({
                 return (
                   <CommandItem
                     key={option.value}
+                    value={option.value}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
                     onSelect={() => {
                       if (isSelected) {
                         onChange(selected.filter((i) => i !== option.value))

@@ -35,7 +35,6 @@ import {
   TabsList, 
   TabsTrigger 
 } from '../../components/ui/tabs';
-import { cn } from '../../lib/utils';
 
 export const DiscoverCatalog: React.FC = () => {
   const navigate = useNavigate();

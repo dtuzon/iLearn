@@ -432,7 +432,7 @@ export const CourseBuilder: React.FC = () => {
         description: data.description || '',
         passingGrade: data.passingGrade,
         targetAudience: data.targetAudience,
-        targetDepartments: data.targetDepartments,
+        targetDepartments: data.targetDepartments || [],
         introContent: data.introContent || '',
         closingContent: data.closingContent || '',
         thumbnailUrl: data.thumbnailUrl || '',
@@ -539,10 +539,7 @@ export const CourseBuilder: React.FC = () => {
     if (currentGrade !== parent.passingGrade) {
       changes.push(`Updated Passing Grade: ${parent.passingGrade}% → ${currentGrade}%`);
     }
-    const currentAudience = currentForm.targetAudience || current.targetAudience;
-    if (currentAudience !== parent.targetAudience) {
-      changes.push(`Changed Target Audience: ${parent.targetAudience.replace(/_/g, ' ')} → ${currentAudience.replace(/_/g, ' ')}`);
-    }
+    // Target audience check removed
 
     // Description changes
     const currentDescription = currentForm.description || current.description || '';
@@ -1493,21 +1490,6 @@ export const CourseBuilder: React.FC = () => {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Target Audience</Label>
-                    <Select
-                      disabled={isReadonly}
-                      value={identityForm.targetAudience}
-                      onValueChange={(val) => setIdentityForm({ ...identityForm, targetAudience: val })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select audience" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="PHASE_1_NEW_HIRE">Phase 1: Newly Hired</SelectItem>
-                        <SelectItem value="PHASE_2_REGULARIZED">Phase 2: Newly Regularized</SelectItem>
-                        <SelectItem value="GENERAL">General Audience</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
                 </div>
 

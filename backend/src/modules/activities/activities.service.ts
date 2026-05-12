@@ -69,6 +69,9 @@ export class ActivitiesService {
           select: {
             activitySubmissions: {
               where: { status: SubmissionStatus.PENDING_REVIEW }
+            },
+            essaySubmissions: {
+              where: { status: 'PENDING_REVIEW' as any }
             }
           }
         },
@@ -94,6 +97,25 @@ export class ActivitiesService {
       include: {
         user: { select: { firstName: true, lastName: true, username: true } },
         module: { select: { title: true, type: true } }
+      },
+      orderBy: { submittedAt: 'desc' }
+    });
+  }
+
+  static async getBatchEssays(batchId: string, checkerId: string) {
+    const isChecker = await prisma.batchChecker.findUnique({
+      where: { batchId_userId: { batchId, userId: checkerId } }
+    });
+    if (!isChecker) throw new Error('Unauthorized');
+
+    return prisma.essaySubmission.findMany({
+      where: { 
+        batchId,
+        status: 'PENDING_REVIEW' as any
+      },
+      include: {
+        user: { select: { firstName: true, lastName: true, username: true } },
+        question: { select: { questionText: true, essayPrompt: true, maxScore: true } }
       },
       orderBy: { submittedAt: 'desc' }
     });

@@ -31,6 +31,15 @@ export class ActivitiesController {
     }
   }
 
+  static async getBatchEssays(req: AuthenticatedRequest, res: Response) {
+    try {
+      const essays = await ActivitiesService.getBatchEssays(req.params.batchId as string, req.user!.userId);
+      res.json(essays);
+    } catch (error: any) {
+      res.status(403).json({ message: error.message });
+    }
+  }
+
   static async grade(req: AuthenticatedRequest, res: Response) {
     try {
       const updated = await ActivitiesService.gradeSubmission(req.params.id as string, req.user!.userId, req.body);

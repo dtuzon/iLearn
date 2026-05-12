@@ -40,6 +40,11 @@ export const activitiesApi = {
     return response.data as ActivitySubmission[];
   },
 
+  getBatchEssays: async (batchId: string) => {
+    const response = await apiClient.get(`/activities/batch-essays/${batchId}`);
+    return response.data as any[];
+  },
+
   grade: async (id: string, data: { status: string; score?: number; feedback?: string }) => {
     const response = await apiClient.patch(`/activities/submissions/${id}/grade`, data);
     return response.data;

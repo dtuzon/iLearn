@@ -5,7 +5,9 @@ export interface Enrollment {
   id: string;
   status: 'NOT_STARTED' | 'IN_PROGRESS' | 'PENDING_GRADING' | 'COMPLETED';
   currentModuleOrder: number;
+  progress: number;
   enrolledAt: string;
+  completedAt?: string;
   dueDate?: string;
   course: Course & { _count: { modules: number } };
   user?: {

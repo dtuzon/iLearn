@@ -171,6 +171,7 @@ export class QuizzesService {
         case 'ESSAY': {
           hasEssay = true;
           if ('essayText' in answer && answer.essayText.trim()) {
+            const batchId = enrollment?.batchId || null;
             // Upsert essay submission for checker review
             await prisma.essaySubmission.upsert({
               where: { userId_questionId: { userId, questionId: q.id } },
@@ -182,6 +183,7 @@ export class QuizzesService {
                 gradedById:  null,
                 gradedAt:    null,
                 submittedAt: new Date(),
+                batchId,
               },
               create: {
                 userId,
@@ -189,6 +191,7 @@ export class QuizzesService {
                 moduleId,
                 response:   answer.essayText,
                 status:     'PENDING_REVIEW',
+                batchId,
               },
             });
           }
