@@ -227,8 +227,6 @@ export const AppShell: React.FC = () => {
               </>
             )}
 
-            {(user?.role === 'EMPLOYEE' || user?.role === 'ADMINISTRATOR') && (
-
               <>
                 <div className="mt-6 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest opacity-70">
                   Learning Center
@@ -237,7 +235,6 @@ export const AppShell: React.FC = () => {
                 <NavLink to="/learning/my-courses" icon={GraduationCap}>My Learning</NavLink>
                 <NavLink to="/learning/certificates" icon={Award}>My Certificates</NavLink>
               </>
-            )}
 
             {(user?.role === 'SUPERVISOR' || user?.role === 'DEPARTMENT_HEAD' || user?.role === 'ADMINISTRATOR') && (
               <>

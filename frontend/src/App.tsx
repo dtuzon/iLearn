@@ -80,9 +80,9 @@ function App() {
                   <Route path="learning-paths/:id" element={<LearningPathBuilder />} />
                 </Route>
 
-                {/* Employee Routes */}
+                {/* Learning Routes (All Roles) */}
                 <Route path="/learning" element={
-                  <RoleGuard allowedRoles={['EMPLOYEE', 'ADMINISTRATOR']}>
+                  <RoleGuard allowedRoles={['EMPLOYEE', 'SUPERVISOR', 'DEPARTMENT_HEAD', 'COURSE_CREATOR', 'LEARNING_MANAGER', 'ADMINISTRATOR']}>
                     <Outlet />
                   </RoleGuard>
                 }>

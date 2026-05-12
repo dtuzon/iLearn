@@ -16,7 +16,15 @@ export class EnrollmentsController {
     try {
       const { courseId } = req.params;
       const { userId, dueDate } = req.body;
-      const targetUserId = userId || req.user!.userId;
+      const caller = req.user!;
+      
+      let targetUserId = caller.userId;
+      
+      // Security Fix: Only allow admins and managers to enroll other users
+      if (userId && ['ADMINISTRATOR', 'LEARNING_MANAGER'].includes(caller.role)) {
+        targetUserId = userId;
+      }
+      
       const enrollment = await EnrollmentsService.enroll(targetUserId, courseId as string, dueDate);
       res.status(201).json(enrollment);
     } catch (error: any) {

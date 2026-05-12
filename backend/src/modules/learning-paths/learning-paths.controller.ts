@@ -67,9 +67,16 @@ export class LearningPathsController {
     try {
       const { id } = req.params;
       const { userId, dueDate } = req.body;
-      const effectiveUserId = (userId || (req as any).user.userId) as string;
+      const caller = (req as any).user;
       
-      const enrollment = await LearningPathsService.enroll(effectiveUserId, id as string, dueDate);
+      let targetUserId = caller.userId;
+      
+      // Security Fix: Only allow admins and managers to enroll other users
+      if (userId && ['ADMINISTRATOR', 'LEARNING_MANAGER'].includes(caller.role)) {
+        targetUserId = userId;
+      }
+      
+      const enrollment = await LearningPathsService.enroll(targetUserId, id as string, dueDate);
       res.status(201).json(enrollment);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -79,6 +86,14 @@ export class LearningPathsController {
   static async getUserEnrollments(req: Request, res: Response) {
     try {
       const { userId } = req.params;
+      const callerId = (req as any).user?.userId;
+      const callerRole = (req as any).user?.role;
+
+      // Security Fix: Prevent basic employees from arbitrarily querying other users' learning paths
+      if (callerRole === 'EMPLOYEE' && userId !== callerId) {
+        return res.status(403).json({ message: 'Forbidden: Insufficient privileges to view this user\'s learning paths' });
+      }
+
       const enrollments = await LearningPathsService.getUserEnrollments(userId as string);
       res.json(enrollments);
     } catch (error: any) {
