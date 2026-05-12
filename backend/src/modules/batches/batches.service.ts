@@ -213,8 +213,8 @@ export class BatchesService {
     const batch = await prisma.batch.findUnique({
       where: { id },
       include: {
-        course: { select: { id: true, modules: true } },
-        learningPath: { select: { id: true, learningPathCourses: { include: { course: { include: { modules: true } } } } } },
+        course: { select: { id: true, title: true, modules: true } },
+        learningPath: { select: { id: true, pathCourses: { include: { course: { include: { modules: true } } } } } },
         enrollments: { 
           where: enrollmentFilter,
           select: { id: true, status: true, userId: true, enrolledAt: true, user: { select: { firstName: true, lastName: true, role: true, department: { select: { name: true } } } } } 
@@ -329,34 +329,41 @@ export class BatchesService {
       averageScore: learnerScores[e.userId] ? Math.round((learnerScores[e.userId].totalScore / learnerScores[e.userId].count) * 10) / 10 : 0
     }));
 
-    // 5. Content Breakdown Data
-    let allModules: any[] = [];
-    if (batch.course) allModules = batch.course.modules;
+    // 5. Course Breakdown Data
+    let coursesToAnalyze: any[] = [];
+    if (batch.course) {
+      coursesToAnalyze = [{ id: batch.courseId, title: batch.course.title, modules: batch.course.modules }];
+    }
     if (batch.learningPath) {
-      batch.learningPath.learningPathCourses.forEach((lpc: any) => {
-        allModules = [...allModules, ...lpc.course.modules];
-      });
+      coursesToAnalyze = batch.learningPath.pathCourses.map((pc: any) => ({
+        id: pc.course.id,
+        title: pc.course.title,
+        modules: pc.course.modules
+      }));
     }
 
-    const moduleDetails = await Promise.all(allModules.map(async m => {
-      const progress = await prisma.moduleProgress.findMany({
-        where: { moduleId: m.id, enrollment: { userId: { in: validUserIds } }, score: { not: null } },
-        select: { score: true, completed: true }
+    const courseDetails = await Promise.all(coursesToAnalyze.map(async c => {
+      const moduleIds = c.modules.map((m: any) => m.id);
+      
+      // Completion: % of learners who have COMPLETED the course
+      const completions = await prisma.enrollment.count({
+        where: { courseId: c.id, userId: { in: validUserIds }, status: 'COMPLETED' }
       });
-
-      const totalCompleted = await prisma.moduleProgress.count({
-        where: { moduleId: m.id, enrollment: { userId: { in: validUserIds } }, completed: true }
+      
+      // Average Score: Average score of all graded modules in this course for these learners
+      const progress = await prisma.moduleProgress.findMany({
+        where: { moduleId: { in: moduleIds }, enrollment: { userId: { in: validUserIds } }, score: { not: null } },
+        select: { score: true }
       });
 
       const avgScore = progress.length > 0 ? progress.reduce((a, b) => a + (b.score || 0), 0) / progress.length : 0;
-      const compRate = validUserIds.length > 0 ? Math.round((totalCompleted / validUserIds.length) * 100) : 0;
+      const compRate = validUserIds.length > 0 ? Math.round((completions / validUserIds.length) * 100) : 0;
 
       return {
-        id: m.id,
-        title: m.title,
-        type: m.type,
-        averageScore: Math.round(avgScore * 10) / 10,
-        completionRate: compRate
+        id: c.id,
+        title: c.title,
+        completionRate: compRate,
+        averageScore: Math.round(avgScore * 10) / 10
       };
     }));
 
@@ -378,7 +385,7 @@ export class BatchesService {
         percentageIncrease: knowledgeIncreasePercentage
       },
       learnerDetails,
-      moduleDetails
+      courseDetails
     };
   }
 

@@ -124,9 +124,9 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
       })));
       XLSX.utils.book_append_sheet(wb, learnersSheet, 'Learners');
 
-      // Tab 4: Content Breakdown
-      const contentSheet = XLSX.utils.json_to_sheet(data.moduleDetails);
-      XLSX.utils.book_append_sheet(wb, contentSheet, 'Content');
+      // Tab 4: Course Breakdown
+      const contentSheet = XLSX.utils.json_to_sheet(data.courseDetails);
+      XLSX.utils.book_append_sheet(wb, contentSheet, 'Courses');
 
       XLSX.writeFile(wb, `${batchName.replace(/\s+/g, '_')}_RawData.xlsx`);
       toast.success('Excel Data Exported Successfully');
@@ -386,30 +386,28 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
             <TabsContent value="content" className="mt-0 outline-none">
               <Card className="rounded-3xl border-none shadow-lg shadow-black/5 overflow-hidden">
                 <CardHeader className="bg-muted/30 pb-4">
-                  <CardTitle className="font-black text-xl tracking-tight">Content Breakdown</CardTitle>
-                  <CardDescription>Average performance and completion rates per module across the cohort.</CardDescription>
+                  <CardTitle className="font-black text-xl tracking-tight">Course Breakdown</CardTitle>
+                  <CardDescription>Average performance and completion rates per course across the cohort.</CardDescription>
                 </CardHeader>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/10 hover:bg-muted/10">
-                        <TableHead className="font-bold tracking-widest uppercase text-xs">Module Title</TableHead>
-                        <TableHead className="font-bold tracking-widest uppercase text-xs">Type</TableHead>
+                        <TableHead className="font-bold tracking-widest uppercase text-xs">Course Title</TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs text-right">Completion Rate</TableHead>
-                        <TableHead className="font-bold tracking-widest uppercase text-xs text-right">Avg Cohort Score</TableHead>
+                        <TableHead className="font-bold tracking-widest uppercase text-xs text-right">Avg Course Score</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data.moduleDetails.map((m: any) => (
-                        <TableRow key={m.id} className="hover:bg-muted/30">
-                          <TableCell className="font-bold max-w-xs truncate">{m.title}</TableCell>
-                          <TableCell>{getModuleTypeBadge(m.type)}</TableCell>
+                      {data.courseDetails.map((c: any) => (
+                        <TableRow key={c.id} className="hover:bg-muted/30">
+                          <TableCell className="font-bold max-w-sm truncate">{c.title}</TableCell>
                           <TableCell className="text-right font-medium">
-                            <span className={m.completionRate >= 80 ? 'text-emerald-600' : 'text-amber-600'}>
-                              {m.completionRate}%
+                            <span className={c.completionRate >= 80 ? 'text-emerald-600' : 'text-amber-600'}>
+                              {c.completionRate}%
                             </span>
                           </TableCell>
-                          <TableCell className="text-right font-black text-primary text-lg">{m.averageScore}</TableCell>
+                          <TableCell className="text-right font-black text-primary text-lg">{c.averageScore}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

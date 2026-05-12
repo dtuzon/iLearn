@@ -65,7 +65,7 @@ export const batchesApi = {
       kashMetrics: { domain: string; score: number }[];
       knowledgeDelta: { preQuizAvg: number; postQuizAvg: number; percentageIncrease: number };
       learnerDetails: { id: string; name: string; department: string; role: string; status: string; enrolledAt: string; averageScore: number }[];
-      moduleDetails: { id: string; title: string; type: string; completionRate: number; averageScore: number }[];
+      courseDetails: { id: string; title: string; completionRate: number; averageScore: number }[];
     };
   },
 
