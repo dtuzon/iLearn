@@ -11,6 +11,15 @@ export class BatchesController {
     }
   }
 
+  static async getAnalytics(req: Request, res: Response) {
+    try {
+      const analytics = await BatchesService.getAnalytics(req.params.id as string);
+      res.json(analytics);
+    } catch (error: any) {
+      res.status(404).json({ message: error.message });
+    }
+  }
+
   static async getById(req: Request, res: Response) {
     try {
       const batch = await BatchesService.getById(req.params.id as string);

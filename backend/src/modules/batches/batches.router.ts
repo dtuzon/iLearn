@@ -11,6 +11,7 @@ const router = Router();
 router.use(authenticate, authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]));
 
 router.get('/', BatchesController.getAll);
+router.get('/:id/analytics', BatchesController.getAnalytics);
 router.get('/:id', BatchesController.getById);
 router.post('/', auditLog('CREATE_BATCH'), BatchesController.create);
 router.put('/:id', auditLog('UPDATE_BATCH'), BatchesController.update);

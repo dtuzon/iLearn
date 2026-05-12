@@ -45,6 +45,18 @@ export const batchesApi = {
     await apiClient.post(`/batches/${id}/assign-learners`, { userIds });
   },
 
+  getAnalytics: async (id: string) => {
+    const response = await apiClient.get(`/batches/${id}/analytics`);
+    return response.data as {
+      totalLearners: number;
+      completionRate: number;
+      averageScore: number;
+      distribution: { name: string; value: number; fill: string }[];
+      topPerformers: { name: string; averageScore: number }[];
+      kashMetrics: { domain: string; score: number }[];
+    };
+  },
+
   cancel: async (id: string, reason?: string) => {
     const response = await apiClient.patch(`/batches/${id}/cancel`, { reason });
     return response.data as { message: string; affectedLearners: number };

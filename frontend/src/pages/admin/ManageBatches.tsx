@@ -21,7 +21,8 @@ import {
   UserCheck,
   ClipboardList,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  TrendingUp
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -32,6 +33,7 @@ import {
   DropdownMenuTrigger
 } from '../../components/ui/dropdown-menu';
 import { BatchWizard } from './BatchWizard';
+import { BatchAnalytics } from './BatchAnalytics';
 import {
   Tabs,
   TabsList,
@@ -94,6 +96,9 @@ export const ManageBatches: React.FC = () => {
   const [cancellingBatch, setCancellingBatch] = useState<Batch | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
+
+  // Analytics state
+  const [analyticsBatch, setAnalyticsBatch] = useState<{ id: string, name: string } | null>(null);
 
   const fetchBatches = async () => {
     setIsLoading(true);
@@ -298,6 +303,16 @@ export const ManageBatches: React.FC = () => {
                       >
                         <Edit2 className="h-4 w-4 text-primary" /> Edit Configuration
                       </DropdownMenuItem>
+
+                      {batch.status === 'COMPLETED' && (
+                        <DropdownMenuItem
+                          className="gap-3 rounded-xl cursor-pointer p-3 font-bold text-amber-500"
+                          onClick={() => setAnalyticsBatch({ id: batch.id, name: batch.name })}
+                        >
+                          <TrendingUp className="h-4 w-4" /> View Analytics
+                        </DropdownMenuItem>
+                      )}
+
                       {batch.status !== 'CANCELLED' && (
                         <DropdownMenuItem
                           className="gap-3 rounded-xl cursor-pointer p-3 font-bold text-destructive"
@@ -596,6 +611,13 @@ export const ManageBatches: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BatchAnalytics 
+        batchId={analyticsBatch?.id || null} 
+        batchName={analyticsBatch?.name || ''} 
+        isOpen={!!analyticsBatch} 
+        onClose={() => setAnalyticsBatch(null)} 
+      />
     </div>
   );
 };
