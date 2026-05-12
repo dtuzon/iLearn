@@ -123,6 +123,13 @@ model User {
   passwordHash String
   firstName    String?
   lastName     String?
+  middleInitial String?
+  nickname     String?
+  position     String?
+  dateHire     DateTime?
+  mobileNumber String?
+  personalEmail String?
+  hrisName     String?
   role         Role     @default(EMPLOYEE)
   isActive               Boolean  @default(true)
   requiresPasswordChange Boolean  @default(false)

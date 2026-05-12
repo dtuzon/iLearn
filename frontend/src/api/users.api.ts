@@ -13,6 +13,13 @@ export interface UserResponse {
     id: string;
     name: string;
   } | null;
+  middleInitial: string | null;
+  nickname: string | null;
+  position: string | null;
+  dateHire: string | null;
+  mobileNumber: string | null;
+  personalEmail: string | null;
+  hrisName: string | null;
   immediateSuperiorId: string | null;
   immediateSuperior?: {
     id: string;

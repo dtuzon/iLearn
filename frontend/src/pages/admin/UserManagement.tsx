@@ -96,23 +96,91 @@ const UserFormFields: React.FC<UserFormFieldsProps> = ({
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
+      <div className="space-y-2">
+        <Label htmlFor="hrisName">HRIS Name (Full Name)</Label>
+        <Input 
+          id="hrisName" 
+          value={formData.hrisName || ''}
+          placeholder="e.g. DOE, JOHN A."
+          onChange={(e) => setFormData({...formData, hrisName: e.target.value})}
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-2 col-span-1">
           <Label htmlFor="firstName">First Name</Label>
           <Input 
             id="firstName" 
-            value={formData.firstName}
+            value={formData.firstName || ''}
             onChange={(e) => setFormData({...formData, firstName: e.target.value})}
           />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 col-span-1">
+          <Label htmlFor="middleInitial">M.I.</Label>
+          <Input 
+            id="middleInitial" 
+            value={formData.middleInitial || ''}
+            maxLength={2}
+            onChange={(e) => setFormData({...formData, middleInitial: e.target.value})}
+          />
+        </div>
+        <div className="space-y-2 col-span-1">
           <Label htmlFor="lastName">Last Name</Label>
           <Input 
             id="lastName" 
-            value={formData.lastName}
+            value={formData.lastName || ''}
             onChange={(e) => setFormData({...formData, lastName: e.target.value})}
           />
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="nickname">Nickname</Label>
+          <Input 
+            id="nickname" 
+            value={formData.nickname || ''}
+            onChange={(e) => setFormData({...formData, nickname: e.target.value})}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="position">Position / Job Title</Label>
+          <Input 
+            id="position" 
+            value={formData.position || ''}
+            onChange={(e) => setFormData({...formData, position: e.target.value})}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="dateHire">Date Hire</Label>
+          <Input 
+            id="dateHire" 
+            type="date"
+            value={formData.dateHire ? formData.dateHire.split('T')[0] : ''}
+            onChange={(e) => setFormData({...formData, dateHire: e.target.value})}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="mobileNumber">Mobile Number</Label>
+          <Input 
+            id="mobileNumber" 
+            value={formData.mobileNumber || ''}
+            onChange={(e) => setFormData({...formData, mobileNumber: e.target.value})}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="personalEmail">Personal Email</Label>
+        <Input 
+          id="personalEmail" 
+          type="email"
+          value={formData.personalEmail || ''}
+          onChange={(e) => setFormData({...formData, personalEmail: e.target.value})}
+        />
       </div>
       
       <div className="space-y-2">
@@ -277,6 +345,13 @@ export const UserManagement: React.FC = () => {
     email: '', 
     firstName: '', 
     lastName: '', 
+    middleInitial: '',
+    nickname: '',
+    position: '',
+    dateHire: '',
+    mobileNumber: '',
+    personalEmail: '',
+    hrisName: '',
     role: 'EMPLOYEE', 
     departmentId: 'none', 
     password: '',
@@ -357,7 +432,21 @@ export const UserManagement: React.FC = () => {
 
   const resetForm = () => {
     setFormData({
-      username: '', email: '', firstName: '', lastName: '', role: 'EMPLOYEE', departmentId: 'none', password: '', immediateSuperiorId: 'none'
+      username: '', 
+      email: '', 
+      firstName: '', 
+      lastName: '', 
+      middleInitial: '',
+      nickname: '',
+      position: '',
+      dateHire: '',
+      mobileNumber: '',
+      personalEmail: '',
+      hrisName: '',
+      role: 'EMPLOYEE', 
+      departmentId: 'none', 
+      password: '', 
+      immediateSuperiorId: 'none'
     });
     setSelectedUser(null);
   };
@@ -369,6 +458,13 @@ export const UserManagement: React.FC = () => {
       email: user.email || '',
       firstName: user.firstName || '',
       lastName: user.lastName || '',
+      middleInitial: user.middleInitial || '',
+      nickname: user.nickname || '',
+      position: user.position || '',
+      dateHire: user.dateHire || '',
+      mobileNumber: user.mobileNumber || '',
+      personalEmail: user.personalEmail || '',
+      hrisName: user.hrisName || '',
       role: user.role,
       departmentId: user.departmentId || 'none',
       password: '',
@@ -445,7 +541,7 @@ export const UserManagement: React.FC = () => {
             <DialogTrigger asChild>
               <Button className="rounded-xl shadow-lg shadow-primary/20"><Plus className="mr-2 h-4 w-4" /> Create User</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md rounded-3xl">
+            <DialogContent className="max-w-2xl rounded-3xl overflow-y-auto max-h-[90vh]">
               <form onSubmit={handleCreate}>
                 <DialogHeader>
                   <DialogTitle className="text-2xl font-bold">Create User</DialogTitle>
@@ -473,7 +569,7 @@ export const UserManagement: React.FC = () => {
 
           {/* Edit User Dialog */}
           <Dialog open={isEditOpen} onOpenChange={(open) => { setIsEditOpen(open); if(!open) resetForm(); }}>
-            <DialogContent className="max-w-md rounded-3xl">
+            <DialogContent className="max-w-2xl rounded-3xl overflow-y-auto max-h-[90vh]">
               <form onSubmit={handleUpdate}>
                 <DialogHeader>
                   <DialogTitle className="text-2xl font-bold">Edit User</DialogTitle>

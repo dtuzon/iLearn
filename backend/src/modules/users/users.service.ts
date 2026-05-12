@@ -80,23 +80,30 @@ export class UsersService {
     username: string;
     password?: string;
     role: Role;
-    departmentId?: string;
+    departmentId?: string | null;
     firstName?: string;
     lastName?: string;
+    middleInitial?: string;
+    nickname?: string;
+    position?: string;
+    dateHire?: Date;
+    mobileNumber?: string;
+    personalEmail?: string;
+    hrisName?: string;
     email?: string;
-    immediateSuperiorId?: string;
+    immediateSuperiorId?: string | null;
   }) {
-    const passwordHash = await hashPassword(data.password || 'password123');
+    const { password, ...userData } = data;
+    const passwordHash = await hashPassword(password || 'password123');
+
+    if (userData.dateHire && typeof userData.dateHire === 'string') {
+      userData.dateHire = new Date(userData.dateHire);
+    }
+
     return prisma.user.create({
       data: {
-        username: data.username,
+        ...userData,
         passwordHash,
-        role: data.role,
-        departmentId: data.departmentId,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        immediateSuperiorId: data.immediateSuperiorId,
         requiresPasswordChange: true // Always true for newly created users with temp passwords
       }
     });
@@ -110,16 +117,29 @@ export class UsersService {
     departmentId: string | null;
     firstName: string;
     lastName: string;
+    middleInitial: string;
+    nickname: string;
+    position: string;
+    dateHire: Date;
+    mobileNumber: string;
+    personalEmail: string;
+    hrisName: string;
     email: string;
     isActive: boolean;
     immediateSuperiorId: string | null;
   }>) {
     const updateData: any = { ...data };
     
-    if (data.password) {
-      updateData.passwordHash = await hashPassword(data.password);
-      updateData.requiresPasswordChange = true;
+    if (data.password !== undefined) {
+      if (data.password) {
+        updateData.passwordHash = await hashPassword(data.password);
+        updateData.requiresPasswordChange = true;
+      }
       delete updateData.password;
+    }
+
+    if (updateData.dateHire && typeof updateData.dateHire === 'string') {
+      updateData.dateHire = new Date(updateData.dateHire);
     }
 
     return prisma.user.update({
@@ -130,19 +150,26 @@ export class UsersService {
 
 
   static async bulkImport(csvBuffer: Buffer) {
-    interface BulkImportRecord {
-      username: string;
-      password?: string;
-      role?: string;
-      departmentId?: string;
-      immediateSuperiorId?: string;
+    interface ExcelImportRecord {
+      'DEPT/DIV/BR/GR'?: string;
+      'IMMEDIATE SUPERVISOR'?: string;
+      'HRIS NAME'?: string;
+      'LAST NAME'?: string;
+      'FIRST NAME'?: string;
+      'M.I'?: string;
+      'NICKNAME'?: string;
+      'POSITION'?: string;
+      'DATE HIRE'?: string;
+      'EMAIL ADDRESS'?: string;
+      'Number'?: string;
+      'Personal Email'?: string;
     }
 
     const records = parse(csvBuffer, {
       columns: true,
       skip_empty_lines: true,
       trim: true
-    }) as BulkImportRecord[];
+    }) as ExcelImportRecord[];
 
     const results = {
       success: 0,
@@ -150,19 +177,120 @@ export class UsersService {
     };
 
     for (const record of records) {
-      try {
-        const { username, password, role, departmentId, immediateSuperiorId } = record;
+      const keys = Object.keys(record);
+      
+      // Strict helper to find value by prioritized matching
+      const findValue = (patterns: string[]) => {
+        const normalizedPatterns = patterns.map(p => p.toUpperCase().replace(/[^A-Z]/g, ''));
         
+        // 1. Try exact normalized matches first
+        for (const p of normalizedPatterns) {
+          const key = keys.find(k => k.toUpperCase().replace(/[^A-Z]/g, '') === p);
+          if (key) return (record as any)[key];
+        }
+        
+        // 2. Fallback to inclusion matches
+        for (const p of normalizedPatterns) {
+          const key = keys.find(k => k.toUpperCase().replace(/[^A-Z]/g, '').includes(p));
+          if (key) return (record as any)[key];
+        }
+        
+        return undefined;
+      };
+
+      const email = findValue(['EMAILADDRESS', 'COMPANYEMAIL', 'WORKEMAIL']);
+      const personalEmail = findValue(['PERSONALEMAIL', 'PRIVATEEMAIL']);
+
+      if (!email) {
+        results.errors.push(`Skipping record: Missing EMAIL ADDRESS`);
+        continue;
+      }
+
+      try {
+        // 1. Resolve Department
+        let departmentId = null;
+        const deptName = findValue(['DEPTDIVBRGR', 'DEPARTMENT', 'DIVISION']);
+        if (deptName) {
+          const dept = await prisma.department.findFirst({
+            where: { name: { equals: deptName.trim(), mode: 'insensitive' } }
+          });
+          if (dept) {
+            departmentId = dept.id;
+          } else {
+            const newDept = await prisma.department.create({
+              data: { name: deptName.trim() }
+            });
+            departmentId = newDept.id;
+          }
+        }
+
+        // 2. Resolve Immediate Superior
+        let immediateSuperiorId = null;
+        const supervisorName = findValue(['IMMEDIATESUPERVISOR', 'SUPERVISOR', 'MANAGER']);
+        if (supervisorName && supervisorName.trim() !== 'None') {
+          const name = supervisorName.trim();
+          const supervisor = await prisma.user.findFirst({
+            where: {
+              OR: [
+                { hrisName: { equals: name, mode: 'insensitive' } },
+                {
+                  AND: [
+                    { firstName: { contains: name.includes(',') ? name.split(',')[1].trim().split(' ')[0] : name.split(' ')[0], mode: 'insensitive' } },
+                    { lastName: { contains: name.includes(',') ? name.split(',')[0].trim() : name.split(' ').pop(), mode: 'insensitive' } }
+                  ]
+                }
+              ]
+            }
+          });
+          if (supervisor) immediateSuperiorId = supervisor.id;
+        }
+
+        // 3. Prepare Date Hire
+        let dateHire = undefined;
+        const rawDate = findValue(['DATEHIRE', 'DATEHIRED', 'HIREDATE']);
+        if (rawDate) {
+          const d = new Date(rawDate);
+          if (!isNaN(d.getTime())) {
+            dateHire = d;
+          } else {
+            const parts = rawDate.split(/[\/\-]/);
+            if (parts.length === 3) {
+              const p0 = parseInt(parts[0]);
+              const p1 = parseInt(parts[1]);
+              const p2 = parseInt(parts[2]);
+              const year = p2 < 100 ? 2000 + p2 : p2;
+              if (p0 > 12) {
+                dateHire = new Date(year, p1 - 1, p0);
+              } else if (p1 > 12) {
+                dateHire = new Date(year, p0 - 1, p1);
+              } else {
+                dateHire = new Date(year, p0 - 1, p1);
+              }
+            }
+          }
+        }
+
+        // 4. Create User
         await this.create({
-          username,
-          password,
-          role: (role as Role) || Role.EMPLOYEE,
-          departmentId: departmentId || undefined,
-          immediateSuperiorId: immediateSuperiorId || undefined
+          username: email.trim(),
+          email: email.trim(),
+          firstName: findValue(['FIRSTNAME']),
+          lastName: findValue(['LASTNAME']),
+          middleInitial: findValue(['MI', 'MIDDLEINITIAL']),
+          nickname: findValue(['NICKNAME']),
+          position: findValue(['POSITION', 'JOBTITLE']),
+          dateHire: dateHire && !isNaN(dateHire.getTime()) ? dateHire : undefined,
+          mobileNumber: findValue(['NUMBER', 'MOBILENUMBER', 'PHONE', 'CONTACT']),
+          personalEmail: personalEmail ? personalEmail.trim() : undefined,
+          hrisName: findValue(['HRISNAME']),
+          departmentId,
+          immediateSuperiorId,
+          role: Role.EMPLOYEE
         });
+
         results.success++;
       } catch (err: any) {
-        results.errors.push(`Error importing ${record.username}: ${err.message}`);
+        results.errors.push(`Error importing ${email}: ${err.message}`);
       }
     }
 
