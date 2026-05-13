@@ -1,14 +1,22 @@
 import nodemailer from 'nodemailer';
+import { prisma } from './prisma';
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER, // e.g., hr@standard-insurance.com
-    pass: process.env.SMTP_APP_PASSWORD, // Google App Password
-  },
-});
+
+const getTransporter = async () => {
+  const settings = await prisma.systemSettings.findFirst();
+  
+  // Use DB settings if available, else fallback to ENV
+  return nodemailer.createTransport({
+    host: settings?.smtpServer || 'smtp.gmail.com',
+    port: settings?.smtpPort || 465,
+    secure: (settings?.smtpPort === 465),
+    auth: {
+      user: settings?.smtpUser || process.env.SMTP_USER,
+      pass: settings?.smtpPassword || process.env.SMTP_APP_PASSWORD,
+    },
+  });
+};
+
 
 export const sendActivityUpdateEmail = async (
   userEmail: string, 
@@ -51,6 +59,7 @@ export const sendActivityUpdateEmail = async (
   `;
 
   try {
+    const transporter = await getTransporter();
     await transporter.sendMail({
       from: `"iLearn LMS" <${process.env.SMTP_USER}>`,
       to: userEmail,
@@ -62,6 +71,7 @@ export const sendActivityUpdateEmail = async (
     console.error('Failed to send email:', error);
   }
 };
+
 
 export const sendActivitySubmissionEmail = async (
   checkerEmail: string,
@@ -95,6 +105,7 @@ export const sendActivitySubmissionEmail = async (
   `;
 
   try {
+    const transporter = await getTransporter();
     await transporter.sendMail({
       from: `"iLearn LMS" <${process.env.SMTP_USER}>`,
       to: checkerEmail,
@@ -106,3 +117,82 @@ export const sendActivitySubmissionEmail = async (
     console.error('Failed to send checker notification email:', error);
   }
 };
+
+export const sendWelcomeEmail = async (
+  userEmail: string,
+  username: string,
+  temporaryPassword: string,
+  firstName: string
+) => {
+  const settings = await prisma.systemSettings.findFirst();
+  const companyName = settings?.companyName || 'Standard Insurance Co., Inc.';
+  const companyLogo = settings?.companyLogoUrl;
+  const systemName = 'iLearn LMS';
+  const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`;
+  
+  const html = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; border: 1px solid #eef2f6; border-radius: 24px; color: #1f2937; background-color: #ffffff;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        ${companyLogo ? `<img src="${companyLogo}" alt="${companyName}" style="max-height: 60px; margin-bottom: 20px;">` : `<h1 style="color: #4F46E5; margin: 0;">${companyName}</h1>`}
+      </div>
+      
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h2 style="font-size: 24px; font-weight: 800; color: #111827; margin: 0;">Welcome to ${systemName}!</h2>
+        <p style="font-size: 16px; color: #6b7280; margin-top: 8px;">Your account has been successfully created.</p>
+      </div>
+
+      <div style="background-color: #f8fafc; padding: 30px; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 30px;">
+        <p style="margin: 0 0 20px 0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 12px; color: #64748b;">Your Login Credentials</p>
+        
+        <div style="margin-bottom: 15px;">
+          <p style="margin: 0; font-size: 14px; color: #64748b;">Username</p>
+          <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: 700; color: #1e293b;">${username}</p>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <p style="margin: 0; font-size: 14px; color: #64748b;">Email Address</p>
+          <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: 700; color: #1e293b;">${userEmail}</p>
+        </div>
+
+        <div>
+          <p style="margin: 0; font-size: 14px; color: #64748b;">Temporary Password</p>
+          <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: 700; color: #4f46e5; font-family: monospace; background: #eff6ff; padding: 8px 12px; border-radius: 8px; display: inline-block;">${temporaryPassword}</p>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-bottom: 30px;">
+        <a href="${loginUrl}" style="background-color: #4f46e5; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: 800; font-size: 16px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);">
+          Log In to your Account
+        </a>
+      </div>
+
+      <div style="background-color: #fffbeb; padding: 15px; border-left: 4px solid #f59e0b; border-radius: 8px; margin-bottom: 30px;">
+        <p style="margin: 0; font-size: 13px; color: #92400e; line-height: 1.5;">
+          <strong>Security Note:</strong> For your protection, you will be prompted to create a new, permanent password during your first login.
+        </p>
+      </div>
+
+      <div style="border-top: 1px solid #eef2f6; padding-top: 30px; text-align: center;">
+        <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.5;">
+          This is an automated message from the <strong>${systemName}</strong> Portal.<br>
+          If you didn't expect this email, please contact your HR administrator.
+        </p>
+        <p style="margin: 10px 0 0 0; font-size: 12px; font-weight: 700; color: #64748b;">${companyName}</p>
+      </div>
+    </div>
+  `;
+
+  try {
+    const transporter = await getTransporter();
+    await transporter.sendMail({
+      from: `"${systemName}" <${settings?.senderEmail || process.env.SMTP_USER}>`,
+      to: userEmail,
+      subject: `Welcome to ${systemName} - Your Account is Ready`,
+      html
+    });
+    console.log(`Welcome email sent successfully to ${userEmail}`);
+  } catch (error) {
+    console.error('CRITICAL: Failed to send Welcome Email:', error);
+  }
+};
+

@@ -2,6 +2,9 @@ import { prisma } from '../../lib/prisma';
 import { hashPassword } from '../../utils/password';
 import { Role } from '@prisma/client';
 import { parse } from 'csv-parse/sync';
+import { sendWelcomeEmail } from '../../lib/email-service';
+import { v4 as uuidv4 } from 'uuid';
+
 
 export class UsersService {
   static async getAll(userId: string, role: string, filters: { search?: string, role?: Role, departmentId?: string } = {}) {
@@ -94,19 +97,35 @@ export class UsersService {
     immediateSuperiorId?: string | null;
   }) {
     const { password, ...userData } = data;
-    const passwordHash = await hashPassword(password || 'password123');
+    
+    // Generate a temporary password if not provided
+    const tempPassword = password || uuidv4().split('-')[0].toUpperCase();
+    const passwordHash = await hashPassword(tempPassword);
 
     if (userData.dateHire && typeof userData.dateHire === 'string') {
       userData.dateHire = new Date(userData.dateHire);
     }
 
-    return prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         ...userData,
         passwordHash,
-        requiresPasswordChange: true // Always true for newly created users with temp passwords
+        requiresPasswordChange: true // Always true for newly created users
       }
     });
+
+    // Send Welcome Email if user has an email address
+    if (user.email) {
+      // Trigger email asynchronously so it doesn't block the response
+      sendWelcomeEmail(
+        user.email,
+        user.username,
+        tempPassword,
+        user.firstName || user.username
+      ).catch(err => console.error(`Failed to send welcome email to ${user.email}:`, err));
+    }
+
+    return user;
   }
 
 

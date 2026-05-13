@@ -12,9 +12,9 @@ export class SettingsService {
         frontPageWelcomeText: 'Welcome to the iLearn Portal',
         footerText: '© 2024 Standard Insurance Co., Inc. All Rights Reserved.',
         dashboardBulletinMessage: 'No active announcements.',
-        smtpServer: 'smtp.example.com',
-        smtpPort: 587,
-        senderEmail: 'no-reply@example.com',
+        smtpServer: 'smtp.gmail.com',
+        smtpPort: 465,
+        senderEmail: 'no-reply@standard-insurance.com',
         maxUploadSizeMb: 10,
         allowedFileTypes: '.pdf,.zip,.docx,.mp4'
       };
