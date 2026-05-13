@@ -3,7 +3,8 @@ import { hashPassword } from '../../utils/password';
 import { Role } from '@prisma/client';
 import { parse } from 'csv-parse/sync';
 import { sendWelcomeEmail } from '../../lib/email-service';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
+
 
 
 export class UsersService {
@@ -98,8 +99,27 @@ export class UsersService {
   }) {
     const { password, ...userData } = data;
     
-    // Generate a temporary password if not provided
-    const tempPassword = password || uuidv4().split('-')[0].toUpperCase();
+    // Check for duplicate username or email
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: userData.username },
+          { email: userData.email ? { equals: userData.email, mode: 'insensitive' } : undefined }
+        ].filter(Boolean) as any
+      }
+    });
+
+    if (existingUser) {
+      if (existingUser.username === userData.username) {
+        throw new Error(`Username "${userData.username}" is already taken.`);
+      }
+      if (existingUser.email && userData.email && existingUser.email.toLowerCase() === userData.email.toLowerCase()) {
+        throw new Error(`Email address "${userData.email}" is already registered.`);
+      }
+    }
+
+    // Generate a temporary password if not provided (8-character alphanumeric)
+    const tempPassword = password || crypto.randomBytes(4).toString('hex').toUpperCase();
     const passwordHash = await hashPassword(tempPassword);
 
     if (userData.dateHire && typeof userData.dateHire === 'string') {

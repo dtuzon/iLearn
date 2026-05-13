@@ -109,7 +109,7 @@ model Department {
   createdAt DateTime @default(now())
 
   headUserId String? @unique
-  head       User?   @relation("DeptHeadRelation", fields: [headUserId], references: [id])
+  head       User?   @relation("DeptHeadRelation", fields: [headUserId], references: [id], onDelete: SetNull)
 
   users User[] @relation("DeptMembers")
 
@@ -161,7 +161,7 @@ model User {
   
   // Direct Reporting Structure
   immediateSuperiorId String?
-  immediateSuperior   User?   @relation("ReportingStructure", fields: [immediateSuperiorId], references: [id])
+  immediateSuperior   User?   @relation("ReportingStructure", fields: [immediateSuperiorId], references: [id], onDelete: SetNull)
   subordinates        User[]  @relation("ReportingStructure")
   
   onlineEvaluations   OnlineEvaluationResult[] @relation("UserOnlineEvaluations")
@@ -526,7 +526,7 @@ model Enrollment {
 
 
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   courseId String
   course   Course @relation(fields: [courseId], references: [id])
@@ -575,7 +575,7 @@ model Transcript {
   finalScore        Int?     // Averaged or post-quiz score recorded at completion
 
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   courseId String
   course   Course @relation(fields: [courseId], references: [id])
@@ -596,7 +596,7 @@ model AuditLog {
   timestamp DateTime @default(now())
 
   userId String?
-  user   User?   @relation(fields: [userId], references: [id])
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("audit_logs")
 }
@@ -604,7 +604,7 @@ model AuditLog {
 model OnlineEvaluationResult {
   id                String   @id @default(cuid())
   userId            String
-  user              User     @relation("UserOnlineEvaluations", fields: [userId], references: [id])
+  user              User     @relation("UserOnlineEvaluations", fields: [userId], references: [id], onDelete: Cascade)
   moduleId          String
   module            CourseModule @relation(fields: [moduleId], references: [id])
   comments          String?
@@ -617,9 +617,9 @@ model OnlineEvaluationResult {
 model BehavioralEvaluation {
   id              String   @id @default(cuid())
   evaluatorId     String
-  evaluator       User     @relation("SupervisorEvaluations", fields: [evaluatorId], references: [id])
+  evaluator       User     @relation("SupervisorEvaluations", fields: [evaluatorId], references: [id], onDelete: Cascade)
   employeeId      String
-  employee        User     @relation("EmployeeEvaluations", fields: [employeeId], references: [id])
+  employee        User     @relation("EmployeeEvaluations", fields: [employeeId], references: [id], onDelete: Cascade)
   courseId        String
   course          Course   @relation(fields: [courseId], references: [id])
   
@@ -726,7 +726,7 @@ model Announcement {
   authorId    String
   createdAt   DateTime  @default(now())
 
-  author      User      @relation(fields: [authorId], references: [id])
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@map("announcements")
 }
@@ -784,7 +784,7 @@ model BatchChecker {
   batchId   String
   batch     Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
   userId    String   // The supervisor/manager acting as the checker
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([batchId, userId])
   @@map("batch_checkers")

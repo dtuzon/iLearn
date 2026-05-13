@@ -5,17 +5,20 @@ import { prisma } from './prisma';
 const getTransporter = async () => {
   const settings = await prisma.systemSettings.findFirst();
   
-  // Use DB settings if available, else fallback to ENV
+  // Use DB settings ONLY if they are actually configured (not example placeholders)
+  const isDbConfigured = settings?.smtpServer && settings?.smtpServer !== 'smtp.example.com' && settings?.smtpUser;
+
   return nodemailer.createTransport({
-    host: settings?.smtpServer || 'smtp.gmail.com',
-    port: settings?.smtpPort || 465,
-    secure: (settings?.smtpPort === 465),
+    host: isDbConfigured ? settings.smtpServer : 'smtp.gmail.com',
+    port: isDbConfigured ? settings.smtpPort : 465,
+    secure: isDbConfigured ? (settings.smtpPort === 465) : true,
     auth: {
-      user: settings?.smtpUser || process.env.SMTP_USER,
-      pass: settings?.smtpPassword || process.env.SMTP_APP_PASSWORD,
+      user: isDbConfigured ? settings.smtpUser : process.env.SMTP_USER,
+      pass: isDbConfigured ? settings.smtpPassword : process.env.SMTP_APP_PASSWORD,
     },
-  });
+  } as any);
 };
+
 
 
 export const sendActivityUpdateEmail = async (
@@ -59,9 +62,14 @@ export const sendActivityUpdateEmail = async (
   `;
 
   try {
+    const settings = await prisma.systemSettings.findFirst();
     const transporter = await getTransporter();
+    const sender = (settings?.senderEmail && settings.senderEmail !== 'no-reply@example.com') 
+      ? settings.senderEmail 
+      : process.env.SMTP_USER;
+
     await transporter.sendMail({
-      from: `"iLearn LMS" <${process.env.SMTP_USER}>`,
+      from: `"iLearn LMS" <${sender}>`,
       to: userEmail,
       subject: `[iLearn] ${title} - ${courseName}`,
       html
@@ -105,9 +113,14 @@ export const sendActivitySubmissionEmail = async (
   `;
 
   try {
+    const settings = await prisma.systemSettings.findFirst();
     const transporter = await getTransporter();
+    const sender = (settings?.senderEmail && settings.senderEmail !== 'no-reply@example.com') 
+      ? settings.senderEmail 
+      : process.env.SMTP_USER;
+
     await transporter.sendMail({
-      from: `"iLearn LMS" <${process.env.SMTP_USER}>`,
+      from: `"iLearn LMS" <${sender}>`,
       to: checkerEmail,
       subject: `[iLearn] ${title} - ${studentName}`,
       html
@@ -184,8 +197,12 @@ export const sendWelcomeEmail = async (
 
   try {
     const transporter = await getTransporter();
+    const sender = (settings?.senderEmail && settings.senderEmail !== 'no-reply@example.com' && settings.senderEmail !== 'no-reply@standard-insurance.com') 
+      ? settings.senderEmail 
+      : process.env.SMTP_USER;
+
     await transporter.sendMail({
-      from: `"${systemName}" <${settings?.senderEmail || process.env.SMTP_USER}>`,
+      from: `"${systemName}" <${sender}>`,
       to: userEmail,
       subject: `Welcome to ${systemName} - Your Account is Ready`,
       html
