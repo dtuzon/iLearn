@@ -271,8 +271,10 @@ export class UsersService {
         }
 
         // 4. Create User
+        const extractedUsername = email.includes('@') ? email.split('@')[0].trim() : email.trim();
+        
         await this.create({
-          username: email.trim(),
+          username: extractedUsername,
           email: email.trim(),
           firstName: findValue(['FIRSTNAME']),
           lastName: findValue(['LASTNAME']),

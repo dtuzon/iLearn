@@ -319,14 +319,58 @@ export class BatchesService {
     ];
 
     // 4. Learner Breakdown Data
-    const learnerDetails = allEnrollments.map(e => ({
-      id: e.userId,
-      name: `${e.user.firstName} ${e.user.lastName}`,
-      department: e.user.department?.name || 'N/A',
-      role: e.user.role,
-      status: e.status,
-      enrolledAt: e.enrolledAt,
-      averageScore: learnerScores[e.userId] ? Math.round((learnerScores[e.userId].totalScore / learnerScores[e.userId].count) * 10) / 10 : 0
+    const learnerDetails = await Promise.all(allEnrollments.map(async e => {
+      let courses: any[] = [];
+      
+      if (batch.learningPathId) {
+        // Find individual course enrollments for this user within this batch context
+        const pathEnrollments = await prisma.enrollment.findMany({
+          where: { userId: e.userId, batchId: batch.id },
+          include: { course: { select: { id: true, title: true } } }
+        });
+
+        courses = await Promise.all(pathEnrollments.map(async pe => {
+          const moduleProgress = await prisma.moduleProgress.findMany({
+            where: { enrollmentId: pe.id, score: { not: null } },
+            select: { score: true }
+          });
+          const avg = moduleProgress.length > 0 ? moduleProgress.reduce((a, b) => a + (b.score || 0), 0) / moduleProgress.length : 0;
+          return {
+            id: pe.courseId,
+            title: pe.course.title,
+            status: pe.status,
+            averageScore: Math.round(avg * 10) / 10
+          };
+        }));
+      } else {
+        // Single course batch
+        const moduleProgress = await prisma.moduleProgress.findMany({
+          where: { enrollmentId: e.id, score: { not: null } },
+          select: { score: true }
+        });
+        const avg = moduleProgress.length > 0 ? moduleProgress.reduce((a, b) => a + (b.score || 0), 0) / moduleProgress.length : 0;
+        
+        // Use batch.courseId as fallback if e.courseId isn't available on the type
+        const courseId = (e as any).courseId || batch.courseId;
+        
+        courses = [{
+          id: courseId,
+          title: batch.course?.title || 'Unknown Course',
+          status: e.status,
+          averageScore: Math.round(avg * 10) / 10
+        }];
+      }
+
+      return {
+        id: e.userId,
+        name: `${e.user.firstName} ${e.user.lastName}`,
+        department: e.user.department?.name || 'N/A',
+        role: e.user.role,
+        status: e.status,
+        enrolledAt: e.enrolledAt,
+        averageScore: learnerScores[e.userId] ? Math.round((learnerScores[e.userId].totalScore / learnerScores[e.userId].count) * 10) / 10 : 0,
+        courses
+      };
     }));
 
     // 5. Course Breakdown Data
@@ -343,27 +387,37 @@ export class BatchesService {
     }
 
     const courseDetails = await Promise.all(coursesToAnalyze.map(async c => {
-      const moduleIds = c.modules.map((m: any) => m.id);
-      
-      // Completion: % of learners who have COMPLETED the course
-      const completions = await prisma.enrollment.count({
-        where: { courseId: c.id, userId: { in: validUserIds }, status: 'COMPLETED' }
-      });
-      
-      // Average Score: Average score of all graded modules in this course for these learners
-      const progress = await prisma.moduleProgress.findMany({
-        where: { moduleId: { in: moduleIds }, enrollment: { userId: { in: validUserIds } }, score: { not: null } },
-        select: { score: true }
+      const enrollments = await prisma.enrollment.findMany({
+        where: { courseId: c.id, batchId: batch.id, userId: { in: validUserIds } },
+        include: { user: { select: { firstName: true, lastName: true, department: { select: { name: true } } } } }
       });
 
-      const avgScore = progress.length > 0 ? progress.reduce((a, b) => a + (b.score || 0), 0) / progress.length : 0;
-      const compRate = validUserIds.length > 0 ? Math.round((completions / validUserIds.length) * 100) : 0;
+      const enrolledStudents = await Promise.all(enrollments.map(async enr => {
+        const moduleProgress = await prisma.moduleProgress.findMany({
+          where: { enrollmentId: enr.id, score: { not: null } },
+          select: { score: true }
+        });
+        const avg = moduleProgress.length > 0 ? moduleProgress.reduce((a, b) => a + (b.score || 0), 0) / moduleProgress.length : 0;
+        return {
+          id: enr.userId,
+          name: `${enr.user.firstName} ${enr.user.lastName}`,
+          department: enr.user.department?.name || 'N/A',
+          status: enr.status,
+          score: Math.round(avg * 10) / 10,
+          completedAt: enr.completedAt
+        };
+      }));
+
+      const completions = enrollments.filter(enr => enr.status === 'COMPLETED').length;
+      const compRate = enrollments.length > 0 ? Math.round((completions / enrollments.length) * 100) : 0;
+      const avgScore = enrolledStudents.length > 0 ? enrolledStudents.reduce((a, b) => a + b.score, 0) / enrolledStudents.length : 0;
 
       return {
         id: c.id,
         title: c.title,
         completionRate: compRate,
-        averageScore: Math.round(avgScore * 10) / 10
+        averageScore: Math.round(avgScore * 10) / 10,
+        enrolledStudents
       };
     }));
 

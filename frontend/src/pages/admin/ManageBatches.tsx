@@ -294,17 +294,19 @@ export const ManageBatches: React.FC = () => {
                       </Button>
                     </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="rounded-[1.5rem] p-2 shadow-2xl border-none bg-background/95 backdrop-blur-lg">
-                      <DropdownMenuItem
-                        className="gap-3 rounded-xl cursor-pointer p-3 font-bold"
-                        onClick={() => {
-                          setSelectedBatchId(batch.id);
-                          setIsWizardOpen(true);
-                        }}
-                      >
-                        <Edit2 className="h-4 w-4 text-primary" /> Edit Configuration
-                      </DropdownMenuItem>
+                      {activeTab !== 'COMPLETED' && (
+                        <DropdownMenuItem
+                          className="gap-3 rounded-xl cursor-pointer p-3 font-bold"
+                          onClick={() => {
+                            setSelectedBatchId(batch.id);
+                            setIsWizardOpen(true);
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4 text-primary" /> Edit Configuration
+                        </DropdownMenuItem>
+                      )}
 
-                      {activeTab === 'COMPLETED' && (
+                      {(activeTab === 'COMPLETED' || activeTab === 'ACTIVE') && (
                         <DropdownMenuItem
                           className="gap-3 rounded-xl cursor-pointer p-3 font-bold text-amber-500"
                           onClick={() => setAnalyticsBatch({ id: batch.id, name: batch.name })}
@@ -313,7 +315,7 @@ export const ManageBatches: React.FC = () => {
                         </DropdownMenuItem>
                       )}
 
-                      {batch.status !== 'CANCELLED' && (
+                      {batch.status !== 'CANCELLED' && activeTab !== 'COMPLETED' && (
                         <DropdownMenuItem
                           className="gap-3 rounded-xl cursor-pointer p-3 font-bold text-destructive"
                           onClick={() => openCancelDialog(batch)}

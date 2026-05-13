@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { batchesApi } from '../../api/batches.api';
 import { departmentsApi } from '../../api/departments.api';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Loader2, Users, CheckCircle2, TrendingUp, Trophy, Download, FileText, Filter, BookOpen } from 'lucide-react';
+import { Loader2, Users, CheckCircle2, TrendingUp, Trophy, Download, FileText, Filter, BookOpen, ArrowUpRight } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Button } from '../../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
+import { cn } from '../../lib/utils';
 
 interface BatchAnalyticsProps {
   batchId: string | null;
@@ -42,6 +43,9 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
     role: 'all',
     status: 'all'
   });
+
+  const [expandedLearnerId, setExpandedLearnerId] = useState<string | null>(null);
+  const [expandedCourseId, setExpandedCourseId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -141,16 +145,6 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
       case 'IN_PROGRESS': return <Badge className="bg-blue-500 hover:bg-blue-600">In Progress</Badge>;
       case 'PENDING_GRADING': return <Badge className="bg-amber-500 hover:bg-amber-600">Pending Grading</Badge>;
       default: return <Badge variant="secondary">Not Started</Badge>;
-    }
-  };
-
-  const getModuleTypeBadge = (type: string) => {
-    switch (type) {
-      case 'PRE_QUIZ': return <Badge variant="outline" className="text-gray-500 border-gray-200">Pre-Quiz</Badge>;
-      case 'POST_QUIZ': return <Badge variant="outline" className="text-primary border-primary/20">Post-Quiz</Badge>;
-      case 'WORKSHOP': return <Badge variant="outline" className="text-amber-500 border-amber-200">Workshop</Badge>;
-      case 'ONLINE_EVALUATION': return <Badge variant="outline" className="text-emerald-500 border-emerald-200">Evaluation</Badge>;
-      default: return <Badge variant="outline" className="text-blue-500 border-blue-200">{type.replace('_', ' ')}</Badge>;
     }
   };
 
@@ -352,30 +346,64 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
               <Card className="rounded-3xl border-none shadow-lg shadow-black/5 overflow-hidden">
                 <CardHeader className="bg-muted/30 pb-4">
                   <CardTitle className="font-black text-xl tracking-tight">Learner Breakdown</CardTitle>
-                  <CardDescription>Detailed progress and grades for all enrolled individuals.</CardDescription>
+                  <CardDescription>Click on a learner to view their individual course performance within this batch.</CardDescription>
                 </CardHeader>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/10 hover:bg-muted/10">
+                        <TableHead className="w-10"></TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs">Learner Name</TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs">Department</TableHead>
-                        <TableHead className="font-bold tracking-widest uppercase text-xs">Role</TableHead>
-                        <TableHead className="font-bold tracking-widest uppercase text-xs">Date Enrolled</TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs">Status</TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs text-right">Avg Score</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {data.learnerDetails.map((l: any) => (
-                        <TableRow key={l.id} className="hover:bg-muted/30">
-                          <TableCell className="font-bold">{l.name}</TableCell>
-                          <TableCell>{l.department}</TableCell>
-                          <TableCell><Badge variant="outline">{l.role}</Badge></TableCell>
-                          <TableCell className="text-muted-foreground">{format(new Date(l.enrolledAt), 'MMM dd, yyyy')}</TableCell>
-                          <TableCell>{getStatusBadge(l.status)}</TableCell>
-                          <TableCell className="text-right font-black text-primary text-lg">{l.averageScore}</TableCell>
-                        </TableRow>
+                        <React.Fragment key={l.id}>
+                          <TableRow 
+                            className="hover:bg-muted/30 cursor-pointer transition-colors"
+                            onClick={() => setExpandedLearnerId(expandedLearnerId === l.id ? null : l.id)}
+                          >
+                            <TableCell>
+                              <div className={cn("transition-transform duration-200", expandedLearnerId === l.id ? "rotate-90" : "")}>
+                                <ArrowUpRight className="h-4 w-4 text-muted-foreground rotate-45" />
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-bold">{l.name}</TableCell>
+                            <TableCell className="text-xs font-medium">{l.department}</TableCell>
+                            <TableCell>{getStatusBadge(l.status)}</TableCell>
+                            <TableCell className="text-right font-black text-primary text-lg">{l.averageScore}</TableCell>
+                          </TableRow>
+                          {expandedLearnerId === l.id && (
+                            <TableRow className="bg-muted/5 hover:bg-muted/5">
+                              <TableCell colSpan={5} className="p-0">
+                                <div className="p-6 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Badge variant="outline" className="bg-background text-primary border-primary/20">Enrolled Content</Badge>
+                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {l.courses?.map((c: any) => (
+                                      <div key={c.id} className="bg-background p-4 rounded-2xl border border-primary/5 flex justify-between items-center shadow-sm">
+                                        <div className="flex-1">
+                                          <p className="font-bold text-sm truncate">{c.title}</p>
+                                          <div className="flex items-center gap-2 mt-1">
+                                            {getStatusBadge(c.status)}
+                                          </div>
+                                        </div>
+                                        <div className="text-right ml-4">
+                                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Score</p>
+                                          <p className="text-lg font-black text-primary">{c.averageScore}</p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
                       ))}
                     </TableBody>
                   </Table>
@@ -387,28 +415,73 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
               <Card className="rounded-3xl border-none shadow-lg shadow-black/5 overflow-hidden">
                 <CardHeader className="bg-muted/30 pb-4">
                   <CardTitle className="font-black text-xl tracking-tight">Course Breakdown</CardTitle>
-                  <CardDescription>Average performance and completion rates per course across the cohort.</CardDescription>
+                  <CardDescription>Click on a course to view the detailed roster and performance of enrolled students.</CardDescription>
                 </CardHeader>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/10 hover:bg-muted/10">
+                        <TableHead className="w-10"></TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs">Course Title</TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs text-right">Completion Rate</TableHead>
-                        <TableHead className="font-bold tracking-widest uppercase text-xs text-right">Avg Course Score</TableHead>
+                        <TableHead className="font-bold tracking-widest uppercase text-xs text-right">Avg Score</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {data.courseDetails.map((c: any) => (
-                        <TableRow key={c.id} className="hover:bg-muted/30">
-                          <TableCell className="font-bold max-w-sm truncate">{c.title}</TableCell>
-                          <TableCell className="text-right font-medium">
-                            <span className={c.completionRate >= 80 ? 'text-emerald-600' : 'text-amber-600'}>
-                              {c.completionRate}%
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right font-black text-primary text-lg">{c.averageScore}</TableCell>
-                        </TableRow>
+                        <React.Fragment key={c.id}>
+                          <TableRow 
+                            className="hover:bg-muted/30 cursor-pointer transition-colors"
+                            onClick={() => setExpandedCourseId(expandedCourseId === c.id ? null : c.id)}
+                          >
+                            <TableCell>
+                              <div className={cn("transition-transform duration-200", expandedCourseId === c.id ? "rotate-90" : "")}>
+                                <ArrowUpRight className="h-4 w-4 text-muted-foreground rotate-45" />
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-bold max-w-sm truncate">{c.title}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                                  <div className="h-full bg-emerald-500" style={{ width: `${c.completionRate}%` }} />
+                                </div>
+                                <span className="font-bold text-xs">{c.completionRate}%</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right font-black text-primary text-lg">{c.averageScore}</TableCell>
+                          </TableRow>
+                          {expandedCourseId === c.id && (
+                            <TableRow className="bg-muted/5 hover:bg-muted/5">
+                              <TableCell colSpan={4} className="p-0">
+                                <div className="p-6 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                                  <div className="rounded-[1.5rem] border bg-background overflow-hidden shadow-sm">
+                                    <Table>
+                                      <TableHeader className="bg-muted/20">
+                                        <TableRow>
+                                          <TableHead className="text-[10px] font-black uppercase h-10">Learner</TableHead>
+                                          <TableHead className="text-[10px] font-black uppercase h-10">Status</TableHead>
+                                          <TableHead className="text-[10px] font-black uppercase h-10 text-right">Score</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {c.enrolledStudents?.map((s: any) => (
+                                          <TableRow key={s.id} className="h-12">
+                                            <TableCell className="py-2">
+                                              <p className="font-bold text-xs">{s.name}</p>
+                                              <p className="text-[10px] text-muted-foreground">{s.department}</p>
+                                            </TableCell>
+                                            <TableCell className="py-2">{getStatusBadge(s.status)}</TableCell>
+                                            <TableCell className="py-2 text-right font-black text-primary">{s.score}</TableCell>
+                                          </TableRow>
+                                        ))}
+                                      </TableBody>
+                                    </Table>
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
                       ))}
                     </TableBody>
                   </Table>
