@@ -32,7 +32,7 @@ interface BatchAnalyticsProps {
 
 export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchName, isOpen, onClose }) => {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<Awaited<ReturnType<typeof batchesApi.getAnalytics>> | null>(null);
   const [departments, setDepartments] = useState<any[]>([]);
   const [isExporting, setIsExporting] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -76,20 +76,29 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
     setIsExporting(true);
     toast.info('Generating PDF Report...');
     try {
-      setActiveTab('overview'); // Ensure we capture the overview
-      // Small timeout to allow tab render
+      setActiveTab('overview');
+      // Small timeout to allow tab render and chart animations to finish
       setTimeout(async () => {
-        const canvas = await html2canvas(printRef.current!, { scale: 2, useCORS: true });
+        const element = printRef.current!;
+        const canvas = await html2canvas(element, { 
+          scale: 2, 
+          useCORS: true,
+          logging: false,
+          windowWidth: element.scrollWidth,
+          windowHeight: element.scrollHeight
+        });
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        
+
+        // If content is too long for one page, we might need multiple pages
+        // For now, we'll just scale it to fit width
         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`${batchName.replace(/\s+/g, '_')}_Analytics.pdf`);
         toast.success('PDF Exported Successfully');
         setIsExporting(false);
-      }, 500);
+      }, 800);
     } catch (e) {
       toast.error('Failed to generate PDF');
       setIsExporting(false);
@@ -108,7 +117,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
         ['Total Learners', data.totalLearners],
         ['Completion Rate', `${data.completionRate}%`],
         ['Average Score', data.averageScore],
-        ['Knowledge Delta', `${data.knowledgeDelta?.percentageIncrease || 0}%`]
+        ['Knowledge Gain', `${data.knowledgeDelta?.percentageIncrease || 0}%`]
       ];
       const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
       XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary KPIs');
@@ -118,7 +127,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
       XLSX.utils.book_append_sheet(wb, topPerformersSheet, 'Top Performers');
 
       // Tab 3: Learner Breakdown
-      const learnersSheet = XLSX.utils.json_to_sheet(data.learnerDetails.map((l: any) => ({
+      const learnersSheet = XLSX.utils.json_to_sheet(data.learnerDetails.map((l) => ({
         Name: l.name,
         Department: l.department,
         Role: l.role,
@@ -129,7 +138,11 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
       XLSX.utils.book_append_sheet(wb, learnersSheet, 'Learners');
 
       // Tab 4: Course Breakdown
-      const contentSheet = XLSX.utils.json_to_sheet(data.courseDetails);
+      const contentSheet = XLSX.utils.json_to_sheet(data.courseDetails.map(c => ({
+        Title: c.title,
+        'Completion Rate': `${c.completionRate}%`,
+        'Average Score': c.averageScore
+      })));
       XLSX.utils.book_append_sheet(wb, contentSheet, 'Courses');
 
       XLSX.writeFile(wb, `${batchName.replace(/\s+/g, '_')}_RawData.xlsx`);
@@ -153,7 +166,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto rounded-[2rem] border-none shadow-2xl p-8">
-        
+
         {/* Header & Export Actions */}
         <DialogHeader className="mb-6 flex flex-row items-start justify-between">
           <div>
@@ -180,14 +193,14 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
           <div className="flex items-center gap-2 text-muted-foreground font-bold mr-2">
             <Filter className="h-4 w-4" /> Filters:
           </div>
-          <Select value={filters.departmentId} onValueChange={v => setFilters({...filters, departmentId: v})}>
+          <Select value={filters.departmentId} onValueChange={v => setFilters({ ...filters, departmentId: v })}>
             <SelectTrigger className="w-[200px] rounded-xl"><SelectValue placeholder="Department" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Departments</SelectItem>
               {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={filters.role} onValueChange={v => setFilters({...filters, role: v})}>
+          <Select value={filters.role} onValueChange={v => setFilters({ ...filters, role: v })}>
             <SelectTrigger className="w-[180px] rounded-xl"><SelectValue placeholder="Role" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
@@ -196,7 +209,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
               <SelectItem value="DEPARTMENT_HEAD">Department Heads</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={filters.status} onValueChange={v => setFilters({...filters, status: v})}>
+          <Select value={filters.status} onValueChange={v => setFilters({ ...filters, status: v })}>
             <SelectTrigger className="w-[180px] rounded-xl"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
@@ -229,7 +242,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
             <TabsContent value="overview" className="mt-0 outline-none">
               {/* Printable Area */}
               <div ref={printRef} className="bg-background rounded-2xl p-2 space-y-6">
-                
+
                 {/* KPI Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <Card className="rounded-3xl border-none shadow-lg shadow-primary/5 bg-gradient-to-br from-primary/10 to-transparent">
@@ -256,7 +269,12 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                   <Card className="rounded-3xl border-none shadow-lg shadow-blue-500/5 bg-gradient-to-br from-blue-500/10 to-transparent">
                     <CardContent className="p-6 flex items-center gap-4">
                       <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center"><TrendingUp className="h-6 w-6 text-blue-500" /></div>
-                      <div><p className="text-xs font-black uppercase tracking-widest text-blue-600/70 mb-1">Knowledge Delta</p><p className="text-3xl font-black text-blue-600">+{data.knowledgeDelta?.percentageIncrease}%</p></div>
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-widest text-blue-600/70 mb-1">Knowledge Gain</p>
+                        <p className={cn("text-3xl font-black", (data.knowledgeDelta?.percentageIncrease || 0) >= 0 ? "text-blue-600" : "text-rose-600")}>
+                          {(data.knowledgeDelta?.percentageIncrease || 0) >= 0 ? '+' : ''}{data.knowledgeDelta?.percentageIncrease}%
+                        </p>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -296,7 +314,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                           <Pie
                             data={data.distribution} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value" stroke="none" cornerRadius={10}
                           >
-                            {data.distribution.map((entry: any, index: number) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                            {data.distribution.map((entry, index: number) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
                           </Pie>
                           <RechartsTooltip contentStyle={{ borderRadius: '1rem', border: 'none', fontWeight: 'bold' }} />
                         </PieChart>
@@ -360,9 +378,9 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data.learnerDetails.map((l: any) => (
+                      {data.learnerDetails.map((l) => (
                         <React.Fragment key={l.id}>
-                          <TableRow 
+                          <TableRow
                             className="hover:bg-muted/30 cursor-pointer transition-colors"
                             onClick={() => setExpandedLearnerId(expandedLearnerId === l.id ? null : l.id)}
                           >
@@ -384,7 +402,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                                     <Badge variant="outline" className="bg-background text-primary border-primary/20">Enrolled Content</Badge>
                                   </div>
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {l.courses?.map((c: any) => (
+                                    {l.courses?.map((c) => (
                                       <div key={c.id} className="bg-background p-4 rounded-2xl border border-primary/5 flex justify-between items-center shadow-sm">
                                         <div className="flex-1">
                                           <p className="font-bold text-sm truncate">{c.title}</p>
@@ -423,14 +441,16 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                       <TableRow className="bg-muted/10 hover:bg-muted/10">
                         <TableHead className="w-10"></TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs">Course Title</TableHead>
-                        <TableHead className="font-bold tracking-widest uppercase text-xs text-right">Completion Rate</TableHead>
-                        <TableHead className="font-bold tracking-widest uppercase text-xs text-right">Avg Score</TableHead>
+                        <TableHead className="font-bold tracking-widest uppercase text-xs text-right">Completion</TableHead>
+                        <TableHead className="font-bold tracking-widest uppercase text-xs text-right text-blue-600">Quiz Avg</TableHead>
+                        <TableHead className="font-bold tracking-widest uppercase text-xs text-right text-emerald-600">Activity Avg</TableHead>
+                        <TableHead className="font-bold tracking-widest uppercase text-xs text-right">Result Summary</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data.courseDetails.map((c: any) => (
+                      {data.courseDetails.map((c) => (
                         <React.Fragment key={c.id}>
-                          <TableRow 
+                          <TableRow
                             className="hover:bg-muted/30 cursor-pointer transition-colors"
                             onClick={() => setExpandedCourseId(expandedCourseId === c.id ? null : c.id)}
                           >
@@ -442,17 +462,24 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                             <TableCell className="font-bold max-w-sm truncate">{c.title}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-2">
-                                <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                                <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                                   <div className="h-full bg-emerald-500" style={{ width: `${c.completionRate}%` }} />
                                 </div>
-                                <span className="font-bold text-xs">{c.completionRate}%</span>
+                                <span className="font-bold text-[10px]">{c.completionRate}%</span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-right font-black text-primary text-lg">{c.averageScore}</TableCell>
+                            <TableCell className="text-right font-black text-blue-600">{c.avgQuizScore}</TableCell>
+                            <TableCell className="text-right font-black text-emerald-600">{c.avgActivityScore}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex flex-col items-end gap-1">
+                                <Badge className="bg-emerald-500 hover:bg-emerald-600 text-[9px] font-black py-0 px-2 h-5">{c.passedCount} Passed</Badge>
+                                {c.failedCount > 0 && <Badge variant="destructive" className="text-[9px] font-black py-0 px-2 h-5">{c.failedCount} Failed</Badge>}
+                              </div>
+                            </TableCell>
                           </TableRow>
                           {expandedCourseId === c.id && (
                             <TableRow className="bg-muted/5 hover:bg-muted/5">
-                              <TableCell colSpan={4} className="p-0">
+                              <TableCell colSpan={6} className="p-0">
                                 <div className="p-6 space-y-4 animate-in slide-in-from-top-2 duration-300">
                                   <div className="rounded-[1.5rem] border bg-background overflow-hidden shadow-sm">
                                     <Table>
@@ -460,18 +487,31 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                                         <TableRow>
                                           <TableHead className="text-[10px] font-black uppercase h-10">Learner</TableHead>
                                           <TableHead className="text-[10px] font-black uppercase h-10">Status</TableHead>
-                                          <TableHead className="text-[10px] font-black uppercase h-10 text-right">Score</TableHead>
+                                          <TableHead className="text-[10px] font-black uppercase h-10 text-right">Quiz Score</TableHead>
+                                          <TableHead className="text-[10px] font-black uppercase h-10 text-right">Activity Score</TableHead>
+                                          <TableHead className="text-[10px] font-black uppercase h-10 text-right">Result</TableHead>
                                         </TableRow>
                                       </TableHeader>
                                       <TableBody>
-                                        {c.enrolledStudents?.map((s: any) => (
+                                        {c.enrolledStudents?.map((s) => (
                                           <TableRow key={s.id} className="h-12">
                                             <TableCell className="py-2">
                                               <p className="font-bold text-xs">{s.name}</p>
                                               <p className="text-[10px] text-muted-foreground">{s.department}</p>
                                             </TableCell>
                                             <TableCell className="py-2">{getStatusBadge(s.status)}</TableCell>
-                                            <TableCell className="py-2 text-right font-black text-primary">{s.score}</TableCell>
+                                            <TableCell className="py-2 text-right font-black text-blue-600">{s.quizScore}</TableCell>
+                                            <TableCell className="py-2 text-right font-black text-emerald-600">{s.activityScore}</TableCell>
+                                            <TableCell className="py-2 text-right">
+                                              <Badge className={cn(
+                                                "font-black uppercase text-[9px] tracking-tighter",
+                                                s.result === 'Passed' ? "bg-emerald-500 hover:bg-emerald-600" :
+                                                s.result === 'Failed' ? "bg-rose-500 hover:bg-rose-600" :
+                                                "bg-muted text-muted-foreground"
+                                              )}>
+                                                {s.result}
+                                              </Badge>
+                                            </TableCell>
                                           </TableRow>
                                         ))}
                                       </TableBody>

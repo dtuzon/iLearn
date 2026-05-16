@@ -64,8 +64,28 @@ export const batchesApi = {
       topPerformers: { name: string; averageScore: number }[];
       kashMetrics: { domain: string; score: number }[];
       knowledgeDelta: { preQuizAvg: number; postQuizAvg: number; percentageIncrease: number };
-      learnerDetails: { id: string; name: string; department: string; role: string; status: string; enrolledAt: string; averageScore: number }[];
-      courseDetails: { id: string; title: string; completionRate: number; averageScore: number }[];
+      learnerDetails: { 
+        id: string; 
+        name: string; 
+        department: string; 
+        role: string; 
+        status: string; 
+        enrolledAt: string; 
+        averageScore: number;
+        courses: { id: string; title: string; status: string; averageScore: number }[];
+      }[];
+      courseDetails: { 
+        id: string; 
+        title: string; 
+        completionRate: number;
+        avgQuizScore: number;
+        avgActivityScore: number;
+        averageScore: number;
+        passedCount: number;
+        failedCount: number;
+        incompleteCount: number;
+        enrolledStudents: { id: string; name: string; department: string; status: string; score: number; quizScore: number; activityScore: number; result: string; completedAt: string | null }[];
+      }[];
     };
   },
 

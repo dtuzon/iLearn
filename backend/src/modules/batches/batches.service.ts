@@ -213,8 +213,8 @@ export class BatchesService {
     const batch = await prisma.batch.findUnique({
       where: { id },
       include: {
-        course: { select: { id: true, title: true, modules: true } },
-        learningPath: { select: { id: true, pathCourses: { include: { course: { include: { modules: true } } } } } },
+        course: { select: { id: true, title: true, modules: true, passingGrade: true } },
+        learningPath: { select: { id: true, pathCourses: { include: { course: { include: { modules: true, passingGrade: true } } } } } },
         enrollments: { 
           where: enrollmentFilter,
           select: { id: true, status: true, userId: true, enrolledAt: true, user: { select: { firstName: true, lastName: true, role: true, department: { select: { name: true } } } } } 
@@ -277,7 +277,7 @@ export class BatchesService {
       .sort((a, b) => b.averageScore - a.averageScore)
       .slice(0, 5);
 
-    // 3. Knowledge Delta (Pre-Quiz vs Post-Quiz)
+    // 3. Knowledge Gain (Pre-Quiz vs Post-Quiz)
     let preQuizAvg = 0;
     let postQuizAvg = 0;
     let knowledgeIncreasePercentage = 0;
@@ -311,11 +311,57 @@ export class BatchesService {
       }
     }
 
+    // 3.5 Calculate Real KASH Metrics
+    const skillsScore = allScores.length > 0 ? averageScore : 70; // Fallback to 70 if no activities
+    const knowledgeScore = postQuizAvg > 0 ? postQuizAvg : (preQuizAvg > 0 ? preQuizAvg : 70);
+    
+    // Habits: Percentage of completed enrollments that were on time (before due date)
+    const completedEnrollments = allEnrollments.filter(e => e.status === 'COMPLETED');
+    let habitsScore = 75; // Default
+    if (completedEnrollments.length > 0) {
+      const onTime = (e: any) => !e.dueDate || !e.completedAt || new Date(e.completedAt) <= new Date(e.dueDate);
+      const onTimeCount = completedEnrollments.filter(onTime).length;
+      habitsScore = Math.round((onTimeCount / completedEnrollments.length) * 100);
+    }
+
+    // Attitude: Try to get from KASH evaluations if they exist
+    let attitudeScore = 80; // Default
+    
+    // First find templates that are KASH evaluations
+    const kashTemplates = await prisma.evaluationTemplate.findMany({
+      where: { category: 'KASH_EVALUATION' },
+      select: { id: true }
+    });
+    const kashTemplateIds = kashTemplates.map(t => t.id);
+
+    const kashEvaluations = kashTemplateIds.length > 0 ? await prisma.evaluationResponse.findMany({
+      where: { 
+        userId: { in: validUserIds },
+        templateId: { in: kashTemplateIds }
+      }
+    }) : [];
+
+    if (kashEvaluations.length > 0) {
+      // Very basic average of all answers (assuming they are numeric ratings)
+      let totalEvalScore = 0;
+      let totalEvalCount = 0;
+      kashEvaluations.forEach((rev: any) => {
+        const answers = rev.answers as Record<string, number>;
+        Object.values(answers).forEach(val => {
+          if (typeof val === 'number') {
+            totalEvalScore += (val / 5) * 100; // Normalize 1-5 to 0-100
+            totalEvalCount++;
+          }
+        });
+      });
+      if (totalEvalCount > 0) attitudeScore = Math.round(totalEvalScore / totalEvalCount);
+    }
+
     const kashMetrics = [
-      { domain: 'Knowledge', score: Math.round(75 + Math.random() * 20) },
-      { domain: 'Attitude', score: Math.round(75 + Math.random() * 20) },
-      { domain: 'Skills', score: Math.round(75 + Math.random() * 20) },
-      { domain: 'Habits', score: Math.round(75 + Math.random() * 20) }
+      { domain: 'Knowledge', score: knowledgeScore },
+      { domain: 'Attitude', score: attitudeScore },
+      { domain: 'Skills', score: skillsScore },
+      { domain: 'Habits', score: habitsScore }
     ];
 
     // 4. Learner Breakdown Data
@@ -376,13 +422,14 @@ export class BatchesService {
     // 5. Course Breakdown Data
     let coursesToAnalyze: any[] = [];
     if (batch.course) {
-      coursesToAnalyze = [{ id: batch.courseId, title: batch.course.title, modules: batch.course.modules }];
+      coursesToAnalyze = [{ id: batch.courseId, title: batch.course.title, modules: batch.course.modules, passingGrade: batch.course.passingGrade }];
     }
     if (batch.learningPath) {
       coursesToAnalyze = batch.learningPath.pathCourses.map((pc: any) => ({
         id: pc.course.id,
         title: pc.course.title,
-        modules: pc.course.modules
+        modules: pc.course.modules,
+        passingGrade: pc.course.passingGrade
       }));
     }
 
@@ -393,30 +440,71 @@ export class BatchesService {
       });
 
       const enrolledStudents = await Promise.all(enrollments.map(async enr => {
-        const moduleProgress = await prisma.moduleProgress.findMany({
-          where: { enrollmentId: enr.id, score: { not: null } },
+        // Quiz scores from module progress (PRE_QUIZ, POST_QUIZ)
+        const quizProgress = await prisma.moduleProgress.findMany({
+          where: { 
+            enrollmentId: enr.id, 
+            score: { not: null },
+            module: { type: { in: ['PRE_QUIZ', 'POST_QUIZ'] } }
+          },
           select: { score: true }
         });
-        const avg = moduleProgress.length > 0 ? moduleProgress.reduce((a, b) => a + (b.score || 0), 0) / moduleProgress.length : 0;
+        const qScore = quizProgress.length > 0 ? quizProgress.reduce((a, b) => a + (b.score || 0), 0) / quizProgress.length : 0;
+
+        // Activity scores from ActivitySubmissions and EssaySubmissions
+        const activityScores = await prisma.activitySubmission.findMany({
+          where: { userId: enr.userId, batchId: batch.id, score: { not: null }, status: 'APPROVED' },
+          select: { score: true }
+        });
+        const essayScores = await prisma.essaySubmission.findMany({
+          where: { userId: enr.userId, batchId: batch.id, score: { not: null }, status: 'APPROVED' },
+          select: { score: true }
+        });
+        
+        const allActScores = [...activityScores.map(s => s.score || 0), ...essayScores.map(s => s.score || 0)];
+        const aScore = allActScores.length > 0 ? allActScores.reduce((a, b) => a + b, 0) / allActScores.length : 0;
+
+        const overallScore = ((qScore + aScore) / (qScore > 0 && aScore > 0 ? 2 : 1));
+        
+        let result = 'Incomplete';
+        if (enr.status === 'COMPLETED') {
+          result = overallScore >= (c.passingGrade || 80) ? 'Passed' : 'Failed';
+        }
+
         return {
           id: enr.userId,
           name: `${enr.user.firstName} ${enr.user.lastName}`,
           department: enr.user.department?.name || 'N/A',
           status: enr.status,
-          score: Math.round(avg * 10) / 10,
+          quizScore: Math.round(qScore * 10) / 10,
+          activityScore: Math.round(aScore * 10) / 10,
+          score: Math.round(overallScore * 10) / 10,
+          result,
           completedAt: enr.completedAt
         };
       }));
 
       const completions = enrollments.filter(enr => enr.status === 'COMPLETED').length;
       const compRate = enrollments.length > 0 ? Math.round((completions / enrollments.length) * 100) : 0;
+      
+      const totalQuiz = enrolledStudents.reduce((acc, s) => acc + s.quizScore, 0);
+      const totalActivity = enrolledStudents.reduce((acc, s) => acc + s.activityScore, 0);
       const avgScore = enrolledStudents.length > 0 ? enrolledStudents.reduce((a, b) => a + b.score, 0) / enrolledStudents.length : 0;
+
+      const passedCount = enrolledStudents.filter(s => s.result === 'Passed').length;
+      const failedCount = enrolledStudents.filter(s => s.result === 'Failed').length;
+      const incompleteCount = enrolledStudents.filter(s => s.result === 'Incomplete').length;
 
       return {
         id: c.id,
         title: c.title,
         completionRate: compRate,
+        avgQuizScore: enrolledStudents.length > 0 ? Math.round((totalQuiz / enrolledStudents.length) * 10) / 10 : 0,
+        avgActivityScore: enrolledStudents.length > 0 ? Math.round((totalActivity / enrolledStudents.length) * 10) / 10 : 0,
         averageScore: Math.round(avgScore * 10) / 10,
+        passedCount,
+        failedCount,
+        incompleteCount,
         enrolledStudents
       };
     }));
