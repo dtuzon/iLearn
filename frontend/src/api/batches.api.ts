@@ -14,6 +14,7 @@ export interface Batch {
   activityCheckers?: any[];
   enrollments?: any[];
   learningPathEnrollments?: any[];
+  requires180DayEval?: boolean;
   _count?: {
     enrollments: number;
     learningPathEnrollments: number;
@@ -71,8 +72,11 @@ export const batchesApi = {
         role: string; 
         status: string; 
         enrolledAt: string; 
+        preQuizAvg: number;
+        postQuizAvg: number;
+        activityScoreAvg: number;
         averageScore: number;
-        courses: { id: string; title: string; status: string; averageScore: number }[];
+        courses: { id: string; title: string; preQuizScore: number; postQuizScore: number; activityScore: number; status: string; averageScore: number }[];
       }[];
       courseDetails: { 
         id: string; 

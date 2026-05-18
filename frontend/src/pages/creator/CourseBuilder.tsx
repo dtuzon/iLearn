@@ -716,16 +716,6 @@ export const CourseBuilder: React.FC = () => {
     }
   };
 
-  const handleToggleEval = async (enabled: boolean) => {
-    if (!courseId || !course) return;
-    try {
-      await coursesApi.partialUpdate(courseId, { requires180DayEval: enabled });
-      setCourse({ ...course, requires180DayEval: enabled });
-      toast.success(enabled ? '180-Day Evaluation enabled' : '180-Day Evaluation disabled');
-    } catch (error) {
-      toast.error('Failed to update evaluation settings');
-    }
-  };
 
   const handleToggleCertificate = async (enabled: boolean) => {
     if (!courseId || !course) return;
@@ -1534,20 +1524,6 @@ export const CourseBuilder: React.FC = () => {
                 <CardDescription>Adjust high-level settings for this course's lifecycle.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-
-                <div className="flex items-center justify-between p-4 border rounded-xl bg-muted/20">
-                  <div className="space-y-1">
-                    <Label className="text-base font-bold">180-Day Behavioral Change Evaluation</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Automatically trigger a follow-up evaluation 6 months after course completion to measure K.A.S.H. impact.
-                    </p>
-                  </div>
-                  <Switch
-                    disabled={isReadonly}
-                    checked={course.requires180DayEval}
-                    onCheckedChange={handleToggleEval}
-                  />
-                </div>
 
 
                 <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-xl bg-muted/20 gap-4 mt-4">

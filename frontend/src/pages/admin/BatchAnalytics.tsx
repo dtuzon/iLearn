@@ -19,7 +19,7 @@ import { Badge } from '../../components/ui/badge';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 import * as XLSX from 'xlsx';
 import { cn } from '../../lib/utils';
 
@@ -37,6 +37,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
   const [isExporting, setIsExporting] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const printRef = useRef<HTMLDivElement>(null);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   const [filters, setFilters] = useState({
     departmentId: 'all',
@@ -71,36 +72,82 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
     }
   };
 
-  const handleExportPDF = async () => {
-    if (!printRef.current) return;
-    setIsExporting(true);
-    toast.info('Generating PDF Report...');
-    try {
-      setActiveTab('overview');
-      // Small timeout to allow tab render and chart animations to finish
-      setTimeout(async () => {
-        const element = printRef.current!;
-        const canvas = await html2canvas(element, { 
-          scale: 2, 
-          useCORS: true,
-          logging: false,
-          windowWidth: element.scrollWidth,
-          windowHeight: element.scrollHeight
-        });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+  const activeDeptName = filters.departmentId === 'all'
+    ? 'All Departments'
+    : (departments.find(d => d.id === filters.departmentId)?.name || 'Filtered Department');
+    
+  const activeRole = filters.role === 'all'
+    ? 'All Roles'
+    : filters.role.replace('_', ' ');
 
-        // If content is too long for one page, we might need multiple pages
-        // For now, we'll just scale it to fit width
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`${batchName.replace(/\s+/g, '_')}_Analytics.pdf`);
-        toast.success('PDF Exported Successfully');
-        setIsExporting(false);
-      }, 800);
+  const activeStatus = filters.status === 'all'
+    ? 'All Statuses'
+    : filters.status.replace('_', ' ');
+
+  const handleExportPDF = async () => {
+    if (!reportRef.current) return;
+    setIsExporting(true);
+    toast.info('Generating Executive Summary PDF...');
+    try {
+      // Small timeout to guarantee DOM styles have resolved
+      setTimeout(async () => {
+        try {
+          const element = reportRef.current!;
+          const canvas = await html2canvas(element, { 
+            scale: 2, 
+            useCORS: true,
+            logging: true,
+            backgroundColor: '#ffffff',
+            windowWidth: element.scrollWidth,
+            windowHeight: element.scrollHeight
+          });
+          const imgData = canvas.toDataURL('image/png');
+          
+          // PDF dimensions
+          const pdfWidth = 210; // A4 standard width in mm
+          const pageHeight = 297; // A4 standard height in mm
+          const imgWidth = pdfWidth;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          let heightLeft = imgHeight;
+          let position = 0;
+          
+          // First page
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+          
+          // Multi-page slicing if the content is taller than A4 height
+          while (heightLeft >= 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+          }
+          
+          // Use a custom bulletproof download trigger by appending to DOM
+          const blob = pdf.output('blob');
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const cleanBatchName = batchName && batchName.trim() ? batchName.trim().replace(/\s+/g, '_') : 'Batch';
+          a.download = `${cleanBatchName}_Executive_Report.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          toast.success('Executive Report PDF Exported Successfully');
+        } catch (error) {
+          console.error('[PDF Export Error]:', error);
+          toast.error('Failed to generate PDF. Check console for details.');
+        } finally {
+          setIsExporting(false);
+        }
+      }, 500);
     } catch (e) {
-      toast.error('Failed to generate PDF');
+      console.error('[PDF Export Trigger Error]:', e);
+      toast.error('Failed to start PDF generation');
       setIsExporting(false);
     }
   };
@@ -117,47 +164,66 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
         ['Total Learners', data.totalLearners],
         ['Completion Rate', `${data.completionRate}%`],
         ['Average Score', data.averageScore],
-        ['Knowledge Gain', `${data.knowledgeDelta?.percentageIncrease || 0}%`]
+        ['Knowledge Gain', `${data.knowledgeDelta?.percentageIncrease || 0}%`],
+        ['', ''],
+        ['--- Active Filters & Context ---', ''],
+        ['Department Filter', activeDeptName],
+        ['Role Filter', activeRole],
+        ['Status Filter', activeStatus],
+        ['Exported At', format(new Date(), 'MMM dd, yyyy HH:mm:ss')]
       ];
       const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
       XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary KPIs');
 
       // Tab 2: Top Performers
-      const topPerformersSheet = XLSX.utils.json_to_sheet(data.topPerformers);
+      const topPerformersSheet = XLSX.utils.json_to_sheet(data.topPerformers || []);
       XLSX.utils.book_append_sheet(wb, topPerformersSheet, 'Top Performers');
 
       // Tab 3: Learner Breakdown
-      const learnersSheet = XLSX.utils.json_to_sheet(data.learnerDetails.map((l) => ({
+      const learnersSheet = XLSX.utils.json_to_sheet((data.learnerDetails || []).map((l) => ({
         Name: l.name,
         Department: l.department,
-        Role: l.role,
+        Role: l.role ? l.role.replace('_', ' ') : 'N/A',
         Status: l.status,
-        'Enrolled At': format(new Date(l.enrolledAt), 'MMM dd, yyyy'),
-        'Average Score': l.averageScore
+        'Pre-Quiz Avg': l.preQuizAvg != null ? `${l.preQuizAvg}%` : 'N/A',
+        'Post-Quiz Avg': l.postQuizAvg != null ? `${l.postQuizAvg}%` : 'N/A',
+        'Activity Avg': l.activityScoreAvg != null ? `${l.activityScoreAvg}%` : 'N/A',
+        'Enrolled At': l.enrolledAt ? format(new Date(l.enrolledAt), 'MMM dd, yyyy') : 'N/A'
       })));
       XLSX.utils.book_append_sheet(wb, learnersSheet, 'Learners');
 
       // Tab 4: Course Breakdown
-      const contentSheet = XLSX.utils.json_to_sheet(data.courseDetails.map(c => ({
+      const contentSheet = XLSX.utils.json_to_sheet((data.courseDetails || []).map(c => ({
         Title: c.title,
         'Completion Rate': `${c.completionRate}%`,
-        'Average Score': c.averageScore
+        'Quiz Average': c.avgQuizScore != null ? `${c.avgQuizScore}%` : 'N/A',
+        'Activity Average': c.avgActivityScore != null ? `${c.avgActivityScore}%` : 'N/A',
+        'Passed Count': c.passedCount || 0,
+        'Failed Count': c.failedCount || 0
       })));
       XLSX.utils.book_append_sheet(wb, contentSheet, 'Courses');
 
-      XLSX.writeFile(wb, `${batchName.replace(/\s+/g, '_')}_RawData.xlsx`);
+      const cleanBatchName = batchName && batchName.trim() ? batchName.trim().replace(/\s+/g, '_') : 'Batch';
+      XLSX.writeFile(wb, `${cleanBatchName}_RawData.xlsx`);
       toast.success('Excel Data Exported Successfully');
     } catch (e) {
-      toast.error('Failed to export Excel');
+      console.error('[Excel Export Error]:', e);
+      toast.error('Failed to export Excel data');
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'COMPLETED': return <Badge className="bg-emerald-500 hover:bg-emerald-600">Completed</Badge>;
-      case 'IN_PROGRESS': return <Badge className="bg-blue-500 hover:bg-blue-600">In Progress</Badge>;
-      case 'PENDING_GRADING': return <Badge className="bg-amber-500 hover:bg-amber-600">Pending Grading</Badge>;
-      default: return <Badge variant="secondary">Not Started</Badge>;
+      case 'Passed':
+      case 'COMPLETED':
+        return <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white font-black uppercase text-[10px] tracking-tight py-0.5 px-2 shadow-sm shadow-emerald-500/10">Passed</Badge>;
+      case 'Failed':
+        return <Badge className="bg-rose-500 hover:bg-rose-600 text-white font-black uppercase text-[10px] tracking-tight py-0.5 px-2 shadow-sm shadow-rose-500/10">Failed</Badge>;
+      case 'Incomplete':
+      case 'IN_PROGRESS':
+      case 'NOT_STARTED':
+      default:
+        return <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-[10px] tracking-tight py-0.5 px-2 shadow-sm shadow-amber-500/10">Incomplete</Badge>;
     }
   };
 
@@ -372,9 +438,10 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                       <TableRow className="bg-muted/10 hover:bg-muted/10">
                         <TableHead className="w-10"></TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs">Learner Name</TableHead>
-                        <TableHead className="font-bold tracking-widest uppercase text-xs">Department</TableHead>
-                        <TableHead className="font-bold tracking-widest uppercase text-xs">Status</TableHead>
-                        <TableHead className="font-bold tracking-widest uppercase text-xs text-right">Avg Score</TableHead>
+                        <TableHead className="font-bold tracking-widest uppercase text-xs text-center text-blue-600">Pre Quiz Avg</TableHead>
+                        <TableHead className="font-bold tracking-widest uppercase text-xs text-center text-indigo-600">Post Quiz Avg</TableHead>
+                        <TableHead className="font-bold tracking-widest uppercase text-xs text-center text-emerald-600">Activity Avg</TableHead>
+                        <TableHead className="font-bold tracking-widest uppercase text-xs text-right">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -389,38 +456,45 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                                 <ArrowUpRight className="h-4 w-4 text-muted-foreground rotate-45" />
                               </div>
                             </TableCell>
-                            <TableCell className="font-bold">{l.name}</TableCell>
-                            <TableCell className="text-xs font-medium">{l.department}</TableCell>
-                            <TableCell>{getStatusBadge(l.status)}</TableCell>
-                            <TableCell className="text-right font-black text-primary text-lg">{l.averageScore}</TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="font-bold text-slate-800">{l.name}</p>
+                                <p className="text-[10px] text-muted-foreground font-medium">{l.department}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center font-black text-blue-600 text-sm">{l.preQuizAvg}%</TableCell>
+                            <TableCell className="text-center font-black text-indigo-600 text-sm">{l.postQuizAvg}%</TableCell>
+                            <TableCell className="text-center font-black text-emerald-600 text-sm">{l.activityScoreAvg}%</TableCell>
+                            <TableCell className="text-right">{getStatusBadge(l.status)}</TableCell>
                           </TableRow>
-                          {expandedLearnerId === l.id && (
-                            <TableRow className="bg-muted/5 hover:bg-muted/5">
-                              <TableCell colSpan={5} className="p-0">
-                                <div className="p-6 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <Badge variant="outline" className="bg-background text-primary border-primary/20">Enrolled Content</Badge>
-                                  </div>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {l.courses?.map((c) => (
-                                      <div key={c.id} className="bg-background p-4 rounded-2xl border border-primary/5 flex justify-between items-center shadow-sm">
-                                        <div className="flex-1">
-                                          <p className="font-bold text-sm truncate">{c.title}</p>
-                                          <div className="flex items-center gap-2 mt-1">
-                                            {getStatusBadge(c.status)}
-                                          </div>
-                                        </div>
-                                        <div className="text-right ml-4">
-                                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Score</p>
-                                          <p className="text-lg font-black text-primary">{c.averageScore}</p>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
+                          {expandedLearnerId === l.id && l.courses?.map((c) => (
+                            <TableRow key={c.id} className="bg-slate-50/40 hover:bg-muted/10 border-none transition-colors h-10">
+                              <TableCell className="py-2"></TableCell>
+                              <TableCell className="py-2 pr-4 font-semibold text-xs text-slate-500 max-w-[240px] truncate pl-6">
+                                <span className="text-muted-foreground mr-2 font-mono">↳</span>
+                                {c.title}
+                              </TableCell>
+                              <TableCell className="py-2 text-center font-bold text-blue-600/80 text-xs">
+                                {c.preQuizScore}%
+                              </TableCell>
+                              <TableCell className="py-2 text-center font-bold text-indigo-600/80 text-xs">
+                                {c.postQuizScore}%
+                              </TableCell>
+                              <TableCell className="py-2 text-center font-bold text-emerald-600/80 text-xs">
+                                {c.activityScore}%
+                              </TableCell>
+                              <TableCell className="py-2 text-right pr-4">
+                                <Badge className={cn(
+                                  "font-black uppercase text-[8px] tracking-tighter text-white py-0.5 px-1.5",
+                                  c.status === 'Passed' ? "bg-emerald-500 hover:bg-emerald-600 shadow-sm shadow-emerald-500/10" :
+                                  c.status === 'Failed' ? "bg-rose-500 hover:bg-rose-600 shadow-sm shadow-rose-500/10" :
+                                  "bg-amber-500 hover:bg-amber-600 shadow-sm shadow-amber-500/10" // Incomplete
+                                )}>
+                                  {c.status}
+                                </Badge>
                               </TableCell>
                             </TableRow>
-                          )}
+                          ))}
                         </React.Fragment>
                       ))}
                     </TableBody>
@@ -477,50 +551,39 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                               </div>
                             </TableCell>
                           </TableRow>
-                          {expandedCourseId === c.id && (
-                            <TableRow className="bg-muted/5 hover:bg-muted/5">
-                              <TableCell colSpan={6} className="p-0">
-                                <div className="p-6 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                                  <div className="rounded-[1.5rem] border bg-background overflow-hidden shadow-sm">
-                                    <Table>
-                                      <TableHeader className="bg-muted/20">
-                                        <TableRow>
-                                          <TableHead className="text-[10px] font-black uppercase h-10">Learner</TableHead>
-                                          <TableHead className="text-[10px] font-black uppercase h-10">Status</TableHead>
-                                          <TableHead className="text-[10px] font-black uppercase h-10 text-right">Quiz Score</TableHead>
-                                          <TableHead className="text-[10px] font-black uppercase h-10 text-right">Activity Score</TableHead>
-                                          <TableHead className="text-[10px] font-black uppercase h-10 text-right">Result</TableHead>
-                                        </TableRow>
-                                      </TableHeader>
-                                      <TableBody>
-                                        {c.enrolledStudents?.map((s) => (
-                                          <TableRow key={s.id} className="h-12">
-                                            <TableCell className="py-2">
-                                              <p className="font-bold text-xs">{s.name}</p>
-                                              <p className="text-[10px] text-muted-foreground">{s.department}</p>
-                                            </TableCell>
-                                            <TableCell className="py-2">{getStatusBadge(s.status)}</TableCell>
-                                            <TableCell className="py-2 text-right font-black text-blue-600">{s.quizScore}</TableCell>
-                                            <TableCell className="py-2 text-right font-black text-emerald-600">{s.activityScore}</TableCell>
-                                            <TableCell className="py-2 text-right">
-                                              <Badge className={cn(
-                                                "font-black uppercase text-[9px] tracking-tighter",
-                                                s.result === 'Passed' ? "bg-emerald-500 hover:bg-emerald-600" :
-                                                s.result === 'Failed' ? "bg-rose-500 hover:bg-rose-600" :
-                                                "bg-muted text-muted-foreground"
-                                              )}>
-                                                {s.result}
-                                              </Badge>
-                                            </TableCell>
-                                          </TableRow>
-                                        ))}
-                                      </TableBody>
-                                    </Table>
+                          {expandedCourseId === c.id && c.enrolledStudents?.map((s) => (
+                            <TableRow key={s.id} className="bg-slate-50/40 hover:bg-muted/10 border-none transition-colors h-10">
+                              <TableCell className="py-2"></TableCell>
+                              <TableCell className="py-2 pr-4 pl-6">
+                                <div className="flex items-start gap-1">
+                                  <span className="text-muted-foreground mr-2 font-mono">↳</span>
+                                  <div>
+                                    <p className="font-semibold text-xs text-slate-500">{s.name}</p>
+                                    <p className="text-[9px] text-slate-400 font-medium">{s.department}</p>
                                   </div>
                                 </div>
                               </TableCell>
+                              <TableCell className="py-2 text-right pr-4">
+                                {getStatusBadge(s.status)}
+                              </TableCell>
+                              <TableCell className="py-2 text-right font-bold text-blue-600/80 text-xs pr-4">
+                                {s.quizScore}%
+                              </TableCell>
+                              <TableCell className="py-2 text-right font-bold text-emerald-600/80 text-xs pr-4">
+                                {s.activityScore}%
+                              </TableCell>
+                              <TableCell className="py-2 text-right pr-4">
+                                <Badge className={cn(
+                                  "font-black uppercase text-[8px] tracking-tighter text-white py-0.5 px-1.5",
+                                  s.result === 'Passed' ? "bg-emerald-500 hover:bg-emerald-600 shadow-sm shadow-emerald-500/10" :
+                                  s.result === 'Failed' ? "bg-rose-500 hover:bg-rose-600 shadow-sm shadow-rose-500/10" :
+                                  "bg-amber-500 hover:bg-amber-600 shadow-sm shadow-amber-500/10" // Incomplete
+                                )}>
+                                  {s.result || 'Incomplete'}
+                                </Badge>
+                              </TableCell>
                             </TableRow>
-                          )}
+                          ))}
                         </React.Fragment>
                       ))}
                     </TableBody>
@@ -532,6 +595,164 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
           </Tabs>
         ) : null}
       </DialogContent>
+      
+      {/* Hidden Printable Executive Summary Report Container */}
+      <div 
+        ref={reportRef} 
+        className="absolute left-[-9999px] top-[-9999px] w-[800px] bg-white text-slate-800 p-8 space-y-8 font-sans"
+        style={{ color: '#1e293b', backgroundColor: '#ffffff' }}
+      >
+        {/* Header Section */}
+        <div className="border-b-2 border-indigo-600 pb-4 flex justify-between items-end">
+          <div>
+            <h1 className="text-2xl font-black text-indigo-900 tracking-tight">Standard Insurance Co., Inc.</h1>
+            <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">iLearn Portal • Executive Batch Analytics Report</p>
+          </div>
+          <div className="text-right">
+            <div className="text-lg font-black text-indigo-600">{batchName}</div>
+            <div className="text-xs text-slate-400 font-medium">Generated: {format(new Date(), 'MMMM dd, yyyy • hh:mm a')}</div>
+          </div>
+        </div>
+
+        {/* Active Filters Summary Box */}
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-3 gap-4 text-xs font-semibold text-slate-600">
+          <div>
+            <span className="text-slate-400 uppercase tracking-wider block font-bold text-[10px]">Department Filter</span>
+            <span className="text-indigo-900 font-bold">{activeDeptName}</span>
+          </div>
+          <div>
+            <span className="text-slate-400 uppercase tracking-wider block font-bold text-[10px]">Role Filter</span>
+            <span className="text-indigo-900 font-bold capitalize">{activeRole}</span>
+          </div>
+          <div>
+            <span className="text-slate-400 uppercase tracking-wider block font-bold text-[10px]">Status Filter</span>
+            <span className="text-indigo-900 font-bold capitalize">{activeStatus}</span>
+          </div>
+        </div>
+
+        {/* SECTION 1: Overview & Performance KPIs */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider">
+            1. Batch Overview & KPIs
+          </h2>
+          <div className="grid grid-cols-4 gap-4">
+            <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 text-center">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-400 block mb-1">Total Enrolled</span>
+              <span className="text-3xl font-black text-indigo-900">{data?.totalLearners || 0}</span>
+            </div>
+            <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 text-center">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400 block mb-1">Completion Rate</span>
+              <span className="text-3xl font-black text-emerald-900">{data?.completionRate || 0}%</span>
+            </div>
+            <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4 text-center">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400 block mb-1">Average Score</span>
+              <span className="text-3xl font-black text-amber-900">{data?.averageScore || 0}%</span>
+            </div>
+            <div className="bg-sky-50/50 border border-sky-100 rounded-2xl p-4 text-center">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-sky-400 block mb-1">Knowledge Gain</span>
+              <span className="text-3xl font-black text-sky-900">{data?.knowledgeDelta?.percentageIncrease || 0}%</span>
+            </div>
+          </div>
+
+          {/* KASH Metrics Overview */}
+          {data?.kashMetrics && data.kashMetrics.length > 0 && (
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">K.A.S.H. Performance Breakdown</h3>
+              <div className="grid grid-cols-4 gap-4 text-center">
+                {data.kashMetrics.map((m, idx) => (
+                  <div key={idx} className="border-r border-slate-200 last:border-r-0">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">{m.domain}</span>
+                    <span className="text-xl font-bold text-slate-800">{m.score}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* SECTION 2: Learner Performance Breakdown */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider">
+            2. Learner Breakdown
+          </h2>
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-indigo-900 text-white font-bold uppercase tracking-wider">
+                <th className="p-2 rounded-l-lg">Name</th>
+                <th className="p-2">Department</th>
+                <th className="p-2">Role</th>
+                <th className="p-2">Status</th>
+                <th className="p-2 rounded-r-lg text-right">Avg Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data?.learnerDetails && data.learnerDetails.length > 0 ? (
+                data.learnerDetails.map((l, idx) => (
+                  <tr key={idx} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
+                    <td className="p-2 font-bold text-slate-800">{l.name}</td>
+                    <td className="p-2 text-slate-600">{l.department}</td>
+                    <td className="p-2 text-slate-600 capitalize">{l.role.toLowerCase().replace('_', ' ')}</td>
+                    <td className="p-2">
+                      <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] ${
+                        l.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' :
+                        l.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
+                        'bg-slate-100 text-slate-800'
+                      }`}>
+                        {l.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="p-2 text-right font-black text-indigo-700">{l.averageScore}%</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="p-4 text-center text-slate-400 italic">No learners found matching active filters</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* SECTION 3: Content Insights */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider">
+            3. Content Insights & Metrics
+          </h2>
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-indigo-900 text-white font-bold uppercase tracking-wider">
+                <th className="p-2 rounded-l-lg">Course Title</th>
+                <th className="p-2 text-center">Completion Rate</th>
+                <th className="p-2 text-center">Avg Quiz Score</th>
+                <th className="p-2 text-center">Avg Activity Score</th>
+                <th className="p-2 rounded-r-lg text-right">Overall Course Avg</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data?.courseDetails && data.courseDetails.length > 0 ? (
+                data.courseDetails.map((c, idx) => (
+                  <tr key={idx} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
+                    <td className="p-2 font-bold text-slate-800">{c.title}</td>
+                    <td className="p-2 text-center font-bold text-slate-700">{c.completionRate}%</td>
+                    <td className="p-2 text-center text-slate-600">{c.avgQuizScore}%</td>
+                    <td className="p-2 text-center text-slate-600">{c.avgActivityScore}%</td>
+                    <td className="p-2 text-right font-black text-indigo-700">{c.averageScore}%</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="p-4 text-center text-slate-400 italic">No course analytics available</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer Disclaimer */}
+        <div className="border-t border-slate-200 pt-4 text-center text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+          Confidential • Standard Insurance Portal Analytics Engine
+        </div>
+      </div>
     </Dialog>
   );
 };

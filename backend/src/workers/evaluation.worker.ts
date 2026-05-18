@@ -20,9 +20,10 @@ export function initEvaluationWorker() {
           completedAt: {
             lte: evaluationThreshold
           },
-          course: {
-            requires180DayEval: true
-          }
+          OR: [
+            { batch: { requires180DayEval: true } },
+            { user: { learningPathEnrollments: { some: { batch: { requires180DayEval: true } } } } }
+          ]
         },
         include: {
           user: {

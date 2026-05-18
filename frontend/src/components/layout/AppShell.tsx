@@ -17,8 +17,6 @@ import {
   Route,
   Compass,
   Newspaper,
-  Search,
-  LifeBuoy,
   User,
   ShieldCheck,
   UserPlus,
@@ -101,30 +99,12 @@ export const AppShell: React.FC = () => {
             </Link>
           </div>
 
-          {/* Center: Global Search Trigger */}
-          <div className="hidden md:flex flex-1 max-w-md mx-8">
-            <Button 
-              variant="outline" 
-              className="w-full justify-between gap-2 px-3 h-10 bg-muted/30 border-muted-foreground/10 text-muted-foreground hover:bg-muted/50 transition-all rounded-xl font-normal group"
-              onClick={() => toast.info('Command Palette coming soon!')}
-            >
-              <div className="flex items-center gap-2">
-                <Search className="h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-                <span>Search iLearn...</span>
-              </div>
-              <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 sm:flex">
-                <span className="text-xs">⌘</span>K
-              </kbd>
-            </Button>
-          </div>
+
           
           {/* Right: Utilities & Profile */}
           <div className="flex items-center gap-1 sm:gap-3">
             
             <div className="flex items-center gap-1 sm:mr-2">
-               <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
-                <LifeBuoy className="h-5 w-5" />
-              </Button>
               <NotificationBell />
             </div>
 

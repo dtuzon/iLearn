@@ -49,6 +49,7 @@ export class BatchesService {
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
         status: data.status || 'UPCOMING',
+        requires180DayEval: data.requires180DayEval ?? false,
         courseId: data.courseId,
         learningPathId: data.learningPathId,
         courseSchedules: {
@@ -77,6 +78,7 @@ export class BatchesService {
           startDate: data.startDate ? new Date(data.startDate) : undefined,
           endDate: data.endDate ? new Date(data.endDate) : undefined,
           status: data.status,
+          requires180DayEval: data.requires180DayEval,
           courseId: data.courseId,
           learningPathId: data.learningPathId
         }
@@ -214,7 +216,7 @@ export class BatchesService {
       where: { id },
       include: {
         course: { select: { id: true, title: true, modules: true, passingGrade: true } },
-        learningPath: { select: { id: true, pathCourses: { include: { course: { include: { modules: true, passingGrade: true } } } } } },
+        learningPath: { select: { id: true, pathCourses: { include: { course: { include: { modules: true } } } } } },
         enrollments: { 
           where: enrollmentFilter,
           select: { id: true, status: true, userId: true, enrolledAt: true, user: { select: { firstName: true, lastName: true, role: true, department: { select: { name: true } } } } } 
@@ -236,10 +238,28 @@ export class BatchesService {
 
     if (!batch) throw new Error('Batch not found');
 
-    // 1. Enrollment Distribution
+    // 1. Enrollment Distribution & Pre-requisites
     const allEnrollments = [...batch.enrollments, ...batch.learningPathEnrollments];
     const totalLearners = allEnrollments.length;
-    
+    const validUserIds = allEnrollments.map(e => e.userId);
+
+    // Fetch all courses in this batch (either single course or learning path courses)
+    let batchCourses: { id: string; title: string; passingGrade: number }[] = [];
+    if (batch.courseId && batch.course) {
+      batchCourses = [{
+        id: batch.courseId,
+        title: batch.course.title,
+        passingGrade: batch.course.passingGrade || 80
+      }];
+    } else if (batch.learningPathId && batch.learningPath) {
+      batchCourses = batch.learningPath.pathCourses.map((pc: any) => ({
+        id: pc.course.id,
+        title: pc.course.title,
+        passingGrade: pc.course.passingGrade || 80
+      }));
+    }
+    const batchCourseIds = batchCourses.map(c => c.id);
+
     const distribution = {
       NOT_STARTED: 0,
       IN_PROGRESS: 0,
@@ -253,23 +273,47 @@ export class BatchesService {
       }
     });
 
-    // 2. Average Score & Performance
-    const allScores = [...batch.activitySubmissions, ...batch.essaySubmissions];
+    // 2. Average Score & Performance (Real-time database records)
     let averageScore = 0;
-    
     const learnerScores: Record<string, { name: string, totalScore: number, count: number }> = {};
+    let allScores: number[] = [];
 
-    if (allScores.length > 0) {
-      const totalScoreSum = allScores.reduce((acc, sub) => acc + (sub.score || 0), 0);
-      averageScore = Math.round((totalScoreSum / allScores.length) * 10) / 10;
-
-      allScores.forEach(sub => {
-        if (!learnerScores[sub.userId]) {
-          learnerScores[sub.userId] = { name: `${sub.user.firstName} ${sub.user.lastName}`, totalScore: 0, count: 0 };
-        }
-        learnerScores[sub.userId].totalScore += (sub.score || 0);
-        learnerScores[sub.userId].count += 1;
+    if (validUserIds.length > 0 && batchCourseIds.length > 0) {
+      const activitySubmissions = await prisma.activitySubmission.findMany({
+        where: {
+          userId: { in: validUserIds },
+          module: { courseId: { in: batchCourseIds } },
+          status: 'APPROVED',
+          score: { not: null }
+        },
+        select: { score: true, userId: true, user: { select: { firstName: true, lastName: true } } }
       });
+
+      const essaySubmissions = await prisma.essaySubmission.findMany({
+        where: {
+          userId: { in: validUserIds },
+          question: { module: { courseId: { in: batchCourseIds } } },
+          status: 'APPROVED',
+          score: { not: null }
+        },
+        select: { score: true, userId: true, user: { select: { firstName: true, lastName: true } } }
+      });
+
+      const combinedSubmissions = [...activitySubmissions, ...essaySubmissions];
+      allScores = combinedSubmissions.map(s => s.score || 0);
+
+      if (combinedSubmissions.length > 0) {
+        const totalScoreSum = combinedSubmissions.reduce((acc, sub) => acc + (sub.score || 0), 0);
+        averageScore = Math.round((totalScoreSum / combinedSubmissions.length) * 10) / 10;
+
+        combinedSubmissions.forEach(sub => {
+          if (!learnerScores[sub.userId]) {
+            learnerScores[sub.userId] = { name: `${sub.user.firstName} ${sub.user.lastName}`, totalScore: 0, count: 0 };
+          }
+          learnerScores[sub.userId].totalScore += (sub.score || 0);
+          learnerScores[sub.userId].count += 1;
+        });
+      }
     }
 
     const topPerformers = Object.values(learnerScores)
@@ -282,14 +326,15 @@ export class BatchesService {
     let postQuizAvg = 0;
     let knowledgeIncreasePercentage = 0;
 
-    const validUserIds = allEnrollments.map(e => e.userId);
-
-    if (validUserIds.length > 0) {
-      // Find all PRE_QUIZ and POST_QUIZ module progress for these users
+    if (validUserIds.length > 0 && batchCourseIds.length > 0) {
+      // Find all PRE_QUIZ and POST_QUIZ module progress for these users and courses
       const quizProgress = await prisma.moduleProgress.findMany({
         where: {
           enrollment: { userId: { in: validUserIds } },
-          module: { type: { in: ['PRE_QUIZ', 'POST_QUIZ'] } },
+          module: { 
+            courseId: { in: batchCourseIds },
+            type: { in: ['PRE_QUIZ', 'POST_QUIZ'] }
+          },
           score: { not: null }
         },
         include: { module: { select: { type: true } } }
@@ -304,9 +349,11 @@ export class BatchesService {
       preQuizAvg = Math.round(preQuizAvg * 10) / 10;
       postQuizAvg = Math.round(postQuizAvg * 10) / 10;
 
-      if (preQuizAvg > 0) {
+      if (postQuizAvg === 0) {
+        knowledgeIncreasePercentage = 0; // Prevent misleading -100% when no post-quiz is taken
+      } else if (preQuizAvg > 0) {
         knowledgeIncreasePercentage = Math.round(((postQuizAvg - preQuizAvg) / preQuizAvg) * 100);
-      } else if (postQuizAvg > 0) {
+      } else {
         knowledgeIncreasePercentage = 100; // went from 0 to something
       }
     }
@@ -316,12 +363,20 @@ export class BatchesService {
     const knowledgeScore = postQuizAvg > 0 ? postQuizAvg : (preQuizAvg > 0 ? preQuizAvg : 70);
     
     // Habits: Percentage of completed enrollments that were on time (before due date)
-    const completedEnrollments = allEnrollments.filter(e => e.status === 'COMPLETED');
     let habitsScore = 75; // Default
-    if (completedEnrollments.length > 0) {
-      const onTime = (e: any) => !e.dueDate || !e.completedAt || new Date(e.completedAt) <= new Date(e.dueDate);
-      const onTimeCount = completedEnrollments.filter(onTime).length;
-      habitsScore = Math.round((onTimeCount / completedEnrollments.length) * 100);
+    if (validUserIds.length > 0 && batchCourseIds.length > 0) {
+      const courseEnrollmentsForHabits = await prisma.enrollment.findMany({
+        where: {
+          userId: { in: validUserIds },
+          courseId: { in: batchCourseIds }
+        }
+      });
+      const completedCourseEnrollments = courseEnrollmentsForHabits.filter(e => e.status === 'COMPLETED');
+      if (completedCourseEnrollments.length > 0) {
+        const onTime = (e: any) => !e.dueDate || !e.completedAt || new Date(e.completedAt) <= new Date(e.dueDate);
+        const onTimeCount = completedCourseEnrollments.filter(onTime).length;
+        habitsScore = Math.round((onTimeCount / completedCourseEnrollments.length) * 100);
+      }
     }
 
     // Attitude: Try to get from KASH evaluations if they exist
@@ -334,9 +389,10 @@ export class BatchesService {
     });
     const kashTemplateIds = kashTemplates.map(t => t.id);
 
-    const kashEvaluations = kashTemplateIds.length > 0 ? await prisma.evaluationResponse.findMany({
+    const kashEvaluations = kashTemplateIds.length > 0 && validUserIds.length > 0 && batchCourseIds.length > 0 ? await prisma.evaluationResponse.findMany({
       where: { 
         userId: { in: validUserIds },
+        courseId: { in: batchCourseIds },
         templateId: { in: kashTemplateIds }
       }
     }) : [];
@@ -366,45 +422,86 @@ export class BatchesService {
 
     // 4. Learner Breakdown Data
     const learnerDetails = await Promise.all(allEnrollments.map(async e => {
-      let courses: any[] = [];
-      
-      if (batch.learningPathId) {
-        // Find individual course enrollments for this user within this batch context
-        const pathEnrollments = await prisma.enrollment.findMany({
-          where: { userId: e.userId, batchId: batch.id },
-          include: { course: { select: { id: true, title: true } } }
+      const courses = await Promise.all(batchCourses.map(async bc => {
+        const courseEnrollment = await prisma.enrollment.findUnique({
+          where: {
+            userId_courseId: {
+              userId: e.userId,
+              courseId: bc.id
+            }
+          }
         });
 
-        courses = await Promise.all(pathEnrollments.map(async pe => {
-          const moduleProgress = await prisma.moduleProgress.findMany({
-            where: { enrollmentId: pe.id, score: { not: null } },
-            select: { score: true }
-          });
-          const avg = moduleProgress.length > 0 ? moduleProgress.reduce((a, b) => a + (b.score || 0), 0) / moduleProgress.length : 0;
+        if (!courseEnrollment) {
           return {
-            id: pe.courseId,
-            title: pe.course.title,
-            status: pe.status,
-            averageScore: Math.round(avg * 10) / 10
+            id: bc.id,
+            title: bc.title,
+            preQuizScore: 0,
+            postQuizScore: 0,
+            activityScore: 0,
+            status: 'Incomplete',
+            averageScore: 0
           };
-        }));
-      } else {
-        // Single course batch
-        const moduleProgress = await prisma.moduleProgress.findMany({
-          where: { enrollmentId: e.id, score: { not: null } },
+        }
+
+        // Pre & Post Quiz scores
+        const quizProgress = await prisma.moduleProgress.findMany({
+          where: { 
+            enrollmentId: courseEnrollment.id, 
+            score: { not: null },
+            module: { type: { in: ['PRE_QUIZ', 'POST_QUIZ'] } }
+          },
+          include: { module: { select: { type: true } } }
+        });
+        const preQuizScore = quizProgress.find(p => p.module.type === 'PRE_QUIZ')?.score || 0;
+        const postQuizScore = quizProgress.find(p => p.module.type === 'POST_QUIZ')?.score || 0;
+
+        // Activity scores from ActivitySubmissions and EssaySubmissions
+        const activityScores = await prisma.activitySubmission.findMany({
+          where: { userId: e.userId, batchId: batch.id, module: { courseId: bc.id }, score: { not: null }, status: 'APPROVED' },
           select: { score: true }
         });
-        const avg = moduleProgress.length > 0 ? moduleProgress.reduce((a, b) => a + (b.score || 0), 0) / moduleProgress.length : 0;
-        
-        // Use batch.courseId as fallback if e.courseId isn't available on the type
-        const courseId = (e as any).courseId || batch.courseId;
-        
-        courses = [{
-          id: courseId,
-          title: batch.course?.title || 'Unknown Course',
-          status: e.status,
-          averageScore: Math.round(avg * 10) / 10
-        }];
+        const essayScores = await prisma.essaySubmission.findMany({
+          where: { userId: e.userId, batchId: batch.id, question: { module: { courseId: bc.id } }, score: { not: null }, status: 'APPROVED' },
+          select: { score: true }
+        });
+        const allActScores = [...activityScores.map(s => s.score || 0), ...essayScores.map(s => s.score || 0)];
+        const activityScore = allActScores.length > 0 ? allActScores.reduce((a, b) => a + b, 0) / allActScores.length : 0;
+
+        const qScoreAvg = quizProgress.length > 0 ? quizProgress.reduce((a, b) => a + (b.score || 0), 0) / quizProgress.length : 0;
+        const overallScore = ((qScoreAvg + activityScore) / (qScoreAvg > 0 && activityScore > 0 ? 2 : 1));
+
+        let resultStatus = 'Incomplete';
+        if (courseEnrollment.status === 'COMPLETED') {
+          resultStatus = overallScore >= bc.passingGrade ? 'Passed' : 'Failed';
+        }
+
+        return {
+          id: bc.id,
+          title: bc.title,
+          preQuizScore: Math.round(preQuizScore * 10) / 10,
+          postQuizScore: Math.round(postQuizScore * 10) / 10,
+          activityScore: Math.round(activityScore * 10) / 10,
+          status: resultStatus,
+          averageScore: Math.round(overallScore * 10) / 10
+        };
+      }));
+
+      const preQuizAvg = courses.length > 0 ? courses.reduce((a, b) => a + b.preQuizScore, 0) / courses.length : 0;
+      const postQuizAvg = courses.length > 0 ? courses.reduce((a, b) => a + b.postQuizScore, 0) / courses.length : 0;
+      const activityScoreAvg = courses.length > 0 ? courses.reduce((a, b) => a + b.activityScore, 0) / courses.length : 0;
+
+      let overallStatus = 'Incomplete';
+      if (courses.length > 0) {
+        const hasFailed = courses.some(c => c.status === 'Failed');
+        const allPassed = courses.every(c => c.status === 'Passed');
+        if (hasFailed) {
+          overallStatus = 'Failed';
+        } else if (allPassed) {
+          overallStatus = 'Passed';
+        } else {
+          overallStatus = 'Incomplete';
+        }
       }
 
       return {
@@ -412,8 +509,11 @@ export class BatchesService {
         name: `${e.user.firstName} ${e.user.lastName}`,
         department: e.user.department?.name || 'N/A',
         role: e.user.role,
-        status: e.status,
+        status: overallStatus,
         enrolledAt: e.enrolledAt,
+        preQuizAvg: Math.round(preQuizAvg * 10) / 10,
+        postQuizAvg: Math.round(postQuizAvg * 10) / 10,
+        activityScoreAvg: Math.round(activityScoreAvg * 10) / 10,
         averageScore: learnerScores[e.userId] ? Math.round((learnerScores[e.userId].totalScore / learnerScores[e.userId].count) * 10) / 10 : 0,
         courses
       };
@@ -434,16 +534,34 @@ export class BatchesService {
     }
 
     const courseDetails = await Promise.all(coursesToAnalyze.map(async c => {
-      const enrollments = await prisma.enrollment.findMany({
-        where: { courseId: c.id, batchId: batch.id, userId: { in: validUserIds } },
-        include: { user: { select: { firstName: true, lastName: true, department: { select: { name: true } } } } }
-      });
+      const enrolledStudents = await Promise.all(allEnrollments.map(async e => {
+        const courseEnrollment = await prisma.enrollment.findUnique({
+          where: {
+            userId_courseId: {
+              userId: e.userId,
+              courseId: c.id
+            }
+          }
+        });
 
-      const enrolledStudents = await Promise.all(enrollments.map(async enr => {
+        if (!courseEnrollment) {
+          return {
+            id: e.userId,
+            name: `${e.user.firstName} ${e.user.lastName}`,
+            department: e.user.department?.name || 'N/A',
+            status: 'NOT_STARTED',
+            quizScore: 0,
+            activityScore: 0,
+            score: 0,
+            result: 'Incomplete',
+            completedAt: null
+          };
+        }
+
         // Quiz scores from module progress (PRE_QUIZ, POST_QUIZ)
         const quizProgress = await prisma.moduleProgress.findMany({
           where: { 
-            enrollmentId: enr.id, 
+            enrollmentId: courseEnrollment.id, 
             score: { not: null },
             module: { type: { in: ['PRE_QUIZ', 'POST_QUIZ'] } }
           },
@@ -453,11 +571,11 @@ export class BatchesService {
 
         // Activity scores from ActivitySubmissions and EssaySubmissions
         const activityScores = await prisma.activitySubmission.findMany({
-          where: { userId: enr.userId, batchId: batch.id, score: { not: null }, status: 'APPROVED' },
+          where: { userId: e.userId, batchId: batch.id, module: { courseId: c.id }, score: { not: null }, status: 'APPROVED' },
           select: { score: true }
         });
         const essayScores = await prisma.essaySubmission.findMany({
-          where: { userId: enr.userId, batchId: batch.id, score: { not: null }, status: 'APPROVED' },
+          where: { userId: e.userId, batchId: batch.id, question: { module: { courseId: c.id } }, score: { not: null }, status: 'APPROVED' },
           select: { score: true }
         });
         
@@ -467,25 +585,25 @@ export class BatchesService {
         const overallScore = ((qScore + aScore) / (qScore > 0 && aScore > 0 ? 2 : 1));
         
         let result = 'Incomplete';
-        if (enr.status === 'COMPLETED') {
+        if (courseEnrollment.status === 'COMPLETED') {
           result = overallScore >= (c.passingGrade || 80) ? 'Passed' : 'Failed';
         }
 
         return {
-          id: enr.userId,
-          name: `${enr.user.firstName} ${enr.user.lastName}`,
-          department: enr.user.department?.name || 'N/A',
-          status: enr.status,
+          id: e.userId,
+          name: `${e.user.firstName} ${e.user.lastName}`,
+          department: e.user.department?.name || 'N/A',
+          status: courseEnrollment.status,
           quizScore: Math.round(qScore * 10) / 10,
           activityScore: Math.round(aScore * 10) / 10,
           score: Math.round(overallScore * 10) / 10,
           result,
-          completedAt: enr.completedAt
+          completedAt: courseEnrollment.completedAt
         };
       }));
 
-      const completions = enrollments.filter(enr => enr.status === 'COMPLETED').length;
-      const compRate = enrollments.length > 0 ? Math.round((completions / enrollments.length) * 100) : 0;
+      const completions = enrolledStudents.filter(s => s.status === 'COMPLETED').length;
+      const compRate = enrolledStudents.length > 0 ? Math.round((completions / enrolledStudents.length) * 100) : 0;
       
       const totalQuiz = enrolledStudents.reduce((acc, s) => acc + s.quizScore, 0);
       const totalActivity = enrolledStudents.reduce((acc, s) => acc + s.activityScore, 0);

@@ -23,6 +23,7 @@ async function main() {
   await prisma.learningPathCertificate.deleteMany();
   await prisma.transcript.deleteMany();
   await prisma.activitySubmission.deleteMany();
+  await prisma.essaySubmission.deleteMany();
   await prisma.evaluationResponse.deleteMany();
   await prisma.quizOption.deleteMany();
   await prisma.quizQuestion.deleteMany();
@@ -31,6 +32,9 @@ async function main() {
   await prisma.certificateTemplate.deleteMany();
   await prisma.behavioralEvaluation.deleteMany();
   await prisma.onlineEvaluationResult.deleteMany();
+  await prisma.batchCourseSchedule.deleteMany();
+  await prisma.batchChecker.deleteMany();
+  await prisma.batch.deleteMany();
   await prisma.course.deleteMany();
   await prisma.learningPath.deleteMany();
 

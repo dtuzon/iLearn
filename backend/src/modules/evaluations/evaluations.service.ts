@@ -104,12 +104,15 @@ export class EvaluationsService {
 
     const subordinateIds = subordinates.map(s => s.id);
 
-    // 2. Find completed enrollments for subordinates where course requires 180-day eval
+    // 2. Find completed enrollments for subordinates where cohort/batch requires 180-day eval
     const completedEnrollments = await prisma.enrollment.findMany({
       where: {
         userId: { in: subordinateIds },
         status: 'COMPLETED',
-        course: { requires180DayEval: true }
+        OR: [
+          { batch: { requires180DayEval: true } },
+          { user: { learningPathEnrollments: { some: { batch: { requires180DayEval: true } } } } }
+        ]
       },
       include: {
         user: { select: { id: true, firstName: true, lastName: true } },

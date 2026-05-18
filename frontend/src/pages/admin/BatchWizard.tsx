@@ -104,6 +104,7 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
     checkerIds: [] as string[],
     learnerIds: [] as string[],
     notifyScheduleChanges: false,
+    requires180DayEval: false,
     courseSchedules: [] as { courseId: string; startDate: string; endDate: string; order?: number }[]
   });
 
@@ -152,7 +153,8 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
               startDate: s.startDate ? format(new Date(s.startDate), 'yyyy-MM-dd') : '',
               endDate: s.endDate ? format(new Date(s.endDate), 'yyyy-MM-dd') : ''
             })) || [],
-            notifyScheduleChanges: false
+            notifyScheduleChanges: false,
+            requires180DayEval: batch.requires180DayEval || false
           });
           
           if (batch.learningPathId) {
@@ -300,7 +302,7 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
           <div className="absolute right-0 top-0 h-full w-1/3 bg-white/5 skew-x-12 transform translate-x-20" />
         </div>
 
-        <ScrollArea className="flex-1 p-8">
+        <div className="flex-1 overflow-hidden p-8 flex flex-col min-h-0">
           {isLoadingData ? (
             <div className="py-24 flex flex-col items-center justify-center gap-4">
               <Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" />
@@ -364,6 +366,23 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
                       className="data-[state=checked]:bg-emerald-600"
                     />
                   </div>
+
+                  <div className="p-4 bg-blue-50 rounded-2xl border border-blue-200 flex items-center justify-between mt-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <ShieldCheck className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <Label className="text-sm font-bold text-blue-900">Requires 180-Day Behavioral Evaluation</Label>
+                        <p className="text-[10px] text-blue-700/70 font-medium">Triggers an automatic supervisor evaluation 6 months post-completion to assess K.A.S.H. impact.</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={formData.requires180DayEval}
+                      onCheckedChange={val => setFormData({ ...formData, requires180DayEval: val })}
+                      className="data-[state=checked]:bg-blue-600"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -387,35 +406,37 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {(formData.contentType === 'COURSE' ? courses : paths).map((item) => (
-                      <Card 
-                        key={item.id}
-                        onClick={() => {
-                          setFormData({ ...formData, contentId: item.id });
-                          if (formData.contentType === 'PATH') {
-                            setSortedCourses([...(item.pathCourses || [])]);
-                          }
-                        }}
-                        className={cn(
-                          "p-4 cursor-pointer border-2 transition-all duration-300 rounded-[1.5rem] flex items-center gap-4 group",
-                          formData.contentId === item.id 
-                            ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20" 
-                            : "border-muted-foreground/10 hover:border-primary/50"
-                        )}
-                      >
-                        <div className="h-12 w-12 rounded-xl bg-muted overflow-hidden flex-shrink-0">
-                          {item.thumbnailUrl ? <img src={item.thumbnailUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-20"><BookOpen /></div>}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-bold text-sm truncate leading-tight">{item.title}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-0.5">
-                            {formData.contentType === 'PATH' ? `${item.pathCourses?.length || 0} Modules` : 'Verified Content'}
-                          </p>
-                        </div>
-                        {formData.contentId === item.id && <CheckCircle2 className="h-5 w-5 text-primary ml-auto flex-shrink-0" />}
-                      </Card>
-                    ))}
+                  <div className="max-h-[380px] overflow-y-auto pr-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(formData.contentType === 'COURSE' ? courses : paths).map((item) => (
+                        <Card 
+                          key={item.id}
+                          onClick={() => {
+                            setFormData({ ...formData, contentId: item.id });
+                            if (formData.contentType === 'PATH') {
+                              setSortedCourses([...(item.pathCourses || [])]);
+                            }
+                          }}
+                          className={cn(
+                            "p-4 cursor-pointer border-2 transition-all duration-300 rounded-[1.5rem] flex items-center gap-4 group",
+                            formData.contentId === item.id 
+                              ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20" 
+                              : "border-muted-foreground/10 hover:border-primary/50"
+                          )}
+                        >
+                          <div className="h-12 w-12 rounded-xl bg-muted overflow-hidden flex-shrink-0">
+                            {item.thumbnailUrl ? <img src={item.thumbnailUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-20"><BookOpen /></div>}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-sm truncate leading-tight">{item.title}</p>
+                            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-0.5">
+                              {formData.contentType === 'PATH' ? `${item.pathCourses?.length || 0} Modules` : 'Verified Content'}
+                            </p>
+                          </div>
+                          {formData.contentId === item.id && <CheckCircle2 className="h-5 w-5 text-primary ml-auto flex-shrink-0" />}
+                        </Card>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -446,55 +467,59 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
                           onChange={e => setSearchLearner(e.target.value)}
                         />
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {filteredLearners.filter(u => u.role === 'EMPLOYEE').map(user => (
-                          <div
-                            key={user.id}
-                            onClick={() => toggleLearner(user.id)}
-                            className={cn(
-                              "p-3 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all",
-                              formData.learnerIds.includes(user.id) ? "border-emerald-500 bg-emerald-50 shadow-sm" : "border-muted-foreground/10 hover:border-emerald-200"
-                            )}
-                          >
-                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center font-bold text-xs uppercase">
-                              {user.firstName?.[0]}{user.lastName?.[0]}
+                      <div className="max-h-[350px] overflow-y-auto pr-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {filteredLearners.filter(u => u.role === 'EMPLOYEE').map(user => (
+                            <div
+                              key={user.id}
+                              onClick={() => toggleLearner(user.id)}
+                              className={cn(
+                                "p-3 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all",
+                                formData.learnerIds.includes(user.id) ? "border-emerald-500 bg-emerald-50 shadow-sm" : "border-muted-foreground/10 hover:border-emerald-200"
+                              )}
+                            >
+                              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center font-bold text-xs uppercase">
+                                {user.firstName?.[0]}{user.lastName?.[0]}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold truncate leading-none">{user.firstName} {user.lastName}</p>
+                                <p className="text-[10px] text-muted-foreground mt-1 uppercase font-black">{user.department?.name || 'No Department'}</p>
+                              </div>
+                              {formData.learnerIds.includes(user.id) && <UserPlus className="h-4 w-4 text-emerald-600" />}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold truncate leading-none">{user.firstName} {user.lastName}</p>
-                              <p className="text-[10px] text-muted-foreground mt-1 uppercase font-black">{user.department?.name || 'No Department'}</p>
-                            </div>
-                            {formData.learnerIds.includes(user.id) && <UserPlus className="h-4 w-4 text-emerald-600" />}
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     </TabsContent>
 
                     <TabsContent value="groups" className="space-y-8 animate-in fade-in duration-300">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                          <h4 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-primary">
-                            <Building2 className="h-4 w-4" /> By Department
-                          </h4>
-                          <div className="space-y-2">
-                            {departments.map(dept => (
-                              <div key={dept.id} className="flex items-center justify-between p-3 rounded-xl border bg-muted/20 hover:bg-muted/30 transition-colors">
-                                <span className="font-bold text-xs">{dept.name}</span>
-                                <Button variant="ghost" size="sm" className="h-8 rounded-lg font-black text-[10px] uppercase hover:bg-primary hover:text-primary-foreground" onClick={() => addAllFromDept(dept.id)}>Add All</Button>
-                              </div>
-                            ))}
+                      <div className="max-h-[350px] overflow-y-auto pr-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-4">
+                            <h4 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-primary">
+                              <Building2 className="h-4 w-4" /> By Department
+                            </h4>
+                            <div className="space-y-2">
+                              {departments.map(dept => (
+                                <div key={dept.id} className="flex items-center justify-between p-3 rounded-xl border bg-muted/20 hover:bg-muted/30 transition-colors">
+                                  <span className="font-bold text-xs">{dept.name}</span>
+                                  <Button variant="ghost" size="sm" className="h-8 rounded-lg font-black text-[10px] uppercase hover:bg-primary hover:text-primary-foreground" onClick={() => addAllFromDept(dept.id)}>Add All</Button>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                        <div className="space-y-4">
-                          <h4 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-primary">
-                            <ShieldCheck className="h-4 w-4" /> By System Role
-                          </h4>
-                          <div className="space-y-2">
-                            {['EMPLOYEE', 'SUPERVISOR', 'DEPARTMENT_HEAD', 'COURSE_CREATOR'].map(role => (
-                              <div key={role} className="flex items-center justify-between p-3 rounded-xl border bg-muted/20 hover:bg-muted/30 transition-colors">
-                                <span className="font-bold text-xs">{role.replace('_', ' ')}</span>
-                                <Button variant="ghost" size="sm" className="h-8 rounded-lg font-black text-[10px] uppercase hover:bg-primary hover:text-primary-foreground" onClick={() => addAllFromRole(role)}>Add All</Button>
-                              </div>
-                            ))}
+                          <div className="space-y-4">
+                            <h4 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-primary">
+                              <ShieldCheck className="h-4 w-4" /> By System Role
+                            </h4>
+                            <div className="space-y-2">
+                              {['EMPLOYEE', 'SUPERVISOR', 'DEPARTMENT_HEAD', 'COURSE_CREATOR'].map(role => (
+                                <div key={role} className="flex items-center justify-between p-3 rounded-xl border bg-muted/20 hover:bg-muted/30 transition-colors">
+                                  <span className="font-bold text-xs">{role.replace('_', ' ')}</span>
+                                  <Button variant="ghost" size="sm" className="h-8 rounded-lg font-black text-[10px] uppercase hover:bg-primary hover:text-primary-foreground" onClick={() => addAllFromRole(role)}>Add All</Button>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -519,26 +544,28 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
                       onChange={e => setSearchChecker(e.target.value)}
                     />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {filteredCheckers.filter(u => ['ADMINISTRATOR', 'LEARNING_MANAGER', 'SUPERVISOR', 'DEPARTMENT_HEAD', 'COURSE_CREATOR'].includes(u.role)).map(user => (
-                      <div
-                        key={user.id}
-                        onClick={() => toggleChecker(user.id)}
-                        className={cn(
-                          "p-3 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all",
-                          formData.checkerIds.includes(user.id) ? "border-primary bg-primary/5 shadow-sm" : "border-muted-foreground/10 hover:border-primary/30"
-                        )}
-                      >
-                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center font-bold text-xs uppercase">
-                          {user.firstName?.[0]}{user.lastName?.[0]}
+                  <div className="max-h-[350px] overflow-y-auto pr-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {filteredCheckers.filter(u => ['ADMINISTRATOR', 'LEARNING_MANAGER', 'SUPERVISOR', 'DEPARTMENT_HEAD', 'COURSE_CREATOR'].includes(u.role)).map(user => (
+                        <div
+                          key={user.id}
+                          onClick={() => toggleChecker(user.id)}
+                          className={cn(
+                            "p-3 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all",
+                            formData.checkerIds.includes(user.id) ? "border-primary bg-primary/5 shadow-sm" : "border-muted-foreground/10 hover:border-primary/30"
+                          )}
+                        >
+                          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center font-bold text-xs uppercase">
+                            {user.firstName?.[0]}{user.lastName?.[0]}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold truncate leading-none">{user.firstName} {user.lastName}</p>
+                            <p className="text-[10px] text-muted-foreground mt-1 uppercase font-black">{user.role}</p>
+                          </div>
+                          {formData.checkerIds.includes(user.id) && <CheckCircle2 className="h-4 w-4 text-primary" />}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold truncate leading-none">{user.firstName} {user.lastName}</p>
-                          <p className="text-[10px] text-muted-foreground mt-1 uppercase font-black">{user.role}</p>
-                        </div>
-                        {formData.checkerIds.includes(user.id) && <CheckCircle2 className="h-4 w-4 text-primary" />}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -554,21 +581,23 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
                   </div>
 
 
-                  <div className="space-y-4">
-                    <DndContext sensors={sensors} onDragEnd={(event: any) => {
-                      const { active, over } = event;
-                      if (over && active.id !== over.id) {
-                        const oldIndex = sortedCourses.findIndex(s => s.courseId === active.id);
-                        const newIndex = sortedCourses.findIndex(s => s.courseId === over.id);
-                        setSortedCourses(arrayMove(sortedCourses, oldIndex, newIndex));
-                      }
-                    }}>
-                      <SortableContext items={sortedCourses.map(c => c.courseId)} strategy={verticalListSortingStrategy}>
-                        {sortedCourses.map((pc: any, i: number) => (
-                          <SortableCourseCard key={pc.courseId} pc={pc} index={i} formData={formData} updateCourseSchedule={updateCourseSchedule} />
-                        ))}
-                      </SortableContext>
-                    </DndContext>
+                  <div className="max-h-[350px] overflow-y-auto pr-1">
+                    <div className="space-y-4">
+                      <DndContext sensors={sensors} onDragEnd={(event: any) => {
+                        const { active, over } = event;
+                        if (over && active.id !== over.id) {
+                          const oldIndex = sortedCourses.findIndex(s => s.courseId === active.id);
+                          const newIndex = sortedCourses.findIndex(s => s.courseId === over.id);
+                          setSortedCourses(arrayMove(sortedCourses, oldIndex, newIndex));
+                        }
+                      }}>
+                        <SortableContext items={sortedCourses.map(c => c.courseId)} strategy={verticalListSortingStrategy}>
+                          {sortedCourses.map((pc: any, i: number) => (
+                            <SortableCourseCard key={pc.courseId} pc={pc} index={i} formData={formData} updateCourseSchedule={updateCourseSchedule} />
+                          ))}
+                        </SortableContext>
+                      </DndContext>
+                    </div>
                   </div>
                 </div>
               )}
@@ -576,7 +605,7 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
 
             </div>
           )}
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="p-8 bg-muted/20 border-t flex items-center justify-between">
           <Button 

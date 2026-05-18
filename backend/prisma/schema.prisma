@@ -305,7 +305,6 @@ model Course {
   
   targetAudience     String   @default("GENERAL") // GENERAL, PHASE_1_NEW_HIRE, PHASE_2_REGULARIZED
   targetDepartments  String[] @default([])
-  requires180DayEval Boolean  @default(false)
   hasCertificate     Boolean  @default(false)
 
   lecturerId String
@@ -737,6 +736,7 @@ model Batch {
   startDate        DateTime
   endDate          DateTime
   status           String    @default("UPCOMING") // UPCOMING, ACTIVE, COMPLETED, CANCELLED
+  requires180DayEval Boolean  @default(false)
 
   // Target Content (Can wrap a single Course or a Learning Path)
   courseId         String?
