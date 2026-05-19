@@ -45,7 +45,6 @@ import { toast } from 'sonner';
 import { Badge } from '../../components/ui/badge';
 import { Card } from '../../components/ui/card';
 import { cn } from '../../lib/utils';
-import { ScrollArea } from '../../components/ui/scroll-area';
 
 const SortableCourseCard = ({ pc, index, formData, updateCourseSchedule }: any) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: pc.courseId });

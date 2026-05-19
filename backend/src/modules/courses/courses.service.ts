@@ -201,7 +201,7 @@ export class CoursesService {
     });
   }
 
-  static async updateStatus(id: string, status: CourseStatus, approverId?: string) {
+  static async updateStatus(id: string, status: CourseStatus, approverId?: string, force?: boolean) {
     // Guard: Prevent unpublishing a course that has IN_PROGRESS learners
     if (status === CourseStatus.DRAFT) {
       const course = await prisma.course.findUnique({ where: { id } });
@@ -213,10 +213,21 @@ export class CoursesService {
           }
         });
         if (activeCount > 0) {
-          throw new Error(
-            `Cannot unpublish. There are ${activeCount} active learner(s) currently enrolled in this version. ` +
-            `Please use 'Create New Draft Version' instead to preserve historical tracking.`
-          );
+          if (force) {
+            // Delete active enrollments (Force unenrollment)
+            await prisma.enrollment.deleteMany({
+              where: {
+                courseId: id,
+                status: 'IN_PROGRESS'
+              }
+            });
+            console.log(`🗑️ Force deleted ${activeCount} active enrollments to unpublish course ${id}`);
+          } else {
+            throw new Error(
+              `Cannot unpublish. There are ${activeCount} active learner(s) currently enrolled in this version. ` +
+              `Please use 'Create New Draft Version' instead to preserve historical tracking.`
+            );
+          }
         }
       }
     }
@@ -228,6 +239,32 @@ export class CoursesService {
     return prisma.course.update({
       where: { id },
       data: { status }
+    });
+  }
+
+  static async getActiveLearners(courseId: string) {
+    return prisma.enrollment.findMany({
+      where: {
+        courseId,
+        status: 'IN_PROGRESS'
+      },
+      select: {
+        id: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            email: true,
+            department: {
+              select: {
+                name: true
+              }
+            }
+          }
+        }
+      }
     });
   }
 
@@ -616,8 +653,36 @@ export class CoursesService {
        throw new Error('Cannot discard a version that has active enrollments.');
     }
 
-    return prisma.course.delete({
-      where: { id }
+    return prisma.$transaction(async (tx) => {
+      // Find the most recent previous version in the lineage
+      const parentId = course.parentId || course.id;
+      const previousVersion = await tx.course.findFirst({
+        where: {
+          OR: [
+            { id: parentId },
+            { parentId: parentId }
+          ],
+          id: { not: id } // Exclude the draft we are discarding
+        },
+        orderBy: { version: 'desc' }
+      });
+
+      if (previousVersion) {
+        // Revert the previous version to be the latest published course
+        await tx.course.update({
+          where: { id: previousVersion.id },
+          data: {
+            isLatest: true,
+            status: CourseStatus.PUBLISHED
+          }
+        });
+        console.log(`🔄 Reverted course "${previousVersion.title}" (v${previousVersion.version}) back to PUBLISHED and isLatest: true`);
+      }
+
+      // Now safely delete the draft
+      return tx.course.delete({
+        where: { id }
+      });
     });
   }
 

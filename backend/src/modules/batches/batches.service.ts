@@ -239,7 +239,15 @@ export class BatchesService {
     if (!batch) throw new Error('Batch not found');
 
     // 1. Enrollment Distribution & Pre-requisites
-    const allEnrollments = [...batch.enrollments, ...batch.learningPathEnrollments];
+    const rawEnrollments = [...batch.enrollments, ...batch.learningPathEnrollments];
+    // Deduplicate by userId to get unique learners in this batch
+    const uniqueEnrollmentsMap = new Map<string, typeof rawEnrollments[number]>();
+    rawEnrollments.forEach(e => {
+      if (!uniqueEnrollmentsMap.has(e.userId)) {
+        uniqueEnrollmentsMap.set(e.userId, e);
+      }
+    });
+    const allEnrollments = Array.from(uniqueEnrollmentsMap.values());
     const totalLearners = allEnrollments.length;
     const validUserIds = allEnrollments.map(e => e.userId);
 
@@ -533,7 +541,15 @@ export class BatchesService {
       }));
     }
 
+    const schedules = await prisma.batchCourseSchedule.findMany({
+      where: { batchId: id }
+    });
+
     const courseDetails = await Promise.all(coursesToAnalyze.map(async c => {
+      const schedule = schedules.find(s => s.courseId === c.id);
+      const cStartDate = schedule?.startDate || batch.startDate;
+      const cEndDate = schedule?.endDate || batch.endDate;
+
       const enrolledStudents = await Promise.all(allEnrollments.map(async e => {
         const courseEnrollment = await prisma.enrollment.findUnique({
           where: {
@@ -616,6 +632,8 @@ export class BatchesService {
       return {
         id: c.id,
         title: c.title,
+        startDate: cStartDate,
+        endDate: cEndDate,
         completionRate: compRate,
         avgQuizScore: enrolledStudents.length > 0 ? Math.round((totalQuiz / enrolledStudents.length) * 10) / 10 : 0,
         avgActivityScore: enrolledStudents.length > 0 ? Math.round((totalActivity / enrolledStudents.length) * 10) / 10 : 0,
@@ -628,6 +646,10 @@ export class BatchesService {
     }));
 
     return {
+      name: batch.name,
+      startDate: batch.startDate,
+      endDate: batch.endDate,
+      status: batch.status,
       totalLearners,
       completionRate: totalLearners > 0 ? Math.round((distribution.COMPLETED / totalLearners) * 100) : 0,
       distribution: [

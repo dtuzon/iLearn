@@ -84,6 +84,13 @@ router.patch(
   CoursesController.updateStatus
 );
 
+router.get(
+  '/:id/active-learners',
+  authenticate,
+  authorize([Role.COURSE_CREATOR, Role.LEARNING_MANAGER, Role.ADMINISTRATOR]),
+  CoursesController.getActiveLearners
+);
+
 router.post(
   '/modules/video/upload',
   authenticate,

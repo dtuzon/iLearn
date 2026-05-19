@@ -58,6 +58,10 @@ export const batchesApi = {
     }
     const response = await apiClient.get(url);
     return response.data as {
+      name: string;
+      startDate: string;
+      endDate: string;
+      status: string;
       totalLearners: number;
       completionRate: number;
       averageScore: number;
@@ -81,6 +85,8 @@ export const batchesApi = {
       courseDetails: { 
         id: string; 
         title: string; 
+        startDate: string;
+        endDate: string;
         completionRate: number;
         avgQuizScore: number;
         avgActivityScore: number;

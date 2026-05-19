@@ -288,7 +288,7 @@ export class CoursesController {
   static async updateStatus(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
-      const { status } = req.body;
+      const { status, force } = req.body;
       const userRole = req.user!.role;
 
       // RBAC Logic for status transitions
@@ -320,10 +320,20 @@ export class CoursesController {
 
 
 
-      const course = await CoursesService.updateStatus(id as string, status, req.user!.userId);
+      const course = await CoursesService.updateStatus(id as string, status, req.user!.userId, !!force);
 
       res.json(course);
 
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  static async getActiveLearners(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const learners = await CoursesService.getActiveLearners(id as string);
+      res.json(learners);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

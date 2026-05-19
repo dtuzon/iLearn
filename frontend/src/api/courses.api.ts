@@ -100,9 +100,23 @@ export const coursesApi = {
     const response = await apiClient.patch(`/courses/${courseId}`, data);
     return response.data as Course;
   },
-  updateStatus: async (courseId: string, status: string) => {
-    const response = await apiClient.patch(`/courses/${courseId}/status`, { status });
+  updateStatus: async (courseId: string, status: string, force?: boolean) => {
+    const response = await apiClient.patch(`/courses/${courseId}/status`, { status, force });
     return response.data;
+  },
+  getActiveLearners: async (courseId: string) => {
+    const response = await apiClient.get(`/courses/${courseId}/active-learners`);
+    return response.data as Array<{
+      id: string;
+      user: {
+        id: string;
+        firstName: string | null;
+        lastName: string | null;
+        username: string;
+        email: string | null;
+        department: { name: string } | null;
+      };
+    }>;
   },
   createDraftVersion: async (courseId: string) => {
     const response = await apiClient.post(`/courses/${courseId}/create-draft-version`);

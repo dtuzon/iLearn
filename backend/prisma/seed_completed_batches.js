@@ -1,4 +1,4 @@
-const { PrismaClient, EnrollmentStatus, ModuleType, CourseStatus } = require('@prisma/client');
+const { PrismaClient, EnrollmentStatus, ModuleType } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { Pool } = require('pg');
 require('dotenv/config');
@@ -8,21 +8,42 @@ const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-async function main() {
-  console.log('--- SEEDING COMPLETED BATCHES WITH DETAILED METRICS ---');
+// Real-world, deterministic sample grade profiles for a beautiful bell-curve distribution:
+const gradeProfiles = [
+  { pre: 75, post: 95, act: 98 },
+  { pre: 60, post: 85, act: 90 },
+  { pre: 80, post: 100, act: 95 },
+  { pre: 50, post: 80, act: 85 },
+  { pre: 70, post: 90, act: 92 },
+  { pre: 65, post: 88, act: 89 },
+  { pre: 85, post: 98, act: 97 },
+  { pre: 55, post: 82, act: 88 },
+  { pre: 90, post: 100, act: 100 },
+  { pre: 72, post: 92, act: 94 },
+  { pre: 68, post: 86, act: 90 },
+  { pre: 78, post: 94, act: 96 },
+  { pre: 62, post: 84, act: 87 },
+  { pre: 82, post: 96, act: 98 },
+  { pre: 58, post: 80, act: 84 },
+  { pre: 74, post: 92, act: 93 },
+  { pre: 66, post: 88, act: 91 }
+];
 
-  // 1. Fetch all EMPLOYEE users
+async function main() {
+  console.log('🌱 --- RESETTING & SEEDING COMPLETED BATCHES WITH REAL-WORLD METRICS ---');
+
+  // 1. Fetch employees
   const employees = await prisma.user.findMany({
     where: { role: 'EMPLOYEE' }
   });
 
   if (employees.length === 0) {
-    console.error('❌ No employees found in database! Please seed users first.');
+    console.error('❌ No employees found in database! Please run default seeds first.');
     return;
   }
   console.log(`Found ${employees.length} employees to enroll.`);
 
-  // 2. Fetch the learning path "Standard Insurance Core Onboarding"
+  // 2. Fetch required templates/paths
   const lpOnboarding = await prisma.learningPath.findFirst({
     where: { title: 'Standard Insurance Core Onboarding' },
     include: {
@@ -42,9 +63,7 @@ async function main() {
     console.error('❌ Learning Path "Standard Insurance Core Onboarding" not found!');
     return;
   }
-  console.log(`Found Learning Path: ${lpOnboarding.title} with ${lpOnboarding.pathCourses.length} courses.`);
 
-  // 3. Find the course "Cybersecurity Threat Mitigation"
   const cyberCourse = await prisma.course.findFirst({
     where: { title: 'Cybersecurity Threat Mitigation' },
     include: { modules: true }
@@ -54,65 +73,61 @@ async function main() {
     console.error('❌ Course "Cybersecurity Threat Mitigation" not found!');
     return;
   }
-  console.log(`Found Course: ${cyberCourse.title}`);
 
-  // Add modules to Cybersecurity Threat Mitigation if it has only one or none
-  if (cyberCourse.modules.length <= 1) {
-    console.log('⚙️ Seeding standard modules for Cybersecurity Threat Mitigation...');
-    
-    // Clean up the initial live session to keep things aligned
-    await prisma.courseModule.deleteMany({
-      where: { courseId: cyberCourse.id }
-    });
-
-    const m1 = await prisma.courseModule.create({
+  // Add POST_QUIZ module to Advanced K.A.S.H. Principles if it doesn't have one
+  const kashCourse = lpOnboarding.pathCourses.find(pc => pc.course.title.includes('K.A.S.H.'))?.course;
+  if (kashCourse && !kashCourse.modules.some(m => m.type === ModuleType.POST_QUIZ)) {
+    console.log(`⚙️ Creating Post-Quiz Module for ${kashCourse.title}...`);
+    const postQuizModule = await prisma.courseModule.create({
       data: {
-        title: 'Pre-Quiz: Cybersecurity Basics',
-        type: ModuleType.PRE_QUIZ,
-        sequenceOrder: 1,
-        courseId: cyberCourse.id
-      }
-    });
-
-    const m2 = await prisma.courseModule.create({
-      data: {
-        title: 'Social Engineering & Threat Vectors',
-        type: ModuleType.VIDEO,
-        sequenceOrder: 2,
-        courseId: cyberCourse.id
-      }
-    });
-
-    const m3 = await prisma.courseModule.create({
-      data: {
-        title: 'Phishing Defense Sandbox Activity',
-        type: ModuleType.WORKSHOP,
-        sequenceOrder: 3,
-        courseId: cyberCourse.id
-      }
-    });
-
-    const m4 = await prisma.courseModule.create({
-      data: {
-        title: 'Post-Quiz: Threat Response Assessment',
+        title: 'Post-Quiz: Final Evaluation',
         type: ModuleType.POST_QUIZ,
-        sequenceOrder: 4,
-        courseId: cyberCourse.id
+        sequenceOrder: 3,
+        courseId: kashCourse.id
       }
     });
-
-    // Refresh course modules in reference
-    cyberCourse.modules = [m1, m2, m3, m4];
-    console.log('✅ Seeding modules completed.');
+    kashCourse.modules.push(postQuizModule);
+    console.log('✅ Post-Quiz Module created.');
   }
 
-  // 4. Create first completed batch: "2025 Q1 Compliance Batch" (Learning Path)
+  // 3. Clean up ALL batches & schedules & enrollments first
+  console.log('🧹 Purging all previous dummy batch records and progress...');
+
+  const allTargetCourseIds = [
+    ...lpOnboarding.pathCourses.map(pc => pc.courseId),
+    cyberCourse.id
+  ];
+  const empIds = employees.map(e => e.id);
+
+  await prisma.moduleProgress.deleteMany({
+    where: { enrollment: { userId: { in: empIds }, courseId: { in: allTargetCourseIds } } }
+  });
+
+  await prisma.activitySubmission.deleteMany({
+    where: { userId: { in: empIds }, module: { courseId: { in: allTargetCourseIds } } }
+  });
+
+  await prisma.enrollment.deleteMany({
+    where: { userId: { in: empIds }, courseId: { in: allTargetCourseIds } }
+  });
+
+  await prisma.learningPathEnrollment.deleteMany({
+    where: { userId: { in: empIds }, learningPathId: lpOnboarding.id }
+  });
+
+  await prisma.batchCourseSchedule.deleteMany();
+  await prisma.batchChecker.deleteMany();
+  await prisma.batch.deleteMany();
+
+  console.log('✅ Purge complete.');
+
+  // 4. Create first completed batch: "SI-2025-Q1 Core Executive Onboarding" (Learning Path)
   const q1Start = new Date('2025-01-05T00:00:00Z');
   const q1End = new Date('2025-02-05T00:00:00Z');
 
   const batch1 = await prisma.batch.create({
     data: {
-      name: '2025 Q1 Compliance Batch',
+      name: 'SI-2025-Q1 Core Executive Onboarding',
       startDate: q1Start,
       endDate: q1End,
       status: 'COMPLETED',
@@ -120,9 +135,9 @@ async function main() {
       requires180DayEval: true
     }
   });
-  console.log(`✅ Created Completed Batch: ${batch1.name} (ID: ${batch1.id})`);
+  console.log(`✅ Created Batch: ${batch1.name} (ID: ${batch1.id})`);
 
-  // Create course schedules for Batch 1
+  // Create schedules for Batch 1
   for (const pc of lpOnboarding.pathCourses) {
     await prisma.batchCourseSchedule.create({
       data: {
@@ -135,13 +150,13 @@ async function main() {
     });
   }
 
-  // 5. Create second completed batch: "2025 Q2 Cybersecurity Cohort" (Single Course)
+  // 5. Create second completed batch: "SI-2025-Q2 Cybersecurity Awareness Cohort" (Single Course)
   const q2Start = new Date('2025-04-01T00:00:00Z');
   const q2End = new Date('2025-05-01T00:00:00Z');
 
   const batch2 = await prisma.batch.create({
     data: {
-      name: '2025 Q2 Cybersecurity Cohort',
+      name: 'SI-2025-Q2 Cybersecurity Awareness Cohort',
       startDate: q2Start,
       endDate: q2End,
       status: 'COMPLETED',
@@ -149,9 +164,8 @@ async function main() {
       requires180DayEval: false
     }
   });
-  console.log(`✅ Created Completed Batch: ${batch2.name} (ID: ${batch2.id})`);
+  console.log(`✅ Created Batch: ${batch2.name} (ID: ${batch2.id})`);
 
-  // Create course schedules for Batch 2
   await prisma.batchCourseSchedule.create({
     data: {
       batchId: batch2.id,
@@ -162,46 +176,12 @@ async function main() {
     }
   });
 
-  // 6. Clean up any existing enrollments for all employees in these courses to avoid conflict
-  const empIds = employees.map(e => e.id);
-  const onboardingCourseIds = lpOnboarding.pathCourses.map(pc => pc.courseId);
-  const allTargetCourseIds = [...onboardingCourseIds, cyberCourse.id];
+  // 6. Seed completed data for Batch 1 (Core Onboarding Learning Path)
+  console.log(`⚙️ Seeding premium completed metrics for ${batch1.name}...`);
+  for (let idx = 0; idx < employees.length; idx++) {
+    const emp = employees[idx];
+    const profile = gradeProfiles[idx % gradeProfiles.length];
 
-  console.log('🧹 Cleaning up database constraint conflicts for all employees...');
-  await prisma.moduleProgress.deleteMany({
-    where: {
-      enrollment: {
-        userId: { in: empIds },
-        courseId: { in: allTargetCourseIds }
-      }
-    }
-  });
-
-  await prisma.activitySubmission.deleteMany({
-    where: {
-      userId: { in: empIds },
-      module: { courseId: { in: allTargetCourseIds } }
-    }
-  });
-
-  await prisma.enrollment.deleteMany({
-    where: {
-      userId: { in: empIds },
-      courseId: { in: allTargetCourseIds }
-    }
-  });
-
-  await prisma.learningPathEnrollment.deleteMany({
-    where: {
-      userId: { in: empIds },
-      learningPathId: lpOnboarding.id
-    }
-  });
-
-  // 7. Seed completed data for Batch 1 (Compliance Batch)
-  console.log(`⚙️ Seeding completed metrics for ${batch1.name}...`);
-  for (const emp of employees) {
-    // LP enrollment
     await prisma.learningPathEnrollment.create({
       data: {
         userId: emp.id,
@@ -213,7 +193,6 @@ async function main() {
       }
     });
 
-    // Course enrollments
     for (const pc of lpOnboarding.pathCourses) {
       const course = pc.course;
       const courseEnrollment = await prisma.enrollment.create({
@@ -227,15 +206,13 @@ async function main() {
         }
       });
 
-      // Modules progress
       for (const mod of course.modules) {
         if (mod.type === ModuleType.PRE_QUIZ) {
-          const preScore = Math.floor(Math.random() * 30) + 50; // 50 to 80
           await prisma.moduleProgress.create({
             data: {
               enrollmentId: courseEnrollment.id,
               moduleId: mod.id,
-              score: preScore,
+              score: profile.pre,
               completed: true,
               completedAt: q1Start
             }
@@ -243,12 +220,11 @@ async function main() {
         }
 
         if (mod.type === ModuleType.POST_QUIZ) {
-          const postScore = Math.floor(Math.random() * 20) + 80; // 80 to 100
           await prisma.moduleProgress.create({
             data: {
               enrollmentId: courseEnrollment.id,
               moduleId: mod.id,
-              score: postScore,
+              score: profile.post,
               completed: true,
               completedAt: q1End
             }
@@ -256,14 +232,13 @@ async function main() {
         }
 
         if (mod.type === ModuleType.WORKSHOP || mod.type === ModuleType.ASSIGNMENT) {
-          const actScore = Math.floor(Math.random() * 15) + 85; // 85 to 100
           await prisma.activitySubmission.create({
             data: {
               moduleId: mod.id,
               userId: emp.id,
               batchId: batch1.id,
               status: 'APPROVED',
-              score: actScore,
+              score: profile.act,
               fileUrl: 'https://example.com/submissions/compliance_onboarding.pdf'
             }
           });
@@ -272,9 +247,12 @@ async function main() {
     }
   }
 
-  // 8. Seed completed data for Batch 2 (Cybersecurity Cohort)
-  console.log(`⚙️ Seeding completed metrics for ${batch2.name}...`);
-  for (const emp of employees) {
+  // 7. Seed completed data for Batch 2 (Cybersecurity Single Course)
+  console.log(`⚙️ Seeding premium completed metrics for ${batch2.name}...`);
+  for (let idx = 0; idx < employees.length; idx++) {
+    const emp = employees[idx];
+    const profile = gradeProfiles[(idx + 3) % gradeProfiles.length]; // Offset profile slightly for variety
+
     const courseEnrollment = await prisma.enrollment.create({
       data: {
         userId: emp.id,
@@ -286,15 +264,13 @@ async function main() {
       }
     });
 
-    // Modules progress
     for (const mod of cyberCourse.modules) {
       if (mod.type === ModuleType.PRE_QUIZ) {
-        const preScore = Math.floor(Math.random() * 35) + 45; // 45 to 80
         await prisma.moduleProgress.create({
           data: {
             enrollmentId: courseEnrollment.id,
             moduleId: mod.id,
-            score: preScore,
+            score: profile.pre - 5 > 0 ? profile.pre - 5 : 0, // customized offset
             completed: true,
             completedAt: q2Start
           }
@@ -302,12 +278,11 @@ async function main() {
       }
 
       if (mod.type === ModuleType.POST_QUIZ) {
-        const postScore = Math.floor(Math.random() * 20) + 80; // 80 to 100
         await prisma.moduleProgress.create({
           data: {
             enrollmentId: courseEnrollment.id,
             moduleId: mod.id,
-            score: postScore,
+            score: profile.post,
             completed: true,
             completedAt: q2End
           }
@@ -315,14 +290,13 @@ async function main() {
       }
 
       if (mod.type === ModuleType.WORKSHOP || mod.type === ModuleType.ASSIGNMENT) {
-        const actScore = Math.floor(Math.random() * 20) + 80; // 80 to 100
         await prisma.activitySubmission.create({
           data: {
             moduleId: mod.id,
             userId: emp.id,
             batchId: batch2.id,
             status: 'APPROVED',
-            score: actScore,
+            score: profile.act,
             fileUrl: 'https://example.com/submissions/cyber_mitigation.pdf'
           }
         });
@@ -330,8 +304,7 @@ async function main() {
     }
   }
 
-  console.log('\n🌟 COMPLETED BATCHES SEEDED SUCCESSFULLY!');
-  console.log('Both "2025 Q1 Compliance Batch" and "2025 Q2 Cybersecurity Cohort" are now fully populated and completed in the database.');
+  console.log('\n🌟 REAL-WORLD COMPLETED BATCHES SEEDED SUCCESSFULLY!');
 }
 
 main()

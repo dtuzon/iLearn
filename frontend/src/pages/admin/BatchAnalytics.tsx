@@ -93,36 +93,26 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
       setTimeout(async () => {
         try {
           const element = reportRef.current!;
-          const canvas = await html2canvas(element, { 
-            scale: 2, 
-            useCORS: true,
-            logging: true,
-            backgroundColor: '#ffffff',
-            windowWidth: element.scrollWidth,
-            windowHeight: element.scrollHeight
-          });
-          const imgData = canvas.toDataURL('image/png');
-          
-          // PDF dimensions
-          const pdfWidth = 210; // A4 standard width in mm
-          const pageHeight = 297; // A4 standard height in mm
-          const imgWidth = pdfWidth;
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          const pages = element.querySelectorAll('.pdf-page');
           
           const pdf = new jsPDF('p', 'mm', 'a4');
-          let heightLeft = imgHeight;
-          let position = 0;
           
-          // First page
-          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pageHeight;
-          
-          // Multi-page slicing if the content is taller than A4 height
-          while (heightLeft >= 0) {
-            position = heightLeft - imgHeight;
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
+          for (let i = 0; i < pages.length; i++) {
+            const pageEl = pages[i] as HTMLElement;
+            const canvas = await html2canvas(pageEl, { 
+              scale: 3, 
+              useCORS: true,
+              logging: false,
+              backgroundColor: '#ffffff',
+              windowWidth: 800,
+              windowHeight: 1130
+            });
+            const imgData = canvas.toDataURL('image/png');
+            
+            if (i > 0) {
+              pdf.addPage();
+            }
+            pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
           }
           
           // Use a custom bulletproof download trigger by appending to DOM
@@ -161,6 +151,9 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
       const summaryData = [
         ['Metric', 'Value'],
         ['Batch Name', batchName],
+        ['Start Date', format(new Date(data.startDate), 'MMMM dd, yyyy')],
+        ['End Date', format(new Date(data.endDate), 'MMMM dd, yyyy')],
+        ['Batch Status', data.status.replace('_', ' ')],
         ['Total Learners', data.totalLearners],
         ['Completion Rate', `${data.completionRate}%`],
         ['Average Score', data.averageScore],
@@ -195,6 +188,8 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
       // Tab 4: Course Breakdown
       const contentSheet = XLSX.utils.json_to_sheet((data.courseDetails || []).map(c => ({
         Title: c.title,
+        'Start Date': c.startDate ? format(new Date(c.startDate), 'MMM dd, yyyy') : 'N/A',
+        'End Date': c.endDate ? format(new Date(c.endDate), 'MMM dd, yyyy') : 'N/A',
         'Completion Rate': `${c.completionRate}%`,
         'Quiz Average': c.avgQuizScore != null ? `${c.avgQuizScore}%` : 'N/A',
         'Activity Average': c.avgActivityScore != null ? `${c.avgActivityScore}%` : 'N/A',
@@ -227,6 +222,18 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
     }
   };
 
+  function chunkArray<T>(arr: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) {
+      chunks.push(arr.slice(i, i + size));
+    }
+    return chunks;
+  }
+
+  const learnerChunks = data?.learnerDetails ? chunkArray(data.learnerDetails, 18) : [[]];
+  const courseChunks = data?.courseDetails ? chunkArray(data.courseDetails, 15) : [[]];
+  const totalReportPages = 1 + learnerChunks.length + courseChunks.length;
+
   if (!isOpen) return null;
 
   return (
@@ -253,6 +260,48 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
             </Button>
           </div>
         </DialogHeader>
+
+        {data && (
+          <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-6 bg-gradient-to-r from-primary/5 to-transparent border border-primary/10 rounded-2xl p-5 text-sm font-semibold">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">🚀</div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Start Date</span>
+                <span className="text-foreground font-black">{format(new Date(data.startDate), 'MMMM dd, yyyy')}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 border-t border-slate-100 pt-3 sm:border-t-0 sm:pt-0 sm:border-x sm:border-slate-100 sm:px-6">
+              <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">🏁</div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">End Date</span>
+                <span className="text-foreground font-black">{format(new Date(data.endDate), 'MMMM dd, yyyy')}</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between border-t border-slate-100 pt-3 sm:border-t-0 sm:pt-0 sm:pl-6">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">⚙️</div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Batch Status</span>
+                  <span className={cn(
+                    "font-black tracking-wider uppercase text-xs",
+                    data.status === 'COMPLETED' ? 'text-emerald-600' :
+                    data.status === 'ACTIVE' ? 'text-blue-600' : 'text-amber-600'
+                  )}>
+                    {data.status.replace('_', ' ')}
+                  </span>
+                </div>
+              </div>
+              <Badge className={cn(
+                "rounded-full px-3 py-1 font-bold tracking-tight border-none text-[9px] shadow-sm uppercase pointer-events-none",
+                data.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-600 shadow-emerald-500/5' :
+                data.status === 'ACTIVE' ? 'bg-blue-500/10 text-blue-600 shadow-blue-500/5' :
+                'bg-amber-500/10 text-amber-600 shadow-amber-500/5'
+              )}>
+                {data.status.toLowerCase().replace('_', ' ')}
+              </Badge>
+            </div>
+          </div>
+        )}
 
         {/* Filters Bar */}
         <div className="bg-muted/30 p-4 rounded-2xl flex flex-wrap gap-4 items-center mb-6">
@@ -360,10 +409,10 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                           <XAxis dataKey="name" tick={{ fontWeight: 'bold' }} axisLine={false} tickLine={false} />
                           <YAxis hide domain={[0, 100]} />
                           <RechartsTooltip contentStyle={{ borderRadius: '1rem', border: 'none', fontWeight: 'bold' }} />
-                          <Bar dataKey="score" fill="#4F46E5" radius={[10, 10, 0, 0]}>
+                          <Bar dataKey="score" fill="#D9A72A" radius={[10, 10, 0, 0]}>
                             {
                               [0, 1].map((_, index) => (
-                                <Cell key={`cell-${index}`} fill={index === 0 ? '#9CA3AF' : '#4F46E5'} />
+                                <Cell key={`cell-${index}`} fill={index === 0 ? '#9CA3AF' : '#D9A72A'} />
                               ))
                             }
                           </Bar>
@@ -439,7 +488,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                         <TableHead className="w-10"></TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs">Learner Name</TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs text-center text-blue-600">Pre Quiz Avg</TableHead>
-                        <TableHead className="font-bold tracking-widest uppercase text-xs text-center text-indigo-600">Post Quiz Avg</TableHead>
+                        <TableHead className="font-bold tracking-widest uppercase text-xs text-center text-amber-600">Post Quiz Avg</TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs text-center text-emerald-600">Activity Avg</TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs text-right">Status</TableHead>
                       </TableRow>
@@ -463,7 +512,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                               </div>
                             </TableCell>
                             <TableCell className="text-center font-black text-blue-600 text-sm">{l.preQuizAvg}%</TableCell>
-                            <TableCell className="text-center font-black text-indigo-600 text-sm">{l.postQuizAvg}%</TableCell>
+                            <TableCell className="text-center font-black text-amber-600 text-sm">{l.postQuizAvg}%</TableCell>
                             <TableCell className="text-center font-black text-emerald-600 text-sm">{l.activityScoreAvg}%</TableCell>
                             <TableCell className="text-right">{getStatusBadge(l.status)}</TableCell>
                           </TableRow>
@@ -477,7 +526,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                               <TableCell className="py-2 text-center font-bold text-blue-600/80 text-xs">
                                 {c.preQuizScore}%
                               </TableCell>
-                              <TableCell className="py-2 text-center font-bold text-indigo-600/80 text-xs">
+                              <TableCell className="py-2 text-center font-bold text-amber-600/80 text-xs">
                                 {c.postQuizScore}%
                               </TableCell>
                               <TableCell className="py-2 text-center font-bold text-emerald-600/80 text-xs">
@@ -533,7 +582,15 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                                 <ArrowUpRight className="h-4 w-4 text-muted-foreground rotate-45" />
                               </div>
                             </TableCell>
-                            <TableCell className="font-bold max-w-sm truncate">{c.title}</TableCell>
+                            <TableCell className="max-w-sm">
+                              <p className="font-bold text-slate-800 truncate">{c.title}</p>
+                              <p className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1.5 mt-0.5">
+                                <span>📅 Schedule:</span>
+                                <span className="text-primary">{format(new Date(c.startDate), 'MMM dd, yyyy')}</span>
+                                <span>-</span>
+                                <span className="text-primary">{format(new Date(c.endDate), 'MMM dd, yyyy')}</span>
+                              </p>
+                            </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-2">
                                 <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -597,161 +654,256 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
       </DialogContent>
       
       {/* Hidden Printable Executive Summary Report Container */}
-      <div 
-        ref={reportRef} 
-        className="absolute left-[-9999px] top-[-9999px] w-[800px] bg-white text-slate-800 p-8 space-y-8 font-sans"
-        style={{ color: '#1e293b', backgroundColor: '#ffffff' }}
-      >
-        {/* Header Section */}
-        <div className="border-b-2 border-indigo-600 pb-4 flex justify-between items-end">
-          <div>
-            <h1 className="text-2xl font-black text-indigo-900 tracking-tight">Standard Insurance Co., Inc.</h1>
-            <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">iLearn Portal • Executive Batch Analytics Report</p>
-          </div>
-          <div className="text-right">
-            <div className="text-lg font-black text-indigo-600">{batchName}</div>
-            <div className="text-xs text-slate-400 font-medium">Generated: {format(new Date(), 'MMMM dd, yyyy • hh:mm a')}</div>
-          </div>
-        </div>
-
-        {/* Active Filters Summary Box */}
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-3 gap-4 text-xs font-semibold text-slate-600">
-          <div>
-            <span className="text-slate-400 uppercase tracking-wider block font-bold text-[10px]">Department Filter</span>
-            <span className="text-indigo-900 font-bold">{activeDeptName}</span>
-          </div>
-          <div>
-            <span className="text-slate-400 uppercase tracking-wider block font-bold text-[10px]">Role Filter</span>
-            <span className="text-indigo-900 font-bold capitalize">{activeRole}</span>
-          </div>
-          <div>
-            <span className="text-slate-400 uppercase tracking-wider block font-bold text-[10px]">Status Filter</span>
-            <span className="text-indigo-900 font-bold capitalize">{activeStatus}</span>
-          </div>
-        </div>
-
-        {/* SECTION 1: Overview & Performance KPIs */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider">
-            1. Batch Overview & KPIs
-          </h2>
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 text-center">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-400 block mb-1">Total Enrolled</span>
-              <span className="text-3xl font-black text-indigo-900">{data?.totalLearners || 0}</span>
-            </div>
-            <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 text-center">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400 block mb-1">Completion Rate</span>
-              <span className="text-3xl font-black text-emerald-900">{data?.completionRate || 0}%</span>
-            </div>
-            <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4 text-center">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400 block mb-1">Average Score</span>
-              <span className="text-3xl font-black text-amber-900">{data?.averageScore || 0}%</span>
-            </div>
-            <div className="bg-sky-50/50 border border-sky-100 rounded-2xl p-4 text-center">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-sky-400 block mb-1">Knowledge Gain</span>
-              <span className="text-3xl font-black text-sky-900">{data?.knowledgeDelta?.percentageIncrease || 0}%</span>
-            </div>
-          </div>
-
-          {/* KASH Metrics Overview */}
-          {data?.kashMetrics && data.kashMetrics.length > 0 && (
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">K.A.S.H. Performance Breakdown</h3>
-              <div className="grid grid-cols-4 gap-4 text-center">
-                {data.kashMetrics.map((m, idx) => (
-                  <div key={idx} className="border-r border-slate-200 last:border-r-0">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">{m.domain}</span>
-                    <span className="text-xl font-bold text-slate-800">{m.score}%</span>
-                  </div>
-                ))}
+      <div ref={reportRef} className="absolute left-[-9999px] top-[-9999px] font-sans">
+        {/* PAGE 1: Overview & KPIs */}
+        <div className="pdf-page w-[800px] h-[1130px] p-12 bg-white text-slate-800 flex flex-col justify-between" style={{ color: '#1e293b', backgroundColor: '#ffffff' }}>
+          <div className="space-y-6">
+            {/* Header Section */}
+            <div className="border-b-2 pb-4 flex justify-between items-end" style={{ borderColor: '#d9a72a' }}>
+              <div className="flex items-center gap-3">
+                <img src="/pdf-logo.png" className="h-10 w-10 object-contain animate-none" style={{ display: 'block', maxWidth: '40px', maxHeight: '40px' }} alt="Standard Insurance Logo" />
+                <div>
+                  <h1 className="text-2xl font-black tracking-tight" style={{ color: '#d9a72a' }}>Standard Insurance Co., Inc.</h1>
+                  <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">iLearn Portal • Executive Batch Analytics Report</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-lg font-black" style={{ color: '#d9a72a' }}>{batchName}</div>
+                <div className="text-xs text-slate-400 font-medium">Generated: {format(new Date(), 'MMMM dd, yyyy • hh:mm a')}</div>
               </div>
             </div>
-          )}
-        </div>
 
-        {/* SECTION 2: Learner Performance Breakdown */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider">
-            2. Learner Breakdown
-          </h2>
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-indigo-900 text-white font-bold uppercase tracking-wider">
-                <th className="p-2 rounded-l-lg">Name</th>
-                <th className="p-2">Department</th>
-                <th className="p-2">Role</th>
-                <th className="p-2">Status</th>
-                <th className="p-2 rounded-r-lg text-right">Avg Score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data?.learnerDetails && data.learnerDetails.length > 0 ? (
-                data.learnerDetails.map((l, idx) => (
-                  <tr key={idx} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
-                    <td className="p-2 font-bold text-slate-800">{l.name}</td>
-                    <td className="p-2 text-slate-600">{l.department}</td>
-                    <td className="p-2 text-slate-600 capitalize">{l.role.toLowerCase().replace('_', ' ')}</td>
-                    <td className="p-2">
-                      <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] ${
-                        l.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' :
-                        l.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
-                        'bg-slate-100 text-slate-800'
-                      }`}>
-                        {l.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="p-2 text-right font-black text-indigo-700">{l.averageScore}%</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={5} className="p-4 text-center text-slate-400 italic">No learners found matching active filters</td>
-                </tr>
+            {/* Active Filters Summary Box */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-3 gap-4 text-xs font-semibold text-slate-600">
+              <div>
+                <span className="text-slate-400 uppercase tracking-wider block font-bold text-[10px]">Department Filter</span>
+                <span className="text-amber-900 font-bold">{activeDeptName}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 uppercase tracking-wider block font-bold text-[10px]">Role Filter</span>
+                <span className="text-amber-900 font-bold capitalize">{activeRole}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 uppercase tracking-wider block font-bold text-[10px]">Status Filter</span>
+                <span className="text-amber-900 font-bold capitalize">{activeStatus}</span>
+              </div>
+            </div>
+
+            {/* Batch Schedule Details Box */}
+            {data && (
+              <div className="bg-amber-50/30 border border-amber-100 rounded-xl p-4 grid grid-cols-3 gap-4 text-xs font-semibold text-slate-600">
+                <div>
+                  <span className="text-amber-400 uppercase tracking-wider block font-bold text-[10px]">Start Date</span>
+                  <span className="text-amber-950 font-bold">{format(new Date(data.startDate), 'MMMM dd, yyyy')}</span>
+                </div>
+                <div>
+                  <span className="text-amber-400 uppercase tracking-wider block font-bold text-[10px]">End Date</span>
+                  <span className="text-amber-950 font-bold">{format(new Date(data.endDate), 'MMMM dd, yyyy')}</span>
+                </div>
+                <div>
+                  <span className="text-amber-400 uppercase tracking-wider block font-bold text-[10px]">Batch Status</span>
+                  <span className={cn(
+                    "font-black uppercase text-[10px] tracking-wider",
+                    data.status === 'COMPLETED' ? 'text-emerald-600' :
+                    data.status === 'ACTIVE' ? 'text-blue-600' : 'text-amber-600'
+                  )}>
+                    {data.status.replace('_', ' ')}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* SECTION 1: Overview & Performance KPIs */}
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider">
+                1. Batch Overview & KPIs
+              </h2>
+              <div className="grid grid-cols-4 gap-4">
+                <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4 text-center">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-amber-500 block mb-1">Total Enrolled</span>
+                  <span className="text-3xl font-black text-amber-900">{data?.totalLearners || 0}</span>
+                </div>
+                <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 text-center">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400 block mb-1">Completion Rate</span>
+                  <span className="text-3xl font-black text-emerald-900">{data?.completionRate || 0}%</span>
+                </div>
+                <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4 text-center">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400 block mb-1">Average Score</span>
+                  <span className="text-3xl font-black text-amber-900">{data?.averageScore || 0}%</span>
+                </div>
+                <div className="bg-sky-50/50 border border-sky-100 rounded-2xl p-4 text-center">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-sky-400 block mb-1">Knowledge Gain</span>
+                  <span className="text-3xl font-black text-sky-900">{data?.knowledgeDelta?.percentageIncrease || 0}%</span>
+                </div>
+              </div>
+
+              {/* KASH Metrics Overview */}
+              {data?.kashMetrics && data.kashMetrics.length > 0 && (
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">K.A.S.H. Performance Breakdown</h3>
+                  <div className="grid grid-cols-4 gap-4 text-center">
+                    {data.kashMetrics.map((m, idx) => (
+                      <div key={idx} className="border-r border-slate-200 last:border-r-0">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">{m.domain}</span>
+                        <span className="text-xl font-bold text-slate-800">{m.score}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
-            </tbody>
-          </table>
+            </div>
+          </div>
+          <div className="text-center text-[8px] font-bold text-slate-400 uppercase tracking-widest">
+            Confidential • Standard Insurance Portal Analytics Engine • Page 1 of {totalReportPages}
+          </div>
         </div>
 
-        {/* SECTION 3: Content Insights */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider">
-            3. Content Insights & Metrics
-          </h2>
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-indigo-900 text-white font-bold uppercase tracking-wider">
-                <th className="p-2 rounded-l-lg">Course Title</th>
-                <th className="p-2 text-center">Completion Rate</th>
-                <th className="p-2 text-center">Avg Quiz Score</th>
-                <th className="p-2 text-center">Avg Activity Score</th>
-                <th className="p-2 rounded-r-lg text-right">Overall Course Avg</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data?.courseDetails && data.courseDetails.length > 0 ? (
-                data.courseDetails.map((c, idx) => (
-                  <tr key={idx} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
-                    <td className="p-2 font-bold text-slate-800">{c.title}</td>
-                    <td className="p-2 text-center font-bold text-slate-700">{c.completionRate}%</td>
-                    <td className="p-2 text-center text-slate-600">{c.avgQuizScore}%</td>
-                    <td className="p-2 text-center text-slate-600">{c.avgActivityScore}%</td>
-                    <td className="p-2 text-right font-black text-indigo-700">{c.averageScore}%</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={5} className="p-4 text-center text-slate-400 italic">No course analytics available</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {/* PAGE 2+: Learner Performance Breakdown (Dynamic Multi-page Chunked Loop) */}
+        {learnerChunks.map((chunk, chunkIdx) => (
+          <div key={`pdf-learner-page-${chunkIdx}`} className="pdf-page w-[800px] h-[1130px] p-12 bg-white text-slate-800 flex flex-col justify-between" style={{ color: '#1e293b', backgroundColor: '#ffffff' }}>
+            <div className="space-y-6">
+              {/* Header Section */}
+              <div className="border-b-2 pb-4 flex justify-between items-end" style={{ borderColor: '#d9a72a' }}>
+                <div className="flex items-center gap-3">
+                  <img src="/pdf-logo.png" className="h-10 w-10 object-contain animate-none" style={{ display: 'block', maxWidth: '40px', maxHeight: '40px' }} alt="Standard Insurance Logo" />
+                  <div>
+                    <h1 className="text-2xl font-black tracking-tight" style={{ color: '#d9a72a' }}>Standard Insurance Co., Inc.</h1>
+                    <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">iLearn Portal • Executive Batch Analytics Report</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-black" style={{ color: '#d9a72a' }}>{batchName}</div>
+                  <div className="text-xs text-slate-400 font-medium">Generated: {format(new Date(), 'MMMM dd, yyyy • hh:mm a')}</div>
+                </div>
+              </div>
 
-        {/* Footer Disclaimer */}
-        <div className="border-t border-slate-200 pt-4 text-center text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-          Confidential • Standard Insurance Portal Analytics Engine
-        </div>
+              {/* SECTION 2: Learner Performance Breakdown */}
+              <div className="space-y-4">
+                <h2 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider flex justify-between">
+                  <span>2. Learner Breakdown</span>
+                  {learnerChunks.length > 1 && (
+                    <span className="text-xs font-black text-amber-600 uppercase tracking-widest">
+                      Part {chunkIdx + 1} of {learnerChunks.length}
+                    </span>
+                  )}
+                </h2>
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-amber-600 text-white font-bold uppercase tracking-wider">
+                      <th className="p-2 rounded-l-lg">Name</th>
+                      <th className="p-2">Department</th>
+                      <th className="p-2">Role</th>
+                      <th className="p-2">Status</th>
+                      <th className="p-2 rounded-r-lg text-right">Avg Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chunk && chunk.length > 0 ? (
+                      chunk.map((l, idx) => (
+                        <tr key={idx} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50" style={{ height: '38px' }}>
+                          <td className="p-2 font-bold text-slate-800">{l.name}</td>
+                          <td className="p-2 text-slate-600">{l.department}</td>
+                          <td className="p-2 text-slate-600 capitalize">{l.role.toLowerCase().replace('_', ' ')}</td>
+                          <td className="p-2">
+                            <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] ${
+                              l.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' :
+                              l.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
+                              'bg-slate-100 text-slate-800'
+                            }`}>
+                              {l.status.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="p-2 text-right font-black text-amber-600">{l.averageScore}%</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="p-4 text-center text-slate-400 italic">No learners found matching active filters</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="text-center text-[8px] font-bold text-slate-400 uppercase tracking-widest">
+              Confidential • Standard Insurance Portal Analytics Engine • Page {2 + chunkIdx} of {totalReportPages}
+            </div>
+          </div>
+        ))}
+
+        {/* PAGE 3+: Content Insights & Metrics (Dynamic Multi-page Chunked Loop) */}
+        {courseChunks.map((chunk, chunkIdx) => (
+          <div key={`pdf-course-page-${chunkIdx}`} className="pdf-page w-[800px] h-[1130px] p-12 bg-white text-slate-800 flex flex-col justify-between" style={{ color: '#1e293b', backgroundColor: '#ffffff' }}>
+            <div className="space-y-6">
+              {/* Header Section */}
+              <div className="border-b-2 pb-4 flex justify-between items-end" style={{ borderColor: '#d9a72a' }}>
+                <div className="flex items-center gap-3">
+                  <img src="/pdf-logo.png" className="h-10 w-10 object-contain animate-none" style={{ display: 'block', maxWidth: '40px', maxHeight: '40px' }} alt="Standard Insurance Logo" />
+                  <div>
+                    <h1 className="text-2xl font-black tracking-tight" style={{ color: '#d9a72a' }}>Standard Insurance Co., Inc.</h1>
+                    <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">iLearn Portal • Executive Batch Analytics Report</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-black" style={{ color: '#d9a72a' }}>{batchName}</div>
+                  <div className="text-xs text-slate-400 font-medium">Generated: {format(new Date(), 'MMMM dd, yyyy • hh:mm a')}</div>
+                </div>
+              </div>
+
+              {/* SECTION 3: Content Insights */}
+              <div className="space-y-4">
+                <h2 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider flex justify-between">
+                  <span>3. Content Insights & Metrics</span>
+                  {courseChunks.length > 1 && (
+                    <span className="text-xs font-black text-amber-600 uppercase tracking-widest">
+                      Part {chunkIdx + 1} of {courseChunks.length}
+                    </span>
+                  )}
+                </h2>
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-amber-600 text-white font-bold uppercase tracking-wider">
+                      <th className="p-2 rounded-l-lg">Course Title</th>
+                      <th className="p-2 text-center">Completion Rate</th>
+                      <th className="p-2 text-center">Avg Quiz Score</th>
+                      <th className="p-2 text-center">Avg Activity Score</th>
+                      <th className="p-2 rounded-r-lg text-right">Overall Course Avg</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chunk && chunk.length > 0 ? (
+                      chunk.map((c, idx) => (
+                        <tr key={idx} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50" style={{ height: '38px' }}>
+                          <td className="p-2">
+                            <div className="font-bold text-slate-800">{c.title}</div>
+                            <div className="text-[9px] text-slate-400 font-medium">
+                              Schedule: {format(new Date(c.startDate), 'MMM dd, yyyy')} - {format(new Date(c.endDate), 'MMM dd, yyyy')}
+                            </div>
+                          </td>
+                          <td className="p-2 text-center font-bold text-slate-700">{c.completionRate}%</td>
+                          <td className="p-2 text-center text-slate-600">{c.avgQuizScore}%</td>
+                          <td className="p-2 text-center text-slate-600">{c.avgActivityScore}%</td>
+                          <td className="p-2 text-right font-black text-amber-600">{c.averageScore}%</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="p-4 text-center text-slate-400 italic">No course analytics available</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Footer Disclaimer */}
+              <div className="border-t border-slate-200 pt-4 text-center text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                Confidential • Standard Insurance Portal Analytics Engine • Page {2 + learnerChunks.length + chunkIdx} of {totalReportPages}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </Dialog>
   );

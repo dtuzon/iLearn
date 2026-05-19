@@ -53,7 +53,6 @@ import 'react-quill-new/dist/quill.snow.css';
 
 import { toast } from 'sonner';
 import { Badge } from '../../components/ui/badge';
-import { Switch } from '../../components/ui/switch';
 import { Textarea } from '../../components/ui/textarea';
 import { QuizBuilder } from '../../components/creator/QuizBuilder';
 import { CertificateBuilder } from '../../components/creator/CertificateBuilder';
@@ -484,6 +483,10 @@ export const CourseBuilder: React.FC = () => {
   };
 
   const [isUnpublishDialogOpen, setIsUnpublishDialogOpen] = useState(false);
+  const [activeLearners, setActiveLearners] = useState<any[]>([]);
+  const [isFetchingActiveLearners, setIsFetchingActiveLearners] = useState(false);
+  const [isListExpanded, setIsListExpanded] = useState(false);
+  const [isForceUnpublishing, setIsForceUnpublishing] = useState(false);
 
   const [approvalDialog, setApprovalDialog] = useState({
     isOpen: false,
@@ -496,54 +499,90 @@ export const CourseBuilder: React.FC = () => {
   const generateAutoDiff = (current: Course, currentForm: typeof identityForm, parent: Course) => {
     const changes: string[] = [];
 
-    // Title Changes — compare form (unsaved) title vs parent
-    const currentTitle = currentForm.title || current.title;
-    if (currentTitle !== parent.title) {
-      changes.push(`Renamed course from "${parent.title}" to "${currentTitle}"`);
+    // Strip internal suffixes like (Draft) for clean comparison
+    const cleanTitle = (t: string) => t.replace(/\s*\([^)]*\)\s*$/i, '').trim();
+    const currentTitle = cleanTitle(currentForm.title || current.title);
+    const parentTitle = cleanTitle(parent.title);
+    if (currentTitle !== parentTitle) {
+      changes.push(`Renamed course from "${parentTitle}" to "${currentTitle}"`);
     }
 
     // 1. Curriculum Changes
     const currentModules = current.modules || [];
     const parentModules = parent.modules || [];
 
-    // Use IDs for reliable matching, fall back to title
-    const currentIds = new Set(currentModules.map(m => m.id));
-    const parentIds = new Set(parentModules.map(m => m.id));
+    // Helper to match draft modules to parent modules reliably
+    const findMatchingParentModule = (m: any) => {
+      // 1. Match by database ID
+      let match = parentModules.find(pm => pm.id === m.id);
+      if (match) return match;
 
-    // Added (new modules with IDs not in parent)
-    const added = currentModules.filter(m => !parentIds.has(m.id));
-    added.forEach(m => changes.push(`Added module: "${m.title}" (${m.type.replace(/_/g, ' ')})`)  );
+      // 2. Match by Title
+      match = parentModules.find(pm => pm.title.trim().toLowerCase() === m.title.trim().toLowerCase());
+      if (match) return match;
 
-    // Removed
-    const removed = parentModules.filter(m => !currentIds.has(m.id));
-    removed.forEach(m => changes.push(`Removed module: "${m.title}"`)  );
+      // 3. Fall back to sequenceOrder if module counts are equal
+      if (parentModules.length === currentModules.length) {
+        return parentModules.find(pm => pm.sequenceOrder === m.sequenceOrder);
+      }
 
-    // Check resequencing and content updates for modules present in both
+      return null;
+    };
+
+    // Determine added modules (no match in parent)
+    const added = currentModules.filter(m => !findMatchingParentModule(m));
+    added.forEach(m => changes.push(`Added module: "${m.title}" (${m.type.replace(/_/g, ' ')})`));
+
+    // Determine removed modules (no current module matches the parent)
+    const removed = parentModules.filter(pm => !currentModules.some(cm => {
+      if (cm.id === pm.id) return true;
+      if (cm.title.trim().toLowerCase() === pm.title.trim().toLowerCase()) return true;
+      if (parentModules.length === currentModules.length && cm.sequenceOrder === pm.sequenceOrder) return true;
+      return false;
+    }));
+    removed.forEach(pm => changes.push(`Removed module: "${pm.title}"`));
+
+    // Check resequencing and content updates for matched modules
     currentModules.forEach((m) => {
-      const parentM = parentModules.find(pm => pm.id === m.id);
+      const parentM = findMatchingParentModule(m);
       if (parentM) {
-        // sequenceOrder is 1-based, display as-is
         if (parentM.sequenceOrder !== m.sequenceOrder) {
           changes.push(`Re-sequenced: "${m.title}" (Step ${parentM.sequenceOrder} → Step ${m.sequenceOrder})`);
         }
         if (parentM.type !== m.type) {
           changes.push(`Changed type of "${m.title}": ${parentM.type.replace(/_/g, ' ')} → ${m.type.replace(/_/g, ' ')}`);
-        } else if (parentM.contentUrlOrText !== m.contentUrlOrText && m.type === 'VIDEO') {
-          changes.push(`Updated video content: "${m.title}"`);
+        } else {
+          // Check for specific sub-content changes
+          if (m.type === 'PRE_QUIZ' || m.type === 'POST_QUIZ') {
+            const parentQCount = parentM.quizQuestions?.length || 0;
+            const currentQCount = m.quizQuestions?.length || 0;
+            if (parentQCount !== currentQCount) {
+              changes.push(`Updated quiz questions in "${m.title}" (${parentQCount} → ${currentQCount} questions)`);
+            }
+          } else if (m.type === 'WORKSHOP' || m.type === 'ASSIGNMENT') {
+            if ((parentM.activityInstructions || '').trim() !== (m.activityInstructions || '').trim()) {
+              changes.push(`Updated workshop instructions for "${m.title}"`);
+            }
+          } else if (m.type === 'LIVE_SESSION') {
+            if ((parentM.meetingUrl || '').trim() !== (m.meetingUrl || '').trim()) {
+              changes.push(`Updated live session meeting link for "${m.title}"`);
+            }
+          } else if ((parentM.contentUrlOrText || '').trim() !== (m.contentUrlOrText || '').trim()) {
+            changes.push(`Updated content for "${m.title}"`);
+          }
         }
       }
     });
 
-    // 2. Configuration Changes — compare form values vs parent DB values
+    // 2. Configuration Changes
     const currentGrade = currentForm.passingGrade ?? current.passingGrade;
     if (currentGrade !== parent.passingGrade) {
       changes.push(`Updated Passing Grade: ${parent.passingGrade}% → ${currentGrade}%`);
     }
-    // Target audience check removed
 
-    // Description changes
     const currentDescription = currentForm.description || current.description || '';
-    if (currentDescription !== (parent.description || '')) {
+    const parentDescription = parent.description || '';
+    if (currentDescription.trim() !== parentDescription.trim()) {
       changes.push('Updated course description');
     }
 
@@ -621,11 +660,12 @@ export const CourseBuilder: React.FC = () => {
     }
   };
 
-  const handleUpdateStatus = async (status: string) => {
+  const handleUpdateStatus = async (status: string, force?: boolean) => {
     if (!courseId) return;
+    if (force) setIsForceUnpublishing(true);
     try {
-      await coursesApi.updateStatus(courseId, status);
-      toast.success(`Course status updated to ${status}`);
+      await coursesApi.updateStatus(courseId, status, force);
+      toast.success(force ? 'Course unpublished & active students unenrolled' : `Course status updated to ${status}`);
       fetchCourse();
     } catch (error: any) {
       const msg = error.response?.data?.message || 'Failed to update status';
@@ -636,6 +676,8 @@ export const CourseBuilder: React.FC = () => {
           : undefined,
         duration: 8000
       });
+    } finally {
+      if (force) setIsForceUnpublishing(false);
     }
   };
   
@@ -654,9 +696,26 @@ export const CourseBuilder: React.FC = () => {
     }
   };
 
+  const handleOpenUnpublishDialog = async () => {
+    if (!courseId) return;
+    setIsFetchingActiveLearners(true);
+    setIsListExpanded(false);
+    try {
+      const data = await coursesApi.getActiveLearners(courseId);
+      setActiveLearners(data);
+      setIsUnpublishDialogOpen(true);
+    } catch (err) {
+      console.error("Failed to fetch active learners", err);
+      setActiveLearners([]);
+      setIsUnpublishDialogOpen(true);
+    } finally {
+      setIsFetchingActiveLearners(false);
+    }
+  };
+
   const handleConfirmUnpublish = async () => {
     setIsUnpublishDialogOpen(false);
-    await handleUpdateStatus('DRAFT');
+    await handleUpdateStatus('DRAFT', activeLearners.length > 0);
   };
 
   const [isAddingModule, setIsAddingModule] = useState(false);
@@ -1003,9 +1062,15 @@ export const CourseBuilder: React.FC = () => {
                     size="sm"
                     variant="outline"
                     className="h-10 px-4 border-dashed border-muted-foreground/30 text-muted-foreground hover:text-destructive hover:border-destructive/50"
-                    onClick={() => setIsUnpublishDialogOpen(true)}
+                    onClick={handleOpenUnpublishDialog}
+                    disabled={isFetchingActiveLearners}
                   >
-                    <EyeOff className="mr-2 h-4 w-4" /> Unpublish Course
+                    {isFetchingActiveLearners ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <EyeOff className="mr-2 h-4 w-4" />
+                    )}
+                    Unpublish Course
                   </Button>
                 </>
               )}
@@ -1022,28 +1087,74 @@ export const CourseBuilder: React.FC = () => {
 
       {/* Unpublish Confirmation Dialog */}
       <AlertDialog open={isUnpublishDialogOpen} onOpenChange={setIsUnpublishDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-md rounded-3xl p-6 border-slate-100 shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <EyeOff className="h-5 w-5 text-destructive" />
+            <AlertDialogTitle className="flex items-center gap-2 text-xl font-black text-slate-900 tracking-tight">
+              <EyeOff className="h-6 w-6 text-destructive" />
               Unpublish This Course?
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
-              <span className="block">
-                This will immediately remove the course from the live catalog and prevent new enrollments.
-              </span>
-              <span className="block p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm font-medium">
-                ⚠️ <strong>Data Risk:</strong> If you intend to make significant edits, we <strong>highly recommend</strong> using <em>"New Version"</em> instead. Unpublishing then deleting modules can corrupt progress records for active learners.
-              </span>
-            </AlertDialogDescription>
+            <div className="text-slate-600 text-sm mt-3 space-y-4">
+              <p>
+                This will immediately remove the course from the live catalog and prevent new employee enrollments.
+              </p>
+
+              {activeLearners.length > 0 ? (
+                <div className="p-4 rounded-2xl bg-destructive/5 border border-destructive/10 space-y-3">
+                  <p className="font-bold text-destructive flex items-center gap-2">
+                    ⚠️ Active Learners Warning
+                  </p>
+                  <p className="text-slate-700 font-medium">
+                    There are currently{' '}
+                    <button
+                      type="button"
+                      onClick={() => setIsListExpanded(!isListExpanded)}
+                      className="text-destructive font-black underline hover:text-destructive/80 transition-colors focus:outline-none"
+                    >
+                      {activeLearners.length} employee(s)
+                    </button>{' '}
+                    actively studying this course version. Unpublishing will unenroll them.
+                  </p>
+
+                  {isListExpanded && (
+                    <div className="mt-2 max-h-40 overflow-y-auto border border-destructive/10 rounded-xl bg-white p-3 space-y-2 custom-scrollbar">
+                      {activeLearners.map((learner: any) => (
+                        <div key={learner.id} className="flex justify-between items-center text-xs py-1 border-b border-slate-50 last:border-0">
+                          <span className="font-bold text-slate-800">
+                            {learner.user.firstName} {learner.user.lastName}
+                          </span>
+                          <span className="text-slate-500 font-mono">
+                            {learner.user.department?.name || 'General'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium">
+                  ⚠️ <strong>Recommendation:</strong> If you intend to make changes to modules or evaluations, we recommend using <strong>"New Version"</strong> instead to preserve historical records of active batches.
+                </div>
+              )}
+            </div>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel — Keep Published</AlertDialogCancel>
+          <AlertDialogFooter className="gap-2 mt-6">
+            <AlertDialogCancel className="rounded-xl border-slate-200 font-bold">
+              Cancel — Keep Live
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmUnpublish}
-              className="bg-destructive hover:bg-destructive/90 text-white"
+              disabled={isForceUnpublishing}
+              className="bg-destructive hover:bg-destructive/90 text-white font-bold rounded-xl shadow-lg shadow-destructive/20 border-none transition-all"
             >
-              Yes, Unpublish
+              {isForceUnpublishing ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Processing...
+                </span>
+              ) : activeLearners.length > 0 ? (
+                `Yes, Unenroll & Unpublish`
+              ) : (
+                `Yes, Unpublish`
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
