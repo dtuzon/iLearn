@@ -54,7 +54,7 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
     return () => {
       if (zoomClientRef.current) {
         try {
-          zoomClientRef.current.leave?.({ confirm: false });
+          zoomClientRef.current.leaveMeeting?.();
         } catch {
           // Ignore errors during cleanup
         }
@@ -101,7 +101,7 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
 
       // Clean up any previous instance
       if (zoomClientRef.current) {
-        try { zoomClientRef.current.leave?.({ confirm: false }); } catch { /* ignore */ }
+        try { zoomClientRef.current.leaveMeeting?.(); } catch { /* ignore */ }
       }
 
       const client = ZoomMtgEmbedded.createClient();
@@ -115,7 +115,7 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
           meetingInfo: ['topic', 'host', 'mn', 'pwd', 'telPwd', 'invite', 'participant', 'dc', 'enctype'],
           toolbar: {
             buttons: [
-              { text: 'Leave Session', className: 'leave-btn', onClick: () => client.leave({ confirm: true }) }
+              { text: 'Leave Session', className: 'leave-btn', onClick: () => client.leaveMeeting() }
             ]
           }
         }
