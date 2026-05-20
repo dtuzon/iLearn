@@ -212,9 +212,11 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
         await batchesApi.assignLearners(batchId, formData.learnerIds);
         toast.success('Batch updated successfully');
       } else {
+        // Show a specific message for new batches since Zoom meeting generation runs in the background
+        toast.info('Creating batch and generating Zoom meetings…', { duration: 4000 });
         const batch = await batchesApi.create(payload);
         await batchesApi.assignLearners(batch.id, formData.learnerIds);
-        toast.success('Batch created successfully');
+        toast.success('Batch created! Zoom meetings are being generated in the background. Check the batch details in a few seconds.', { duration: 6000 });
       }
       onSuccess();
     } catch (error: any) {
@@ -627,8 +629,17 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
                 disabled={isSubmitting}
                 className="rounded-xl h-12 px-10 font-black gap-2 bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20"
               >
-                {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
-                Finalize {batchId ? 'Update' : 'Creation'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    {batchId ? 'Updating...' : 'Creating & Generating Zoom Meetings...'}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-5 w-5" />
+                    Finalize {batchId ? 'Update' : 'Creation'}
+                  </>
+                )}
               </Button>
             )}
           </div>

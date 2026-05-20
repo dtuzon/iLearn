@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { sendBatchEnrollmentConfirmation, sendBatchScheduleUpdateNotifications, sendBatchCancellationNotifications } from '../../workers/batch-notifications.worker';
+import { createMeeting } from '../../services/zoom.service';
 
 export class BatchesService {
   static async getAll() {
@@ -37,13 +38,25 @@ export class BatchesService {
         },
         learningPathEnrollments: {
           include: { user: { include: { department: true } } }
+        },
+        liveSessions: {
+          select: {
+            id: true,
+            courseModuleId: true,
+            zoomMeetingId: true,
+            zoomPasscode: true,
+            joinUrl: true,
+            scheduledAt: true,
+            topic: true
+          }
         }
       }
     });
   }
 
   static async create(data: any) {
-    return prisma.batch.create({
+    // 1. Persist the batch first — Zoom meeting generation is a side-effect
+    const batch = await prisma.batch.create({
       data: {
         name: data.name,
         startDate: new Date(data.startDate),
@@ -66,6 +79,101 @@ export class BatchesService {
         }
       }
     });
+
+    // 2. Collect all LIVE_SESSION modules from the batch curriculum (non-blocking)
+    BatchesService.generateZoomMeetingsForBatch(batch).catch((err) => {
+      console.error(`[Zoom] Background meeting generation failed for batch ${batch.id}:`, err);
+    });
+
+    // Return the batch immediately — Zoom generation continues in background
+    return { ...batch, zoomSessionsCreated: 0, zoomGenerating: true };
+  }
+
+  /**
+   * Scans all LIVE_SESSION modules in a batch's curriculum and auto-generates
+   * a Zoom meeting for each one. Saves results to BatchLiveSession.
+   * Errors are logged per-module but never throw — the batch is already saved.
+   */
+  private static async generateZoomMeetingsForBatch(batch: { id: string; startDate: Date; courseId: string | null; learningPathId: string | null }) {
+    // Gather all course IDs in this batch
+    let courseIds: string[] = [];
+
+    if (batch.courseId) {
+      courseIds = [batch.courseId];
+    } else if (batch.learningPathId) {
+      const lpCourses = await prisma.learningPathCourse.findMany({
+        where: { learningPathId: batch.learningPathId },
+        select: { courseId: true }
+      });
+      courseIds = lpCourses.map((lpc) => lpc.courseId);
+    }
+
+    if (courseIds.length === 0) {
+      console.log(`[Zoom] No courses found for batch ${batch.id} — skipping meeting generation.`);
+      return;
+    }
+
+    // Find all LIVE_SESSION modules within those courses
+    const liveModules = await prisma.courseModule.findMany({
+      where: {
+        courseId: { in: courseIds },
+        type: 'LIVE_SESSION'
+      },
+      include: { course: { select: { title: true } } }
+    });
+
+    if (liveModules.length === 0) {
+      console.log(`[Zoom] No LIVE_SESSION modules found for batch ${batch.id}.`);
+      return;
+    }
+
+    console.log(`[Zoom] Generating ${liveModules.length} Zoom meeting(s) for batch ${batch.id}...`);
+
+    // Generate meetings concurrently; allSettled so one failure doesn't abort others
+    const results = await Promise.allSettled(
+      liveModules.map(async (mod) => {
+        // Use module's scheduledAt if set; otherwise fall back to batch start date
+        const meetingStart = mod.scheduledAt ? new Date(mod.scheduledAt) : new Date(batch.startDate);
+        const topic = `[iLearn] ${mod.course.title} — ${mod.title}`;
+
+        try {
+          const meeting = await createMeeting(topic, meetingStart, 480);
+
+          // Upsert: if a meeting already exists for this batch+module, update it
+          await prisma.batchLiveSession.upsert({
+            where: { batchId_courseModuleId: { batchId: batch.id, courseModuleId: mod.id } },
+            update: {
+              zoomMeetingId: String(meeting.id),
+              zoomPasscode: meeting.password,
+              joinUrl: meeting.join_url,
+              startUrl: meeting.start_url,
+              scheduledAt: meetingStart,
+              topic
+            },
+            create: {
+              batchId: batch.id,
+              courseModuleId: mod.id,
+              zoomMeetingId: String(meeting.id),
+              zoomPasscode: meeting.password,
+              joinUrl: meeting.join_url,
+              startUrl: meeting.start_url,
+              scheduledAt: meetingStart,
+              topic
+            }
+          });
+
+          console.log(`[Zoom] ✓ Meeting created for module "${mod.title}" — ID: ${meeting.id}`);
+          return { moduleId: mod.id, meetingId: meeting.id };
+        } catch (err: any) {
+          console.error(`[Zoom] ✗ Failed to create meeting for module "${mod.title}":`, err.message);
+          throw err;
+        }
+      })
+    );
+
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    console.log(`[Zoom] Batch ${batch.id} complete — ${succeeded} created, ${failed} failed.`);
   }
 
   static async update(id: string, data: any) {

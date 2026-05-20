@@ -388,6 +388,7 @@ model CourseModule {
   moduleProgress ModuleProgress[]
   onlineEvaluations OnlineEvaluationResult[]
   activitySubmissions ActivitySubmission[]
+  batchLiveSessions   BatchLiveSession[]
 
   @@map("course_modules")
 }
@@ -751,6 +752,7 @@ model Batch {
   activityCheckers        BatchChecker[] 
   activitySubmissions     ActivitySubmission[]
   essaySubmissions        EssaySubmission[]
+  liveSessions            BatchLiveSession[]
 
   // Pre-training notification tracking (prevents duplicate sends)
   notify30DaySentAt DateTime?
@@ -788,4 +790,26 @@ model BatchChecker {
 
   @@unique([batchId, userId])
   @@map("batch_checkers")
+}
+
+// Stores the auto-generated Zoom meeting credentials for each LIVE_SESSION
+// module within a specific batch. Created automatically on batch finalization.
+model BatchLiveSession {
+  id             String   @id @default(cuid())
+  batchId        String
+  courseModuleId String   // The blueprint CourseModule that spawned this meeting
+  zoomMeetingId  String   @unique
+  zoomPasscode   String
+  joinUrl        String?
+  startUrl       String?  // Host start URL — for admin/facilitator use only
+  scheduledAt    DateTime?
+  topic          String
+
+  batch        Batch        @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  courseModule CourseModule @relation(fields: [courseModuleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([batchId, courseModuleId]) // One Zoom meeting per LIVE_SESSION module per batch
+  @@map("batch_live_sessions")
 }

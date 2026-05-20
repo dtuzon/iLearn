@@ -374,10 +374,10 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                     </CardContent>
                   </Card>
 
-                  <Card className="rounded-3xl border-none shadow-lg shadow-amber-500/5 bg-gradient-to-br from-amber-500/10 to-transparent">
+                  <Card className="rounded-3xl border-none shadow-lg" style={{ boxShadow: '0 10px 15px -3px rgba(217, 167, 42, 0.05)', backgroundImage: 'linear-gradient(to bottom right, rgba(217, 167, 42, 0.1), transparent)' }}>
                     <CardContent className="p-6 flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-amber-500/20 flex items-center justify-center"><Trophy className="h-6 w-6 text-amber-500" /></div>
-                      <div><p className="text-xs font-black uppercase tracking-widest text-amber-600/70 mb-1">Avg Score</p><p className="text-3xl font-black text-amber-600">{data.averageScore}</p></div>
+                      <div className="h-12 w-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(217, 167, 42, 0.2)' }}><Trophy className="h-6 w-6" style={{ color: '#D9A72A' }} /></div>
+                      <div><p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: 'rgba(217, 167, 42, 0.8)' }}>Avg Score</p><p className="text-3xl font-black" style={{ color: '#D9A72A' }}>{data.averageScore}%</p></div>
                     </CardContent>
                   </Card>
 
@@ -488,7 +488,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                         <TableHead className="w-10"></TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs">Learner Name</TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs text-center text-blue-600">Pre Quiz Avg</TableHead>
-                        <TableHead className="font-bold tracking-widest uppercase text-xs text-center text-amber-600">Post Quiz Avg</TableHead>
+                        <TableHead className="font-bold tracking-widest uppercase text-xs text-center" style={{ color: '#D9A72A' }}>Post Quiz Avg</TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs text-center text-emerald-600">Activity Avg</TableHead>
                         <TableHead className="font-bold tracking-widest uppercase text-xs text-right">Status</TableHead>
                       </TableRow>
@@ -512,7 +512,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                               </div>
                             </TableCell>
                             <TableCell className="text-center font-black text-blue-600 text-sm">{l.preQuizAvg}%</TableCell>
-                            <TableCell className="text-center font-black text-amber-600 text-sm">{l.postQuizAvg}%</TableCell>
+                            <TableCell className="text-center font-black text-sm" style={{ color: '#D9A72A' }}>{l.postQuizAvg}%</TableCell>
                             <TableCell className="text-center font-black text-emerald-600 text-sm">{l.activityScoreAvg}%</TableCell>
                             <TableCell className="text-right">{getStatusBadge(l.status)}</TableCell>
                           </TableRow>
@@ -526,7 +526,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                               <TableCell className="py-2 text-center font-bold text-blue-600/80 text-xs">
                                 {c.preQuizScore}%
                               </TableCell>
-                              <TableCell className="py-2 text-center font-bold text-amber-600/80 text-xs">
+                              <TableCell className="py-2 text-center font-bold text-xs" style={{ color: '#D9A72A' }}>
                                 {c.postQuizScore}%
                               </TableCell>
                               <TableCell className="py-2 text-center font-bold text-emerald-600/80 text-xs">
@@ -535,10 +535,11 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                               <TableCell className="py-2 text-right pr-4">
                                 <Badge className={cn(
                                   "font-black uppercase text-[8px] tracking-tighter text-white py-0.5 px-1.5",
-                                  c.status === 'Passed' ? "bg-emerald-500 hover:bg-emerald-600 shadow-sm shadow-emerald-500/10" :
-                                  c.status === 'Failed' ? "bg-rose-500 hover:bg-rose-600 shadow-sm shadow-rose-500/10" :
-                                  "bg-amber-500 hover:bg-amber-600 shadow-sm shadow-amber-500/10" // Incomplete
-                                )}>
+                                  c.status === 'Passed' ? "bg-emerald-500 hover:bg-emerald-600 shadow-sm shadow-emerald-500/10 text-white" :
+                                  c.status === 'Failed' ? "bg-rose-500 hover:bg-rose-600 shadow-sm shadow-rose-500/10 text-white" :
+                                  "text-white" // Incomplete
+                                )}
+                                style={c.status !== 'Passed' && c.status !== 'Failed' ? { backgroundColor: '#D9A72A', boxShadow: '0 1px 2px 0 rgba(217, 167, 42, 0.1)' } : undefined}>
                                   {c.status}
                                 </Badge>
                               </TableCell>
@@ -632,10 +633,11 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                               <TableCell className="py-2 text-right pr-4">
                                 <Badge className={cn(
                                   "font-black uppercase text-[8px] tracking-tighter text-white py-0.5 px-1.5",
-                                  s.result === 'Passed' ? "bg-emerald-500 hover:bg-emerald-600 shadow-sm shadow-emerald-500/10" :
-                                  s.result === 'Failed' ? "bg-rose-500 hover:bg-rose-600 shadow-sm shadow-rose-500/10" :
-                                  "bg-amber-500 hover:bg-amber-600 shadow-sm shadow-amber-500/10" // Incomplete
-                                )}>
+                                  s.result === 'Passed' ? "bg-emerald-500 hover:bg-emerald-600 shadow-sm shadow-emerald-500/10 text-white" :
+                                  s.result === 'Failed' ? "bg-rose-500 hover:bg-rose-600 shadow-sm shadow-rose-500/10 text-white" :
+                                  "text-white" // Incomplete
+                                )}
+                                style={s.result !== 'Passed' && s.result !== 'Failed' ? { backgroundColor: '#D9A72A', boxShadow: '0 1px 2px 0 rgba(217, 167, 42, 0.1)' } : undefined}>
                                   {s.result || 'Incomplete'}
                                 </Badge>
                               </TableCell>
@@ -677,36 +679,37 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-3 gap-4 text-xs font-semibold text-slate-600">
               <div>
                 <span className="text-slate-400 uppercase tracking-wider block font-bold text-[10px]">Department Filter</span>
-                <span className="text-amber-900 font-bold">{activeDeptName}</span>
+                <span className="font-bold" style={{ color: '#D9A72A' }}>{activeDeptName}</span>
               </div>
               <div>
                 <span className="text-slate-400 uppercase tracking-wider block font-bold text-[10px]">Role Filter</span>
-                <span className="text-amber-900 font-bold capitalize">{activeRole}</span>
+                <span className="font-bold capitalize" style={{ color: '#D9A72A' }}>{activeRole}</span>
               </div>
               <div>
                 <span className="text-slate-400 uppercase tracking-wider block font-bold text-[10px]">Status Filter</span>
-                <span className="text-amber-900 font-bold capitalize">{activeStatus}</span>
+                <span className="font-bold capitalize" style={{ color: '#D9A72A' }}>{activeStatus}</span>
               </div>
             </div>
 
             {/* Batch Schedule Details Box */}
             {data && (
-              <div className="bg-amber-50/30 border border-amber-100 rounded-xl p-4 grid grid-cols-3 gap-4 text-xs font-semibold text-slate-600">
+              <div className="rounded-xl p-4 grid grid-cols-3 gap-4 text-xs font-semibold text-slate-600 border" style={{ backgroundColor: 'rgba(217, 167, 42, 0.03)', borderColor: 'rgba(217, 167, 42, 0.15)' }}>
                 <div>
-                  <span className="text-amber-400 uppercase tracking-wider block font-bold text-[10px]">Start Date</span>
-                  <span className="text-amber-950 font-bold">{format(new Date(data.startDate), 'MMMM dd, yyyy')}</span>
+                  <span className="uppercase tracking-wider block font-bold text-[10px]" style={{ color: '#D9A72A' }}>Start Date</span>
+                  <span className="text-slate-800 font-bold">{format(new Date(data.startDate), 'MMMM dd, yyyy')}</span>
                 </div>
                 <div>
-                  <span className="text-amber-400 uppercase tracking-wider block font-bold text-[10px]">End Date</span>
-                  <span className="text-amber-950 font-bold">{format(new Date(data.endDate), 'MMMM dd, yyyy')}</span>
+                  <span className="uppercase tracking-wider block font-bold text-[10px]" style={{ color: '#D9A72A' }}>End Date</span>
+                  <span className="text-slate-800 font-bold">{format(new Date(data.endDate), 'MMMM dd, yyyy')}</span>
                 </div>
                 <div>
-                  <span className="text-amber-400 uppercase tracking-wider block font-bold text-[10px]">Batch Status</span>
+                  <span className="uppercase tracking-wider block font-bold text-[10px]" style={{ color: '#D9A72A' }}>Batch Status</span>
                   <span className={cn(
                     "font-black uppercase text-[10px] tracking-wider",
                     data.status === 'COMPLETED' ? 'text-emerald-600' :
-                    data.status === 'ACTIVE' ? 'text-blue-600' : 'text-amber-600'
-                  )}>
+                    data.status === 'ACTIVE' ? 'text-blue-600' : ''
+                  )}
+                  style={data.status !== 'COMPLETED' && data.status !== 'ACTIVE' ? { color: '#D9A72A' } : undefined}>
                     {data.status.replace('_', ' ')}
                   </span>
                 </div>
@@ -719,17 +722,17 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                 1. Batch Overview & KPIs
               </h2>
               <div className="grid grid-cols-4 gap-4">
-                <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4 text-center">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-amber-500 block mb-1">Total Enrolled</span>
-                  <span className="text-3xl font-black text-amber-900">{data?.totalLearners || 0}</span>
+                <div className="rounded-2xl p-4 text-center border" style={{ backgroundColor: 'rgba(217, 167, 42, 0.05)', borderColor: 'rgba(217, 167, 42, 0.15)' }}>
+                  <span className="text-[10px] uppercase font-bold tracking-wider block mb-1" style={{ color: '#D9A72A' }}>Total Enrolled</span>
+                  <span className="text-3xl font-black text-slate-800" style={{ color: '#D9A72A' }}>{data?.totalLearners || 0}</span>
                 </div>
                 <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 text-center">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400 block mb-1">Completion Rate</span>
                   <span className="text-3xl font-black text-emerald-900">{data?.completionRate || 0}%</span>
                 </div>
-                <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4 text-center">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400 block mb-1">Average Score</span>
-                  <span className="text-3xl font-black text-amber-900">{data?.averageScore || 0}%</span>
+                <div className="rounded-2xl p-4 text-center border" style={{ backgroundColor: 'rgba(217, 167, 42, 0.05)', borderColor: 'rgba(217, 167, 42, 0.15)' }}>
+                  <span className="text-[10px] uppercase font-bold tracking-wider block mb-1" style={{ color: '#D9A72A' }}>Average Score</span>
+                  <span className="text-3xl font-black" style={{ color: '#D9A72A' }}>{data?.averageScore || 0}%</span>
                 </div>
                 <div className="bg-sky-50/50 border border-sky-100 rounded-2xl p-4 text-center">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-sky-400 block mb-1">Knowledge Gain</span>
@@ -782,14 +785,14 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                 <h2 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider flex justify-between">
                   <span>2. Learner Breakdown</span>
                   {learnerChunks.length > 1 && (
-                    <span className="text-xs font-black text-amber-600 uppercase tracking-widest">
+                    <span className="text-xs font-black uppercase tracking-widest" style={{ color: '#D9A72A' }}>
                       Part {chunkIdx + 1} of {learnerChunks.length}
                     </span>
                   )}
                 </h2>
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-amber-600 text-white font-bold uppercase tracking-wider">
+                    <tr className="text-white font-bold uppercase tracking-wider" style={{ backgroundColor: '#D9A72A' }}>
                       <th className="p-2 rounded-l-lg">Name</th>
                       <th className="p-2">Department</th>
                       <th className="p-2">Role</th>
@@ -813,7 +816,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                               {l.status.replace('_', ' ')}
                             </span>
                           </td>
-                          <td className="p-2 text-right font-black text-amber-600">{l.averageScore}%</td>
+                          <td className="p-2 text-right font-black" style={{ color: '#D9A72A' }}>{l.averageScore}%</td>
                         </tr>
                       ))
                     ) : (
@@ -855,14 +858,14 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                 <h2 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider flex justify-between">
                   <span>3. Content Insights & Metrics</span>
                   {courseChunks.length > 1 && (
-                    <span className="text-xs font-black text-amber-600 uppercase tracking-widest">
+                    <span className="text-xs font-black uppercase tracking-widest" style={{ color: '#D9A72A' }}>
                       Part {chunkIdx + 1} of {courseChunks.length}
                     </span>
                   )}
                 </h2>
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-amber-600 text-white font-bold uppercase tracking-wider">
+                    <tr className="text-white font-bold uppercase tracking-wider" style={{ backgroundColor: '#D9A72A' }}>
                       <th className="p-2 rounded-l-lg">Course Title</th>
                       <th className="p-2 text-center">Completion Rate</th>
                       <th className="p-2 text-center">Avg Quiz Score</th>
@@ -883,7 +886,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                           <td className="p-2 text-center font-bold text-slate-700">{c.completionRate}%</td>
                           <td className="p-2 text-center text-slate-600">{c.avgQuizScore}%</td>
                           <td className="p-2 text-center text-slate-600">{c.avgActivityScore}%</td>
-                          <td className="p-2 text-right font-black text-amber-600">{c.averageScore}%</td>
+                          <td className="p-2 text-right font-black" style={{ color: '#D9A72A' }}>{c.averageScore}%</td>
                         </tr>
                       ))
                     ) : (
