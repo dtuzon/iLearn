@@ -25,16 +25,40 @@ export default defineConfig({
               "connect-src 'self' https://*.zoom.us wss://*.zoom.us https://*.zoomdev.us wss://*.zoomdev.us",
               "worker-src 'self' blob:",
               "frame-src 'self' https://*.zoom.us",
-            ].join('; ')
-          );
-          // Required for SharedArrayBuffer (used by Zoom audio processing)
-          res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-          res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-          next();
-        });
+              ].join('; ')
+            );
+            // Required for SharedArrayBuffer (used by Zoom audio processing)
+            res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+            res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+            next();
+          });
+        },
       },
-    },
-  ],
+      // Rewrite legacy React internals to React 19 equivalents during file serving
+      {
+        name: 'zoom-react19-compat',
+        transform(code, id) {
+          if (code.includes('__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED')) {
+            return {
+              code: code.replace(/__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED/g, '__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE'),
+              map: null
+            };
+          }
+        }
+      },
+      {
+        name: 'react-dom-compat-alias',
+        enforce: 'pre',
+        resolveId(source, importer, options) {
+          if (source === 'react-dom') {
+            if (importer && (importer.replace(/\\/g, '/').includes('node_modules/react-dom') || importer.includes('react-dom-compat'))) {
+              return this.resolve(source, importer, Object.assign({ skipSelf: true }, options));
+            }
+            return path.resolve(__dirname, "./src/react-dom-compat.ts");
+          }
+        }
+      }
+    ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -54,8 +78,24 @@ export default defineConfig({
       },
     },
   },
-  // Allow WASM imports from @zoom/meetingsdk
+  // Ensure @zoom/meetingsdk is pre-bundled by Vite to resolve CommonJS require/module issues
   optimizeDeps: {
-    exclude: ['@zoom/meetingsdk'],
+    include: ['@zoom/meetingsdk'],
+    rolldownOptions: {
+      plugins: [
+        {
+          name: 'react-dom-compat-rolldown',
+          resolveId(source, importer, options) {
+            if (source === 'react-dom') {
+              if (importer && (importer.replace(/\\/g, '/').includes('node_modules/react-dom') || importer.includes('react-dom-compat'))) {
+                return null; // Fallback to default resolution
+              }
+              return path.resolve(__dirname, './src/react-dom-compat.ts');
+            }
+            return null;
+          }
+        }
+      ]
+    }
   },
-})
+});

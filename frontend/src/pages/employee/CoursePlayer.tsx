@@ -653,6 +653,7 @@ export const CoursePlayer: React.FC = () => {
               <LiveSessionPlayer 
                 module={displayedModule}
                 onComplete={handleCompleteModule}
+                batchId={enrollment?.batchId}
               />
             )}
 
