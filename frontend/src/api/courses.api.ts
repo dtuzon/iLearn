@@ -57,7 +57,7 @@ export interface CourseModule {
   scheduledAt?: string;
   attendanceCode?: string;
   attachments?: CourseAttachment[];
-
+  quizQuestions?: any[];
 }
 
 

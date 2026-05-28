@@ -9,7 +9,6 @@ import {
   Calendar,
   Users,
   MoreVertical,
-  Trash2,
   Edit2,
   BookOpen,
   Clock,
@@ -115,17 +114,6 @@ export const ManageBatches: React.FC = () => {
   useEffect(() => {
     fetchBatches();
   }, []);
-
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this batch? All enrollment links will be removed.')) return;
-    try {
-      await batchesApi.delete(id);
-      toast.success('Batch deleted successfully');
-      fetchBatches();
-    } catch (error) {
-      toast.error('Failed to delete batch');
-    }
-  };
 
   const openCancelDialog = (batch: Batch) => {
     setCancellingBatch(batch);

@@ -10,7 +10,6 @@ import { Textarea } from '../../components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
 import { 
   CheckCircle2, 
-  XCircle, 
   Clock, 
   MessageSquare,
   FileText,

@@ -35,15 +35,42 @@ export default defineConfig({
         },
       },
       // Rewrite legacy React internals to React 19 equivalents during file serving
+      // Rewrite legacy React internals to React 19 equivalents during file serving
       {
         name: 'zoom-react19-compat',
         transform(code, id) {
-          if (code.includes('__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED')) {
-            return {
-              code: code.replace(/__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED/g, '__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE'),
-              map: null
-            };
+          if (
+            id.includes('@zoom/meetingsdk') || 
+            id.includes('zoomus-websdk') || 
+            id.includes('@zoom_meetingsdk')
+          ) {
+            let changed = false;
+            let newCode = code;
+
+            if (newCode.includes('__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED')) {
+              newCode = newCode.replace(
+                /__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED/g,
+                '__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE'
+              );
+              changed = true;
+            }
+
+            if (newCode.includes('react.element')) {
+              newCode = newCode.replace(
+                /['"]react\.element['"]/g,
+                '"react.transitional.element"'
+              );
+              changed = true;
+            }
+
+            if (changed) {
+              return {
+                code: newCode,
+                map: null
+              };
+            }
           }
+          return null;
         }
       },
       {
@@ -84,8 +111,45 @@ export default defineConfig({
     rolldownOptions: {
       plugins: [
         {
+          name: 'zoom-react19-compat-rolldown',
+          transform(code, id) {
+            if (
+              id.includes('@zoom/meetingsdk') || 
+              id.includes('zoomus-websdk') || 
+              id.includes('@zoom_meetingsdk')
+            ) {
+              let changed = false;
+              let newCode = code;
+
+              if (newCode.includes('__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED')) {
+                newCode = newCode.replace(
+                  /__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED/g,
+                  '__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE'
+                );
+                changed = true;
+              }
+
+              if (newCode.includes('react.element')) {
+                newCode = newCode.replace(
+                  /['"]react\.element['"]/g,
+                  '"react.transitional.element"'
+                );
+                changed = true;
+              }
+
+              if (changed) {
+                return {
+                  code: newCode,
+                  map: null
+                };
+              }
+            }
+            return null;
+          }
+        },
+        {
           name: 'react-dom-compat-rolldown',
-          resolveId(source, importer, options) {
+          resolveId(source, importer) {
             if (source === 'react-dom') {
               if (importer && (importer.replace(/\\/g, '/').includes('node_modules/react-dom') || importer.includes('react-dom-compat'))) {
                 return null; // Fallback to default resolution

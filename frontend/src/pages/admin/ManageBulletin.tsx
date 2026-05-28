@@ -14,7 +14,7 @@ import { announcementsApi } from '../../api/announcements.api';
 import type { Announcement } from '../../api/announcements.api';
 
 import { toast } from 'sonner';
-import { Plus, Search, Trash2, Edit, AlertCircle, Calendar, Megaphone, Newspaper, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Calendar, Megaphone, Newspaper, Loader2 } from 'lucide-react';
 
 export const ManageBulletin: React.FC = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
