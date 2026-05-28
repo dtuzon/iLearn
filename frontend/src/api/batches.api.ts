@@ -15,6 +15,16 @@ export interface Batch {
   enrollments?: any[];
   learningPathEnrollments?: any[];
   requires180DayEval?: boolean;
+  liveSessions?: {
+    id: string;
+    courseModuleId: string;
+    zoomMeetingId: string;
+    zoomPasscode: string;
+    joinUrl: string;
+    startUrl?: string;
+    scheduledAt: string;
+    topic: string;
+  }[];
   _count?: {
     enrollments: number;
     learningPathEnrollments: number;

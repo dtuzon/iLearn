@@ -46,6 +46,7 @@ export class BatchesService {
             zoomMeetingId: true,
             zoomPasscode: true,
             joinUrl: true,
+            startUrl: true,
             scheduledAt: true,
             topic: true
           }

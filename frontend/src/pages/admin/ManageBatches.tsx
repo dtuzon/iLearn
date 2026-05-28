@@ -21,7 +21,9 @@ import {
   ClipboardList,
   XCircle,
   AlertTriangle,
-  TrendingUp
+  TrendingUp,
+  Video,
+  ExternalLink
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -449,6 +451,66 @@ export const ManageBatches: React.FC = () => {
                       )}
                     </div>
                   </div>
+
+                  {/* ZOOM MEETINGS */}
+                  {viewingBatch.liveSessions && viewingBatch.liveSessions.length > 0 && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <h3 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-3">
+                        <Video className="h-6 w-6 text-primary" />
+                        Live Zoom Sessions
+                      </h3>
+                      <div className="grid grid-cols-1 gap-4">
+                        {viewingBatch.liveSessions.map((session) => (
+                          <div key={session.id} className="p-6 rounded-[2rem] bg-muted/40 border border-primary/5 space-y-4">
+                            <div className="flex justify-between items-start">
+                              <div className="space-y-1">
+                                <p className="font-bold text-base leading-snug">{session.topic}</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-primary/60 flex items-center gap-1.5">
+                                  <Calendar className="h-3.5 w-3.5" />
+                                  {session.scheduledAt ? format(new Date(session.scheduledAt), 'MMMM dd, yyyy @ h:mm a') : 'TBD'}
+                                </p>
+                              </div>
+                              <Badge className="bg-orange-500 hover:bg-orange-600 border-none px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase">
+                                Zoom Active
+                              </Badge>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 text-xs font-medium bg-background p-4 rounded-2xl border">
+                              <div>
+                                <span className="text-[9px] font-black uppercase text-muted-foreground block mb-0.5">Meeting ID</span>
+                                <span className="font-mono text-sm font-bold select-all">{session.zoomMeetingId}</span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] font-black uppercase text-muted-foreground block mb-0.5">Passcode</span>
+                                <span className="font-mono text-sm font-bold select-all">{session.zoomPasscode}</span>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                              {session.startUrl && (
+                                <Button
+                                  onClick={() => window.open(session.startUrl, '_blank')}
+                                  className="flex-1 h-12 rounded-xl font-black italic uppercase tracking-wider bg-primary text-primary-foreground text-xs shadow-md shadow-primary/10 gap-2"
+                                >
+                                  <Video className="h-4 w-4" /> Start Meeting (Host)
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                onClick={() => window.open(session.joinUrl, '_blank')}
+                                className={cn(
+                                  "h-12 rounded-xl font-bold text-xs border-primary/10",
+                                  session.startUrl ? "flex-1" : "w-full"
+                                )}
+                              >
+                                <ExternalLink className="h-4 w-4 mr-2" /> Join Meeting (Attendee)
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* LEARNER ROSTER */}
                   <div className="space-y-6">
