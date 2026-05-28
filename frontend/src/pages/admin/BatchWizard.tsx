@@ -159,13 +159,18 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
           if (batch.learningPathId) {
              const lp = pathData.find(p => p.id === batch.learningPathId);
              if (lp && lp.pathCourses) {
-               // Restore sorted order if available
-               const scheduledCourses = [...lp.pathCourses].sort((a, b) => {
-                 const orderA = batch.courseSchedules?.find((s: any) => s.courseId === a.courseId)?.order ?? 999;
-                 const orderB = batch.courseSchedules?.find((s: any) => s.courseId === b.courseId)?.order ?? 999;
-                 return orderA - orderB;
-               });
-               setSortedCourses(scheduledCourses);
+                // Restore sorted order if available
+                const scheduledCourses = [...lp.pathCourses].sort((a, b) => {
+                  const orderA = batch.courseSchedules?.find((s: any) => s.courseId === a.courseId)?.order ?? 999;
+                  const orderB = batch.courseSchedules?.find((s: any) => s.courseId === b.courseId)?.order ?? 999;
+                  return orderA - orderB;
+                });
+                setSortedCourses(scheduledCourses);
+             }
+          } else if (batch.courseId) {
+             const c = courseData.find((x: any) => x.id === batch.courseId);
+             if (c) {
+               setSortedCourses([{ id: c.id, courseId: c.id, course: c, order: 0 }]);
              }
           }
         }
@@ -196,15 +201,15 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
         courseId: formData.contentType === 'COURSE' && formData.contentId ? formData.contentId : null,
         learningPathId: formData.contentType === 'PATH' && formData.contentId ? formData.contentId : null,
         // Send the full ordered array
-        courseSchedules: formData.contentType === 'PATH' ? sortedCourses.map((c: any, idx: number) => {
-          const existing = formData.courseSchedules.find(s => s.courseId === c.courseId);
+        courseSchedules: sortedCourses.map((c: any, idx: number) => {
+          const existing = formData.courseSchedules.find(s => s.courseId === (c.courseId || c.id));
           return {
-            courseId: c.courseId,
+            courseId: c.courseId || c.id,
             startDate: existing?.startDate || null,
             endDate: existing?.endDate || null,
             order: idx
           };
-        }) : formData.courseSchedules
+        })
       };
 
       if (batchId) {
@@ -293,7 +298,7 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
             <DialogTitle className="text-3xl font-black italic uppercase tracking-tighter mb-2 flex items-center gap-3">
               {batchId ? 'Edit Cohort' : 'Configure New Batch'}
               <Badge variant="outline" className="text-primary-foreground border-primary-foreground/20 font-bold tracking-widest text-[10px]">
-                STEP {step} / {formData.contentType === 'PATH' ? '5' : '4'}
+                STEP {step} / 5
               </Badge>
             </DialogTitle>
             <DialogDescription className="text-primary-foreground/80 font-medium">
@@ -394,14 +399,20 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
                     <Button 
                       variant={formData.contentType === 'COURSE' ? 'default' : 'ghost'}
                       className={cn("flex-1 h-12 rounded-xl gap-2 font-black", formData.contentType === 'COURSE' && "shadow-lg")}
-                      onClick={() => setFormData({ ...formData, contentType: 'COURSE', contentId: '' })}
+                      onClick={() => {
+                        setFormData({ ...formData, contentType: 'COURSE', contentId: '' });
+                        setSortedCourses([]);
+                      }}
                     >
                       <BookOpen className="h-4 w-4" /> Individual Course
                     </Button>
                     <Button 
                       variant={formData.contentType === 'PATH' ? 'default' : 'ghost'}
                       className={cn("flex-1 h-12 rounded-xl gap-2 font-black", formData.contentType === 'PATH' && "shadow-lg")}
-                      onClick={() => setFormData({ ...formData, contentType: 'PATH', contentId: '' })}
+                      onClick={() => {
+                        setFormData({ ...formData, contentType: 'PATH', contentId: '' });
+                        setSortedCourses([]);
+                      }}
                     >
                       <Layers className="h-4 w-4" /> Learning Path
                     </Button>
@@ -416,6 +427,8 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
                             setFormData({ ...formData, contentId: item.id });
                             if (formData.contentType === 'PATH') {
                               setSortedCourses([...(item.pathCourses || [])]);
+                            } else {
+                              setSortedCourses([{ id: item.id, courseId: item.id, course: item, order: 0 }]);
                             }
                           }}
                           className={cn(
@@ -572,13 +585,17 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
               )}
 
               {/* Step 5: Granular Scheduling (Paths Only) */}
-              {step === 5 && formData.contentType === 'PATH' && (
+              {step === 5 && (
                 <div className="space-y-6">
                   <div className="bg-primary/5 p-6 rounded-3xl border border-primary/10">
                     <h3 className="font-black italic uppercase text-primary flex items-center gap-2 mb-1">
                       <Clock className="h-5 w-5" /> Paced Roadmapping
                     </h3>
-                    <p className="text-xs text-muted-foreground font-medium italic">Define custom timelines for each course in this path. Leave blank to follow overall batch dates.</p>
+                    <p className="text-xs text-muted-foreground font-medium italic">
+                      {formData.contentType === 'PATH' 
+                        ? 'Define custom timelines for each course in this path. Leave blank to follow overall batch dates.'
+                        : 'Define custom timelines for this course. Leave blank to follow overall batch dates.'}
+                    </p>
                   </div>
 
 
@@ -618,7 +635,7 @@ export const BatchWizard: React.FC<BatchWizardProps> = ({ batchId, onClose, onSu
           </Button>
 
           <div className="flex gap-3">
-            {((formData.contentType === 'COURSE' && step < 4) || (formData.contentType === 'PATH' && step < 5)) ? (
+            {step < 5 ? (
               <Button onClick={handleNext} className="rounded-xl h-12 px-8 font-black gap-2 shadow-lg shadow-primary/20 group">
                 Continue to Step {step + 1}
                 <ChevronRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />

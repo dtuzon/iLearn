@@ -67,10 +67,11 @@ export class BatchesService {
         courseId: data.courseId,
         learningPathId: data.learningPathId,
         courseSchedules: {
-          create: data.courseSchedules?.map((s: any) => ({
+          create: data.courseSchedules?.map((s: any, idx: number) => ({
             courseId: s.courseId,
             startDate: s.startDate ? new Date(s.startDate) : null,
-            endDate: s.endDate ? new Date(s.endDate) : null
+            endDate: s.endDate ? new Date(s.endDate) : null,
+            order: s.order ?? idx
           }))
         },
         activityCheckers: {
@@ -218,6 +219,47 @@ export class BatchesService {
         });
       }
 
+      // 3.1 Update enrollment due dates for assigned learners
+      if (batch.learningPathId) {
+        await tx.learningPathEnrollment.updateMany({
+          where: { batchId: id },
+          data: { dueDate: batch.endDate }
+        });
+
+        const pathCourses = await tx.learningPathCourse.findMany({
+          where: { learningPathId: batch.learningPathId }
+        });
+
+        const schedules = await tx.batchCourseSchedule.findMany({
+          where: { batchId: id }
+        });
+
+        for (const pc of pathCourses) {
+          const sched = schedules.find(s => s.courseId === pc.courseId);
+          const dueDate = sched?.endDate ?? batch.endDate;
+
+          await tx.enrollment.updateMany({
+            where: {
+              batchId: id,
+              courseId: pc.courseId
+            },
+            data: {
+              dueDate
+            }
+          });
+        }
+      } else if (batch.courseId) {
+        const sched = await tx.batchCourseSchedule.findUnique({
+          where: { batchId_courseId: { batchId: id, courseId: batch.courseId } }
+        });
+        const dueDate = sched?.endDate ?? batch.endDate;
+
+        await tx.enrollment.updateMany({
+          where: { batchId: id, courseId: batch.courseId },
+          data: { dueDate }
+        });
+      }
+
       return batch;
     });
 
@@ -274,13 +316,27 @@ export class BatchesService {
         data: { batchId: null }
       });
 
-      // 2. Re-assign the selected learners
+      // 2. Fetch path courses if it is a learning path batch
+      let pathCourseIds: string[] = [];
+      if (batch.learningPathId) {
+        const pathCourses = await tx.learningPathCourse.findMany({
+          where: { learningPathId: batch.learningPathId }
+        });
+        pathCourseIds = pathCourses.map(pc => pc.courseId);
+      }
+
+      // 3. Re-assign the selected learners
       for (const userId of userIds) {
         if (batch.courseId) {
+          const sched = await tx.batchCourseSchedule.findUnique({
+            where: { batchId_courseId: { batchId, courseId: batch.courseId } }
+          });
+          const dueDate = sched?.endDate ?? batch.endDate;
+
           await tx.enrollment.upsert({
             where: { userId_courseId: { userId, courseId: batch.courseId } },
-            update: { batchId, dueDate: batch.endDate },
-            create: { userId, courseId: batch.courseId, batchId, dueDate: batch.endDate, status: 'NOT_STARTED' }
+            update: { batchId, dueDate },
+            create: { userId, courseId: batch.courseId, batchId, dueDate, status: 'NOT_STARTED' }
           });
         } else if (batch.learningPathId) {
           await tx.learningPathEnrollment.upsert({
@@ -288,6 +344,21 @@ export class BatchesService {
             update: { batchId, dueDate: batch.endDate },
             create: { userId, learningPathId: batch.learningPathId, batchId, dueDate: batch.endDate, status: 'NOT_STARTED' }
           });
+
+          const schedules = await tx.batchCourseSchedule.findMany({
+            where: { batchId }
+          });
+
+          for (const courseId of pathCourseIds) {
+            const sched = schedules.find(s => s.courseId === courseId);
+            const dueDate = sched?.endDate ?? batch.endDate;
+
+            await tx.enrollment.upsert({
+              where: { userId_courseId: { userId, courseId } },
+              update: { batchId, dueDate },
+              create: { userId, courseId, batchId, dueDate, status: 'NOT_STARTED' }
+            });
+          }
         }
       }
     });
