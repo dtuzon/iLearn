@@ -96,7 +96,7 @@ export class BatchesService {
    * a Zoom meeting for each one. Saves results to BatchLiveSession.
    * Errors are logged per-module but never throw — the batch is already saved.
    */
-  private static async generateZoomMeetingsForBatch(batch: { id: string; startDate: Date; courseId: string | null; learningPathId: string | null }) {
+  public static async generateZoomMeetingsForBatch(batch: { id: string; startDate: Date; courseId: string | null; learningPathId: string | null }) {
     // Gather all course IDs in this batch
     let courseIds: string[] = [];
 
@@ -290,6 +290,11 @@ export class BatchesService {
         }
       }
     }
+
+    // 5. Generate/update Zoom meetings for any LIVE_SESSION modules in the updated curriculum (non-blocking)
+    BatchesService.generateZoomMeetingsForBatch(result).catch((err) => {
+      console.error(`[Zoom] Background meeting generation failed for updated batch ${result.id}:`, err);
+    });
 
     return result;
   }

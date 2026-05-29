@@ -327,7 +327,7 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 onClick={handleJoinEmbedded}
-                disabled={['loading-session', 'loading-signature', 'initializing-sdk', 'joined'].includes(zoomState)}
+                disabled={['loading-session', 'loading-signature', 'initializing-sdk', 'joined', 'session-not-found'].includes(zoomState)}
                 className="flex-1 h-16 text-lg font-black uppercase tracking-widest shadow-xl shadow-orange-500/20 bg-orange-600 hover:bg-orange-700 disabled:opacity-60"
               >
                 {['loading-session', 'loading-signature', 'initializing-sdk'].includes(zoomState)
