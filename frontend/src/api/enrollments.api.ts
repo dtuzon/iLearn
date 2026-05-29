@@ -13,6 +13,12 @@ export interface Enrollment {
   user?: {
     activitySubmissions: any[];
   };
+  batch?: {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+  } | null;
 }
 
 

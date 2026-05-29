@@ -8,6 +8,7 @@ import { coursesApi } from '../../api/courses.api';
 import { zoomApi } from '../../api/zoom.api';
 import type { BatchLiveSession } from '../../api/zoom.api';
 import { toast } from 'sonner';
+import { useAuth } from '../../context/AuthContext';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -34,6 +35,8 @@ type ZoomPlayerState =
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, onComplete, batchId }) => {
+  const { user } = useAuth();
+
   // ── Shared state ──────────────────────────────────────────────────────────
   const [passcode, setPasscode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -47,6 +50,7 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
   const zoomClientRef = useRef<any>(null);
 
   const useEmbeddedSdk = !!batchId;
+  const userName = user ? `${user.firstName} ${user.lastName}`.trim() : 'iLearn Learner';
   const localTime = module.scheduledAt ? format(new Date(module.scheduledAt), 'PPPP p') : 'Not Scheduled';
 
   // ── Cleanup on unmount ────────────────────────────────────────────────────
@@ -84,9 +88,9 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
         throw err;
       }
 
-      // Step 2: Fetch SDK Signature
+      // Step 2: Fetch SDK Signature (sdkKey is embedded in the JWT payload by the backend)
       setZoomState('loading-signature');
-      const { signature, sdkKey } = await zoomApi.getSignature(liveSession.zoomMeetingId, 0);
+      const { signature } = await zoomApi.getSignature(liveSession.zoomMeetingId, 0);
 
       // Step 3: Dynamically import Zoom Embedded SDK (keeps it out of the main bundle)
       setZoomState('initializing-sdk');
@@ -121,20 +125,25 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
         }
       });
 
+      // NOTE: sdkKey is intentionally omitted from joinOptions per Zoom SDK v4.0.0+.
+      // The sdkKey/appKey is embedded inside the JWT signature payload instead.
       await client.join({
-        sdkKey,
         signature,
         meetingNumber: liveSession.zoomMeetingId,
         password: liveSession.zoomPasscode,
-        userName: 'iLearn Learner', // In production: use the authenticated user's name
-        userEmail: '', // Optional
+        userName,
+        userEmail: user?.email ?? '',
       });
 
       setZoomState('joined');
 
     } catch (err: any) {
       console.error('[LiveSessionPlayer] Zoom SDK error:', err);
-      const message = err?.response?.data?.message || err?.message || 'Failed to join the Zoom session.';
+      // Zoom SDK errors are non-standard objects with a `type` and `reason` field
+      const zoomReason = err?.reason || err?.type;
+      const message = zoomReason
+        ? `Zoom error: ${zoomReason}`
+        : err?.response?.data?.message || err?.message || 'Failed to join the Zoom session.';
       setZoomError(message);
       setZoomState('error');
       toast.error(message);

@@ -124,9 +124,9 @@ export async function createMeeting(
     settings: {
       host_video: true,
       participant_video: true,
-      join_before_host: false,
-      waiting_room: true,
-      approval_type: 0, // Automatically approve
+      join_before_host: true,   // Allow learners to enter before instructor starts
+      waiting_room: false,       // Disable waiting room — LMS controls access via enrollment
+      approval_type: 0,          // Automatically approve
       registration_type: 1,
       mute_upon_entry: true,
       auto_recording: 'none',

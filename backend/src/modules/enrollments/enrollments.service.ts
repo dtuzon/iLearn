@@ -23,6 +23,14 @@ export class EnrollmentsService {
             lecturer: { select: { firstName: true, lastName: true } },
             _count: { select: { modules: true } }
           }
+        },
+        batch: {
+          select: {
+            id: true,
+            name: true,
+            startDate: true,
+            endDate: true
+          }
         }
       }
     });

@@ -17,14 +17,14 @@ export default defineConfig({
             'Content-Security-Policy',
             [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://*.zoom.us https://*.zoomdev.us",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://*.zoom.us https://zoom.us https://*.zoomdev.us https://zoomdev.us",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com data:",
-              "img-src 'self' data: blob: https:",
-              "media-src 'self' blob:",
-              "connect-src 'self' https://*.zoom.us wss://*.zoom.us https://*.zoomdev.us wss://*.zoomdev.us",
+              "img-src 'self' data: blob: https: https://*.zoom.us https://zoom.us",
+              "media-src 'self' blob: https:",
+              "connect-src 'self' https://*.zoom.us https://zoom.us wss://*.zoom.us wss://zoom.us https://*.zoomdev.us https://zoomdev.us wss://*.zoomdev.us wss://zoomdev.us https://*.cloudfront.net",
               "worker-src 'self' blob:",
-              "frame-src 'self' https://*.zoom.us",
+              "frame-src 'self' https://*.zoom.us https://zoom.us",
               ].join('; ')
             );
             // Required for SharedArrayBuffer (used by Zoom audio processing)

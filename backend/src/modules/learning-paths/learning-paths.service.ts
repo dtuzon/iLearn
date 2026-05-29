@@ -174,6 +174,14 @@ export class LearningPathsService {
               where: { userId }
             }
           }
+        },
+        batch: {
+          select: {
+            id: true,
+            name: true,
+            startDate: true,
+            endDate: true
+          }
         }
       }
     });

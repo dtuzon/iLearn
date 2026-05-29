@@ -133,9 +133,16 @@ export const MyLearning: React.FC = () => {
                     <div className="h-1.5 w-full bg-primary/10 group-hover:bg-primary transition-colors" />
                     <CardHeader>
                       <div className="flex justify-between items-start mb-1">
-                        <Badge variant="secondary" className="bg-primary/5 text-primary border-none text-[10px] font-bold">
-                          {path.pathCourses.length} COURSES
-                        </Badge>
+                        <div className="flex flex-wrap gap-1.5 items-center">
+                          <Badge variant="secondary" className="bg-primary/5 text-primary border-none text-[10px] font-bold">
+                            {path.pathCourses.length} COURSES
+                          </Badge>
+                          {enrollment.batch && (
+                            <Badge variant="outline" className="text-primary border-primary/30 bg-primary/5 text-[10px] font-semibold uppercase tracking-tight">
+                              Batch: {enrollment.batch.name}
+                            </Badge>
+                          )}
+                        </div>
                         <div className="flex flex-col items-end gap-2">
                           {enrollment.status === 'COMPLETED' ? (
                             <CheckCircle2 className="h-5 w-5 text-success" />
@@ -237,6 +244,13 @@ export const MyLearning: React.FC = () => {
                     </div>
 
                     <CardHeader>
+                      {enrollment.batch && (
+                        <div className="mb-2">
+                          <Badge variant="outline" className="text-purple-500 border-purple-500/30 bg-purple-500/5 text-[10px] font-semibold uppercase tracking-tight">
+                            Batch: {enrollment.batch.name}
+                          </Badge>
+                        </div>
+                      )}
                       <CardTitle className="line-clamp-2 leading-tight group-hover:text-purple-500 transition-colors min-h-[3rem]">
                         {enrollment.course.title}
                       </CardTitle>
