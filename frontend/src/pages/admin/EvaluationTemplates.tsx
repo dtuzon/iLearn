@@ -247,8 +247,8 @@ export const EvaluationTemplates: React.FC = () => {
       <div className="space-y-8 max-w-5xl mx-auto">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Create Global Template</h1>
-            <p className="text-muted-foreground mt-1">Design a unified evaluation framework for the organization.</p>
+            <h1 className="text-3xl font-extrabold tracking-tight text-primary">Create Global Template</h1>
+            <p className="text-muted-foreground text-lg mt-1">Design a unified evaluation framework for the organization.</p>
           </div>
           <Button variant="ghost" onClick={() => { setIsCreating(false); resetForm(); }}>Cancel</Button>
         </div>
@@ -539,8 +539,8 @@ export const EvaluationTemplates: React.FC = () => {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Global Evaluation Templates</h1>
-          <p className="text-muted-foreground mt-1">Standardized measurement frameworks for enterprise performance.</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-primary">Global Evaluation Templates</h1>
+          <p className="text-muted-foreground text-lg mt-1">Standardized measurement frameworks for enterprise performance.</p>
         </div>
         <Button onClick={() => setIsCreating(true)} className="gap-2 h-11 px-6 shadow-lg shadow-primary/20">
           <Plus className="h-5 w-5" /> Create Template

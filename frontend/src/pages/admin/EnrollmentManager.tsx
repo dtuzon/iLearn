@@ -202,11 +202,11 @@ export const EnrollmentManager: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-4xl font-black tracking-tighter italic uppercase flex items-center gap-3">
-            <Rocket className="h-10 w-10 text-primary" />
+          <h1 className="text-3xl font-extrabold tracking-tight text-primary flex items-center gap-3">
+            <Rocket className="h-8 w-8" />
             Enrollment Manager
           </h1>
-          <p className="text-muted-foreground text-lg font-medium">Enterprise scale course deployment and audience orchestration.</p>
+          <p className="text-muted-foreground text-lg mt-1">Enterprise scale course deployment and audience orchestration.</p>
         </div>
         <div className="flex items-center gap-4 bg-muted/30 p-2 rounded-2xl border border-border/50">
           <div className="px-4 py-2 text-center">

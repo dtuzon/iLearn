@@ -85,11 +85,11 @@ export const ManageBulletin: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-4xl font-black tracking-tight italic uppercase flex items-center gap-3">
-          <Newspaper className="h-10 w-10 text-primary" />
+        <h1 className="text-3xl font-extrabold tracking-tight text-primary flex items-center gap-3">
+          <Newspaper className="h-8 w-8" />
           Bulletin Management
         </h1>
-        <p className="text-muted-foreground text-lg">Broadcast important updates and motivational content to the entire organization.</p>
+        <p className="text-muted-foreground text-lg mt-1">Broadcast important updates and motivational content to the entire organization.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

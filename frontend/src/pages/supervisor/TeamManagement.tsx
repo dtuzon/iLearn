@@ -112,7 +112,7 @@ export const TeamManagement: React.FC = () => {
           <Users className="h-8 w-8" />
           Team Management
         </h1>
-        <p className="text-muted-foreground text-lg italic">Monitor progress and assign learning journeys to your direct reports.</p>
+        <p className="text-muted-foreground text-lg mt-1">Monitor progress and assign learning journeys to your direct reports.</p>
       </div>
 
       <div className="border rounded-2xl bg-card overflow-hidden shadow-xl bg-background/50 backdrop-blur-sm">

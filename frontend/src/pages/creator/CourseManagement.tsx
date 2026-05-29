@@ -244,7 +244,7 @@ export const CourseManagement: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="space-y-1">
           <h1 className="text-3xl font-extrabold tracking-tight text-primary">Course Studio</h1>
-          <p className="text-muted-foreground text-lg italic">Design, build, and deploy premium corporate learning experiences.</p>
+          <p className="text-muted-foreground text-lg mt-1">Design, build, and deploy premium corporate learning experiences.</p>
         </div>
 
         <div className="flex items-center gap-4">
@@ -722,8 +722,8 @@ export const CourseManagement: React.FC = () => {
                                     <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary">
                                       <MessageSquare className="h-3 w-3" /> Release Notes
                                     </div>
-                                    <div className="p-4 bg-background rounded-xl border border-slate-200 shadow-sm min-h-[100px]">
-                                      <pre className="text-sm text-slate-600 font-mono whitespace-pre-wrap leading-relaxed">
+                                    <div className="p-4 bg-background rounded-xl border border-border shadow-sm min-h-[100px]">
+                                      <pre className="text-sm text-muted-foreground font-mono whitespace-pre-wrap leading-relaxed">
                                         {v.changeSummary || "No detailed release notes provided for this version."}
                                       </pre>
                                     </div>
@@ -737,7 +737,7 @@ export const CourseManagement: React.FC = () => {
                                     <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                                       {v.modules && v.modules.length > 0 ? (
                                         v.modules.map((m: any) => (
-                                          <div key={m.sequenceOrder} className="flex items-center gap-3 p-2 bg-background rounded-lg border border-slate-100 text-xs">
+                                          <div key={m.sequenceOrder} className="flex items-center gap-3 p-2 bg-background rounded-lg border border-border/60 text-xs">
                                             <span className="font-mono font-bold text-primary w-4">{m.sequenceOrder + 1}</span>
                                             <span className="flex-1 font-bold truncate">{m.title}</span>
                                             <Badge variant="outline" className="text-[9px] uppercase py-0">{m.type.replace(/_/g, ' ')}</Badge>
@@ -750,7 +750,7 @@ export const CourseManagement: React.FC = () => {
                                   </div>
                                 </div>
 
-                                <div className="mt-6 pt-4 border-t border-slate-200 flex justify-end">
+                                <div className="mt-6 pt-4 border-t border-border flex justify-end">
                                   <Button
                                     variant="ghost"
                                     size="sm"

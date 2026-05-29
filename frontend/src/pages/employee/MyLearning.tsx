@@ -90,7 +90,7 @@ export const MyLearning: React.FC = () => {
             <Compass className="h-8 w-8" />
             My Learning
           </h1>
-          <p className="text-muted-foreground text-lg italic">Track your progress across sequenced paths and individual courses.</p>
+          <p className="text-muted-foreground text-lg mt-1">Track your progress across sequenced paths and individual courses.</p>
         </div>
         <Button variant="outline" className="shadow-sm" onClick={() => navigate('/learning/discover')}>
           Explore Catalog

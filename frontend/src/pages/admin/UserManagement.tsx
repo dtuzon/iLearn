@@ -527,7 +527,7 @@ export const UserManagement: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-primary">User Management</h1>
-          <p className="text-muted-foreground text-lg italic">Manage system users, roles, and corporate reporting structure.</p>
+          <p className="text-muted-foreground text-lg mt-1">Manage system users, roles, and corporate reporting structure.</p>
         </div>
         
         <div className="flex items-center gap-2">

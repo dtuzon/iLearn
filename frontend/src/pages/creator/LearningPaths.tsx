@@ -120,7 +120,7 @@ export const LearningPaths: React.FC = () => {
             <Route className="h-8 w-8" />
             Learning Paths
           </h1>
-          <p className="text-muted-foreground text-lg italic">Bundle courses into sequenced journeys for specific employee cohorts.</p>
+          <p className="text-muted-foreground text-lg mt-1">Bundle courses into sequenced journeys for specific employee cohorts.</p>
         </div>
         
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>

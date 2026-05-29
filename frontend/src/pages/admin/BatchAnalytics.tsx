@@ -270,14 +270,14 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                 <span className="text-foreground font-black">{format(new Date(data.startDate), 'MMMM dd, yyyy')}</span>
               </div>
             </div>
-            <div className="flex items-center gap-3 border-t border-slate-100 pt-3 sm:border-t-0 sm:pt-0 sm:border-x sm:border-slate-100 sm:px-6">
+            <div className="flex items-center gap-3 border-t border-border pt-3 sm:border-t-0 sm:pt-0 sm:border-x sm:border-border sm:px-6">
               <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">🏁</div>
               <div>
                 <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">End Date</span>
                 <span className="text-foreground font-black">{format(new Date(data.endDate), 'MMMM dd, yyyy')}</span>
               </div>
             </div>
-            <div className="flex items-center justify-between border-t border-slate-100 pt-3 sm:border-t-0 sm:pt-0 sm:pl-6">
+            <div className="flex items-center justify-between border-t border-border pt-3 sm:border-t-0 sm:pt-0 sm:pl-6">
               <div className="flex items-center gap-3">
                 <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">⚙️</div>
                 <div>
@@ -507,7 +507,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                             </TableCell>
                             <TableCell>
                               <div>
-                                <p className="font-bold text-slate-800">{l.name}</p>
+                                <p className="font-bold text-foreground">{l.name}</p>
                                 <p className="text-[10px] text-muted-foreground font-medium">{l.department}</p>
                               </div>
                             </TableCell>
@@ -517,9 +517,9 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                             <TableCell className="text-right">{getStatusBadge(l.status)}</TableCell>
                           </TableRow>
                           {expandedLearnerId === l.id && l.courses?.map((c) => (
-                            <TableRow key={c.id} className="bg-slate-50/40 hover:bg-muted/10 border-none transition-colors h-10">
+                            <TableRow key={c.id} className="bg-muted/20 hover:bg-muted/10 border-none transition-colors h-10">
                               <TableCell className="py-2"></TableCell>
-                              <TableCell className="py-2 pr-4 font-semibold text-xs text-slate-500 max-w-[240px] truncate pl-6">
+                              <TableCell className="py-2 pr-4 font-semibold text-xs text-muted-foreground max-w-[240px] truncate pl-6">
                                 <span className="text-muted-foreground mr-2 font-mono">↳</span>
                                 {c.title}
                               </TableCell>
@@ -584,7 +584,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                               </div>
                             </TableCell>
                             <TableCell className="max-w-sm">
-                              <p className="font-bold text-slate-800 truncate">{c.title}</p>
+                              <p className="font-bold text-foreground truncate">{c.title}</p>
                               <p className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1.5 mt-0.5">
                                 <span>📅 Schedule:</span>
                                 <span className="text-primary">{format(new Date(c.startDate), 'MMM dd, yyyy')}</span>
@@ -610,14 +610,14 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                             </TableCell>
                           </TableRow>
                           {expandedCourseId === c.id && c.enrolledStudents?.map((s) => (
-                            <TableRow key={s.id} className="bg-slate-50/40 hover:bg-muted/10 border-none transition-colors h-10">
+                            <TableRow key={s.id} className="bg-muted/20 hover:bg-muted/10 border-none transition-colors h-10">
                               <TableCell className="py-2"></TableCell>
                               <TableCell className="py-2 pr-4 pl-6">
                                 <div className="flex items-start gap-1">
                                   <span className="text-muted-foreground mr-2 font-mono">↳</span>
                                   <div>
-                                    <p className="font-semibold text-xs text-slate-500">{s.name}</p>
-                                    <p className="text-[9px] text-slate-400 font-medium">{s.department}</p>
+                                    <p className="font-semibold text-xs text-muted-foreground">{s.name}</p>
+                                    <p className="text-[9px] text-muted-foreground/60 font-medium">{s.department}</p>
                                   </div>
                                 </div>
                               </TableCell>

@@ -149,11 +149,11 @@ export const ActivityApprovals: React.FC = () => {
     <div className="space-y-8 max-w-6xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black uppercase tracking-tight flex items-center gap-3">
-            <ShieldCheck className="h-8 w-8 text-primary" />
+          <h1 className="text-3xl font-extrabold tracking-tight text-primary flex items-center gap-3">
+            <ShieldCheck className="h-8 w-8" />
             Pending Activity Approvals
           </h1>
-          <p className="text-muted-foreground mt-1">Review workshop submissions and validate corporate training compliance.</p>
+          <p className="text-muted-foreground text-lg mt-1">Review workshop submissions and validate corporate training compliance.</p>
         </div>
         <Badge variant="outline" className="h-10 px-4 font-bold border-primary/20 text-primary">
           {submissions.length} Pending Actions
@@ -339,14 +339,14 @@ export const ActivityApprovals: React.FC = () => {
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground font-medium uppercase tracking-widest text-[10px]">Module</span>
-                <span className="font-bold text-slate-700 truncate max-w-[200px]">{submissionToReassign?.module?.title}</span>
+                <span className="font-bold text-foreground/90 truncate max-w-[200px]">{submissionToReassign?.module?.title}</span>
               </div>
             </div>
 
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Select New Evaluator</Label>
               <Select value={selectedCheckerId} onValueChange={setSelectedCheckerId}>
-                <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-slate-200">
+                <SelectTrigger className="h-12 rounded-xl bg-muted/30 border-border">
                   <SelectValue placeholder="Choose checker..." />
                 </SelectTrigger>
                 <SelectContent>

@@ -189,12 +189,12 @@ export const DiscoverCatalog: React.FC = () => {
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12">
       {/* Page Header */}
-      <div className="space-y-2">
-        <h1 className="text-4xl font-black tracking-tighter text-primary flex items-center gap-3">
-          <Compass className="h-10 w-10" />
-          DISCOVER
+      <div className="space-y-1">
+        <h1 className="text-3xl font-extrabold tracking-tight text-primary flex items-center gap-3">
+          <Compass className="h-8 w-8" />
+          Discover
         </h1>
-        <p className="text-muted-foreground text-lg font-medium">Your personal growth portal. Explore paths, courses, and expert-led training.</p>
+        <p className="text-muted-foreground text-lg mt-1">Your personal growth portal. Explore paths, courses, and expert-led training.</p>
       </div>
 
       {/* Control Toolbar */}

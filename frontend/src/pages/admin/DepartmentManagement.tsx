@@ -76,8 +76,8 @@ export const DepartmentManagement: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Departments</h2>
-          <p className="text-muted-foreground">Manage organization departments and their heads.</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-primary">Departments</h1>
+          <p className="text-muted-foreground text-lg mt-1">Manage organization departments and their heads.</p>
         </div>
         
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>

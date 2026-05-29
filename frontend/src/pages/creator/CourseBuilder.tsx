@@ -328,37 +328,37 @@ const VersionTimelineItem: React.FC<VersionTimelineItemProps> = ({ v, isCurrent 
   return (
     <div className="relative group animate-in fade-in duration-500">
       {/* The node */}
-      <div className={`absolute -left-[30px] top-1 h-[20px] w-[20px] rounded-full border-4 bg-white z-10 transition-all ${isCurrent ? 'border-primary shadow-[0_0_15px_rgba(234,179,8,0.3)]' : 'border-slate-300 group-hover:border-slate-400'}`}></div>
+      <div className={`absolute -left-[30px] top-1 h-[20px] w-[20px] rounded-full border-4 bg-background z-10 transition-all ${isCurrent ? 'border-primary shadow-[0_0_15px_rgba(234,179,8,0.3)]' : 'border-border group-hover:border-muted-foreground/30'}`}></div>
 
       <div
-        className={`space-y-2 p-3 rounded-2xl transition-all cursor-pointer ${isCurrent ? 'bg-primary/5 border border-primary/10' : 'hover:bg-white hover:shadow-sm hover:border-slate-100 border border-transparent'}`}
+        className={`space-y-2 p-3 rounded-2xl transition-all cursor-pointer ${isCurrent ? 'bg-primary/5 border border-primary/10' : 'hover:bg-muted/50 hover:shadow-sm hover:border-border border border-transparent'}`}
         onClick={() => !isCurrent && setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className={`text-[10px] font-black font-mono px-1.5 py-0.5 rounded ${isCurrent ? 'bg-primary text-white' : 'bg-slate-200 text-slate-600'}`}>
+            <span className={`text-[10px] font-black font-mono px-1.5 py-0.5 rounded ${isCurrent ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}>
               v{v.version}
             </span>
             {isCurrent && <span className="text-[9px] font-black text-primary uppercase animate-pulse">Active</span>}
           </div>
-          <span className="text-[9px] text-slate-400 font-bold tabular-nums">
+          <span className="text-[9px] text-muted-foreground font-bold tabular-nums">
             {v.updatedAt ? new Date(v.updatedAt).toLocaleDateString() : '---'}
           </span>
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          <p className={`text-sm font-bold tracking-tight truncate ${isCurrent ? 'text-slate-900' : 'text-slate-600'}`}>
+          <p className={`text-sm font-bold tracking-tight truncate ${isCurrent ? 'text-foreground' : 'text-muted-foreground'}`}>
             {v.versionTag || 'Unlabeled Release'}
           </p>
           {!isCurrent && v.changeSummary && (
-            <ChevronDown className={`h-3 w-3 text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
           )}
         </div>
 
         {/* Expanded Release Notes */}
         {(isCurrent || (isExpanded && v.changeSummary)) && (
           <div className={`animate-in slide-in-from-top-1 duration-300 overflow-hidden`}>
-            <div className={`p-3 rounded-xl font-mono text-[11px] leading-relaxed italic ${isCurrent ? 'bg-white/60 text-slate-600' : 'bg-slate-50 text-slate-500 border border-slate-100'}`}>
+            <div className={`p-3 rounded-xl font-mono text-[11px] leading-relaxed italic ${isCurrent ? 'bg-background/60 text-muted-foreground' : 'bg-muted/30 text-muted-foreground border border-border/50'}`}>
               &ldquo;{v.changeSummary || 'No release notes provided.'}&rdquo;
             </div>
           </div>
@@ -978,8 +978,8 @@ export const CourseBuilder: React.FC = () => {
               {course.status === 'PUBLISHED' && <Badge variant="success" className="text-[10px] font-black uppercase px-2 py-0">PUBLISHED</Badge>}
               {course.status === 'PENDING_APPROVAL' && <Badge variant="warning" className="text-[10px] font-black uppercase px-2 py-0 animate-pulse">PENDING</Badge>}
               {course.status === 'DRAFT' && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-white border border-blue-100 rounded-full shadow-sm text-sm font-bold text-slate-700">
-                  <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                <div className="flex items-center gap-2 px-3 py-1 bg-muted border border-border rounded-full shadow-sm text-sm font-bold text-muted-foreground">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
                   Draft
                 </div>
               )}
@@ -1086,13 +1086,13 @@ export const CourseBuilder: React.FC = () => {
 
       {/* Unpublish Confirmation Dialog */}
       <AlertDialog open={isUnpublishDialogOpen} onOpenChange={setIsUnpublishDialogOpen}>
-        <AlertDialogContent className="sm:max-w-md rounded-3xl p-6 border-slate-100 shadow-2xl">
+        <AlertDialogContent className="sm:max-w-md rounded-3xl p-6 border-border shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-xl font-black text-slate-900 tracking-tight">
+            <AlertDialogTitle className="flex items-center gap-2 text-xl font-black text-foreground tracking-tight">
               <EyeOff className="h-6 w-6 text-destructive" />
               Unpublish This Course?
             </AlertDialogTitle>
-            <div className="text-slate-600 text-sm mt-3 space-y-4">
+            <div className="text-muted-foreground text-sm mt-3 space-y-4">
               <p>
                 This will immediately remove the course from the live catalog and prevent new employee enrollments.
               </p>
@@ -1102,7 +1102,7 @@ export const CourseBuilder: React.FC = () => {
                   <p className="font-bold text-destructive flex items-center gap-2">
                     ⚠️ Active Learners Warning
                   </p>
-                  <p className="text-slate-700 font-medium">
+                  <p className="text-foreground/90 font-medium">
                     There are currently{' '}
                     <button
                       type="button"
@@ -1115,13 +1115,13 @@ export const CourseBuilder: React.FC = () => {
                   </p>
 
                   {isListExpanded && (
-                    <div className="mt-2 max-h-40 overflow-y-auto border border-destructive/10 rounded-xl bg-white p-3 space-y-2 custom-scrollbar">
+                    <div className="mt-2 max-h-40 overflow-y-auto border border-destructive/10 rounded-xl bg-background p-3 space-y-2 custom-scrollbar">
                       {activeLearners.map((learner: any) => (
-                        <div key={learner.id} className="flex justify-between items-center text-xs py-1 border-b border-slate-50 last:border-0">
-                          <span className="font-bold text-slate-800">
+                        <div key={learner.id} className="flex justify-between items-center text-xs py-1 border-b border-border/30 last:border-0">
+                          <span className="font-bold text-foreground">
                             {learner.user.firstName} {learner.user.lastName}
                           </span>
-                          <span className="text-slate-500 font-mono">
+                          <span className="text-muted-foreground font-mono">
                             {learner.user.department?.name || 'General'}
                           </span>
                         </div>
@@ -1130,14 +1130,14 @@ export const CourseBuilder: React.FC = () => {
                   )}
                 </div>
               ) : (
-                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium">
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 text-sm font-medium">
                   ⚠️ <strong>Recommendation:</strong> If you intend to make changes to modules or evaluations, we recommend using <strong>"New Version"</strong> instead to preserve historical records of active batches.
                 </div>
               )}
             </div>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 mt-6">
-            <AlertDialogCancel className="rounded-xl border-slate-200 font-bold">
+            <AlertDialogCancel className="rounded-xl border-border font-bold">
               Cancel — Keep Live
             </AlertDialogCancel>
             <AlertDialogAction
@@ -1221,7 +1221,7 @@ export const CourseBuilder: React.FC = () => {
                 value={approvalDialog.changeSummary}
                 onChange={(e) => setApprovalDialog(prev => ({ ...prev, changeSummary: e.target.value }))}
                 placeholder="• Bullet points of changes..."
-                className="min-h-[140px] font-mono text-sm bg-slate-50 border-slate-200"
+                className="min-h-[140px] font-mono text-sm bg-muted/30 border-border"
                 disabled={approvalDialog.isSubmitting || approvalDialog.isGeneratingDiff}
               />
               <p className="text-[10px] text-muted-foreground italic">
@@ -1278,7 +1278,7 @@ export const CourseBuilder: React.FC = () => {
                     <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Governance Protocol</span>
                     <Badge variant="outline" className="bg-primary text-white border-none text-[10px] font-black py-0 px-2 rounded-full">Review Required</Badge>
                   </div>
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                  <h2 className="text-2xl font-black text-foreground tracking-tight">
                     {course.title.replace(/\s*\(Draft\)$/i, '')}
                   </h2>
                 </div>
@@ -1287,7 +1287,7 @@ export const CourseBuilder: React.FC = () => {
               <div className="flex items-center gap-3 w-full lg:w-auto">
                 <Button
                   variant="outline"
-                  className="flex-1 lg:flex-none h-14 px-8 border-slate-200 text-slate-500 hover:text-destructive hover:border-destructive/30 hover:bg-destructive/5 font-bold rounded-2xl transition-all"
+                  className="flex-1 lg:flex-none h-14 px-8 border-border text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/5 font-bold rounded-2xl transition-all"
                   onClick={() => handleUpdateStatus('DRAFT')}
                 >
                   <XCircle className="mr-2 h-5 w-5" /> Reject Version
@@ -1308,35 +1308,35 @@ export const CourseBuilder: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-5 rounded-3xl bg-primary/5 border border-primary/10 space-y-1 group hover:bg-primary/10 transition-colors">
                     <p className="text-[10px] font-black text-primary uppercase tracking-widest">Version</p>
-                    <p className="text-xl font-mono font-black text-slate-900">v{course.version}</p>
-                    <p className="text-[10px] text-slate-500 truncate font-medium">{course.versionTag || 'Unlabeled Release'}</p>
+                    <p className="text-xl font-mono font-black text-foreground">v{course.version}</p>
+                    <p className="text-[10px] text-muted-foreground truncate font-medium">{course.versionTag || 'Unlabeled Release'}</p>
                   </div>
                   <div className="p-5 rounded-3xl bg-primary/5 border border-primary/10 space-y-1 group hover:bg-primary/10 transition-colors">
                     <p className="text-[10px] font-black text-primary uppercase tracking-widest">Blueprint</p>
-                    <p className="text-xl font-black text-slate-900">{(course._count?.modules ?? course.modules?.length ?? 0)}</p>
-                    <p className="text-[10px] text-slate-500 font-medium">Components</p>
+                    <p className="text-xl font-black text-foreground">{(course._count?.modules ?? course.modules?.length ?? 0)}</p>
+                    <p className="text-[10px] text-muted-foreground font-medium">Components</p>
                   </div>
                 </div>
-                <div className="p-5 rounded-3xl bg-slate-50 border border-slate-100 flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-full bg-white flex items-center justify-center text-xs font-black text-primary uppercase border-2 border-primary/20 shadow-sm">
+                <div className="p-5 rounded-3xl bg-muted/30 border border-border flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-full bg-background flex items-center justify-center text-xs font-black text-primary uppercase border-2 border-primary/20 shadow-sm">
                     {course.lecturer?.firstName?.charAt(0)}{course.lecturer?.lastName?.charAt(0)}
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Submitted By</p>
-                    <p className="text-base font-bold text-slate-800">{course.lecturer ? `${course.lecturer.firstName} ${course.lecturer.lastName}` : '---'}</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Submitted By</p>
+                    <p className="text-base font-bold text-foreground">{course.lecturer ? `${course.lecturer.firstName} ${course.lecturer.lastName}` : '---'}</p>
                   </div>
                 </div>
               </div>
 
               {/* Release Notes */}
               <div className="lg:col-span-8">
-                <div className="h-full rounded-3xl bg-white border border-slate-100 p-6 shadow-sm relative overflow-hidden">
+                <div className="h-full rounded-3xl bg-card border border-border p-6 shadow-sm relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-2 h-full bg-primary/20"></div>
                   <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
                     <FileText className="h-3 w-3" /> Smart Diff / Release Notes
                   </p>
                   <div className="max-h-[140px] overflow-y-auto pr-2 custom-scrollbar">
-                    <pre className="text-sm text-slate-600 font-mono whitespace-pre-wrap leading-relaxed">
+                    <pre className="text-sm text-muted-foreground font-mono whitespace-pre-wrap leading-relaxed">
                       {course.changeSummary || 'The system detected no significant structural changes for this version.'}
                     </pre>
                   </div>
@@ -1594,7 +1594,7 @@ export const CourseBuilder: React.FC = () => {
                 </div>
 
 
-                <div className="h-px bg-slate-100 my-4" />
+                <div className="h-px bg-border my-4" />
 
                 <div className="space-y-3">
                   <Label className="text-sm font-bold">Target Departments</Label>
@@ -1660,13 +1660,13 @@ export const CourseBuilder: React.FC = () => {
 
             {/* Version Governance & History */}
             {course.parentId && (
-              <div className="p-8 rounded-[2.5rem] bg-slate-50/50 border border-slate-200/60 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="p-8 rounded-[2.5rem] bg-muted/30 border border-border shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <div className="flex items-center gap-4 mb-8">
-                  <div className="h-12 w-12 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-slate-100">
+                  <div className="h-12 w-12 rounded-2xl bg-background flex items-center justify-center shadow-sm border border-border">
                     <HistoryIcon className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black text-slate-900 tracking-tight">Version Governance</h3>
+                    <h3 className="text-lg font-black text-foreground tracking-tight">Version Governance</h3>
                     <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Blueprint Lineage & Audit Trail</p>
                   </div>
                 </div>
@@ -1677,17 +1677,17 @@ export const CourseBuilder: React.FC = () => {
                     <div className="flex-1 p-4 overflow-hidden flex flex-col min-h-[400px] max-h-[600px]">
                       <div className="flex items-center justify-between mb-8 shrink-0">
                         <div className="flex items-center gap-2">
-                          <Layers className="h-3 w-3 text-slate-400" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Release Timeline</span>
+                          <Layers className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Release Timeline</span>
                         </div>
-                        <Badge variant="outline" className="text-[9px] font-mono bg-slate-100/50 border-slate-200">
+                        <Badge variant="outline" className="text-[9px] font-mono bg-muted border-border">
                           {lineageVersions.length} {lineageVersions.length === 1 ? 'Snapshot' : 'Snapshots'}
                         </Badge>
                       </div>
 
                       <div className="relative flex-1 overflow-y-auto pr-4 custom-scrollbar">
                         {/* The Track */}
-                        <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-slate-200"></div>
+                        <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-border"></div>
 
                         <div className="relative pl-10 space-y-8">
                           {lineageVersions.map((v) => (
@@ -1700,8 +1700,8 @@ export const CourseBuilder: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="mt-8 pt-6 border-t border-slate-200/50 shrink-0">
-                        <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest italic">End of Audit Stream</p>
+                      <div className="mt-8 pt-6 border-t border-border shrink-0">
+                        <p className="text-[10px] text-center text-muted-foreground font-bold uppercase tracking-widest italic">End of Audit Stream</p>
                       </div>
                     </div>
                   </div>

@@ -127,7 +127,7 @@ const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
                 <Badge variant="secondary" className="text-[10px] font-bold tracking-tighter uppercase">
                   {(item.course as any)._count?.modules || item.course.modules?.length || 0} Modules
                 </Badge>
-                <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">
+                <span className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-tighter">
                   {item.course.passingGrade}% Pass Req.
                 </span>
               </div>
@@ -137,7 +137,7 @@ const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
                   variant="ghost"
                   size="icon"
                   onClick={() => onRemove(item.id)}
-                  className="h-8 w-8 rounded-lg text-slate-300 hover:text-destructive hover:bg-destructive/5"
+                  className="h-8 w-8 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/5"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -162,37 +162,37 @@ const VersionTimelineItem: React.FC<VersionTimelineItemProps> = ({ v, isCurrent 
   return (
     <div className="relative group animate-in fade-in duration-500">
       {/* The node */}
-      <div className={`absolute -left-[30px] top-1 h-[20px] w-[20px] rounded-full border-4 bg-white z-10 transition-all ${isCurrent ? 'border-primary shadow-[0_0_15px_rgba(234,179,8,0.3)]' : 'border-slate-300 group-hover:border-slate-400'}`}></div>
+      <div className={`absolute -left-[30px] top-1 h-[20px] w-[20px] rounded-full border-4 bg-background z-10 transition-all ${isCurrent ? 'border-primary shadow-[0_0_15px_rgba(234,179,8,0.3)]' : 'border-border group-hover:border-muted-foreground/30'}`}></div>
 
       <div
-        className={`space-y-2 p-3 rounded-2xl transition-all cursor-pointer ${isCurrent ? 'bg-primary/5 border border-primary/10' : 'hover:bg-white hover:shadow-sm hover:border-slate-100 border border-transparent'}`}
+        className={`space-y-2 p-3 rounded-2xl transition-all cursor-pointer ${isCurrent ? 'bg-primary/5 border border-primary/10' : 'hover:bg-muted/50 hover:shadow-sm hover:border-border border border-transparent'}`}
         onClick={() => !isCurrent && setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className={`text-[10px] font-black font-mono px-1.5 py-0.5 rounded ${isCurrent ? 'bg-primary text-white' : 'bg-slate-200 text-slate-600'}`}>
+            <span className={`text-[10px] font-black font-mono px-1.5 py-0.5 rounded ${isCurrent ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}>
               v{v.version}
             </span>
             {isCurrent && <span className="text-[9px] font-black text-primary uppercase animate-pulse">Active</span>}
           </div>
-          <span className="text-[9px] text-slate-400 font-bold tabular-nums">
+          <span className="text-[9px] text-muted-foreground font-bold tabular-nums">
             {v.updatedAt ? new Date(v.updatedAt).toLocaleDateString() : '---'}
           </span>
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          <p className={`text-sm font-bold tracking-tight truncate ${isCurrent ? 'text-slate-900' : 'text-slate-600'}`}>
+          <p className={`text-sm font-bold tracking-tight truncate ${isCurrent ? 'text-foreground' : 'text-muted-foreground'}`}>
             {v.versionTag || 'Unlabeled Release'}
           </p>
           {!isCurrent && v.changeSummary && (
-            <ChevronDown className={`h-3 w-3 text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
           )}
         </div>
 
         {/* Expanded Release Notes */}
         {(isCurrent || (isExpanded && v.changeSummary)) && (
           <div className={`animate-in slide-in-from-top-1 duration-300 overflow-hidden`}>
-            <div className={`p-3 rounded-xl font-mono text-[11px] leading-relaxed italic ${isCurrent ? 'bg-white/60 text-slate-600' : 'bg-slate-50 text-slate-500 border border-slate-100'}`}>
+            <div className={`p-3 rounded-xl font-mono text-[11px] leading-relaxed italic ${isCurrent ? 'bg-background/60 text-muted-foreground' : 'bg-muted/30 text-muted-foreground border border-border/50'}`}>
               &ldquo;{v.changeSummary || 'No release notes provided.'}&rdquo;
             </div>
           </div>
@@ -594,8 +594,8 @@ export const LearningPathBuilder: React.FC = () => {
               <div className="flex items-center gap-1.5 px-2.5 py-1 bg-muted rounded-full border text-xs font-mono text-muted-foreground shrink-0">
                 <span className="font-bold text-foreground">v{path.version}</span>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1 bg-white border border-blue-100 rounded-full shadow-sm text-[10px] font-bold text-slate-700 uppercase tracking-tighter">
-                <CheckCircle2 className="h-3 w-3 text-blue-500" />
+              <div className="flex items-center gap-2 px-3 py-1 bg-muted border border-border rounded-full shadow-sm text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
+                <CheckCircle2 className="h-3 w-3 text-primary" />
                 {path.status}
               </div>
             </div>
@@ -756,10 +756,10 @@ export const LearningPathBuilder: React.FC = () => {
                           <div
                             key={course.id}
                             onClick={() => addToPath(course)}
-                            className="group p-4 bg-background rounded-xl border border-slate-100 hover:border-primary/30 hover:shadow-md transition-all cursor-pointer"
+                            className="group p-4 bg-background rounded-xl border border-border hover:border-primary/30 hover:shadow-md transition-all cursor-pointer"
                           >
                             <div className="flex flex-col gap-2">
-                              <h4 className="text-sm font-bold text-slate-800 group-hover:text-primary transition-colors leading-tight">{course.title}</h4>
+                              <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors leading-tight">{course.title}</h4>
                               <div className="flex items-center gap-2">
                                 <Badge variant="secondary" className="text-[10px] font-bold tracking-tighter uppercase">{course.passingGrade}% Pass Req.</Badge>
                                 <span className="text-[10px] text-muted-foreground">{(course as any)._count?.modules || course.modules?.length || 0} Modules</span>
@@ -924,18 +924,18 @@ export const LearningPathBuilder: React.FC = () => {
               )}
 
               {/* Version Governance Section */}
-              <div className="pt-12 mt-12 border-t border-slate-100">
+              <div className="pt-12 mt-12 border-t border-border">
                 <div className="flex items-center justify-between mb-8">
                   <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-2xl bg-amber-50 flex items-center justify-center">
+                    <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
                       <HistoryIcon className="h-6 w-6 text-amber-600" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-slate-900">Version Governance</h2>
-                      <p className="text-sm text-slate-500">Audit lineage and version history for this learning journey.</p>
+                      <h2 className="text-xl font-bold text-foreground">Version Governance</h2>
+                      <p className="text-sm text-muted-foreground">Audit lineage and version history for this learning journey.</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-full text-[10px] font-black text-muted-foreground uppercase tracking-widest">
                     {lineagePaths.length} Snapshots Captured
                   </div>
                 </div>
@@ -945,14 +945,14 @@ export const LearningPathBuilder: React.FC = () => {
                   <div className="flex flex-col">
                     <div className="flex-1 p-4 overflow-hidden flex flex-col min-h-[400px] max-h-[600px]">
                       <div className="flex items-center justify-between mb-8 shrink-0">
-                        <h3 className="font-black text-sm uppercase tracking-widest text-slate-400">Audit Stream</h3>
-                        <Badge variant="outline" className="bg-slate-100/50 border-slate-200 text-[10px] font-bold">LATEST: v{path.version}</Badge>
+                        <h3 className="font-black text-sm uppercase tracking-widest text-muted-foreground">Audit Stream</h3>
+                        <Badge variant="outline" className="bg-muted border-border text-[10px] font-bold">LATEST: v{path.version}</Badge>
                       </div>
 
                       <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar">
                         <div className="relative">
                           {/* Vertical Track */}
-                          <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-slate-200"></div>
+                          <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-border"></div>
 
                           <div className="relative pl-10 space-y-8">
                             {lineagePaths.map((v) => (
@@ -966,8 +966,8 @@ export const LearningPathBuilder: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="mt-8 pt-6 border-t border-slate-200/50 shrink-0">
-                        <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest italic">End of Audit Stream</p>
+                      <div className="mt-8 pt-6 border-t border-border shrink-0">
+                        <p className="text-[10px] text-center text-muted-foreground font-bold uppercase tracking-widest italic">End of Audit Stream</p>
                       </div>
                     </div>
                   </div>
@@ -1032,7 +1032,7 @@ export const LearningPathBuilder: React.FC = () => {
                 value={approvalDialog.changeSummary}
                 onChange={(e) => setApprovalDialog(prev => ({ ...prev, changeSummary: e.target.value }))}
                 placeholder="• Bullet points of changes..."
-                className="min-h-[140px] font-mono text-sm bg-slate-50 border-slate-200"
+                className="min-h-[140px] font-mono text-sm bg-muted/30 border-border"
                 disabled={approvalDialog.isSubmitting}
               />
               <p className="text-[10px] text-muted-foreground italic text-center">
@@ -1056,14 +1056,14 @@ export const LearningPathBuilder: React.FC = () => {
             <Button
               variant="ghost"
               onClick={() => setApprovalDialog(prev => ({ ...prev, isOpen: false }))}
-              className="font-bold text-slate-500"
+              className="font-bold text-muted-foreground"
             >
               Cancel
             </Button>
             <Button
               onClick={handleFinalPublish}
               disabled={approvalDialog.isSubmitting}
-              className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
             >
               {approvalDialog.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
               Confirm & Publish

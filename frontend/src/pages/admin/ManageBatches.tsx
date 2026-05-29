@@ -186,11 +186,11 @@ export const ManageBatches: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="space-y-1">
-          <h1 className="text-4xl font-black tracking-tighter text-primary flex items-center gap-3 italic uppercase">
-            <LayoutGrid className="h-10 w-10 text-primary" />
-            Batch Command Center
+          <h1 className="text-3xl font-extrabold tracking-tight text-primary flex items-center gap-3">
+            <LayoutGrid className="h-8 w-8" />
+            Batch Management
           </h1>
-          <p className="text-muted-foreground text-lg font-medium">Lifecycle management for scheduled batch training.</p>
+          <p className="text-muted-foreground text-lg mt-1">Lifecycle management for scheduled batch training.</p>
         </div>
         <Button
           onClick={() => {

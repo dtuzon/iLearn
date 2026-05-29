@@ -212,4 +212,3 @@ export const sendWelcomeEmail = async (
     console.error('CRITICAL: Failed to send Welcome Email:', error);
   }
 };
-

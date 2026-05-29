@@ -85,8 +85,8 @@ export const MyCertificates: React.FC = () => {
             <Award className="h-10 w-10 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-4xl font-black tracking-tight text-foreground">Achievement Portal</h1>
-            <p className="text-muted-foreground text-lg font-medium">Showcase your verified professional milestones.</p>
+            <h1 className="text-3xl font-extrabold tracking-tight text-primary">Achievement Portal</h1>
+            <p className="text-muted-foreground text-lg mt-1">Showcase your verified professional milestones.</p>
           </div>
         </div>
         <div className="flex gap-4">

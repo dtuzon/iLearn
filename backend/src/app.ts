@@ -26,11 +26,6 @@ import batchesRouter from './modules/batches/batches.router';
 import activitiesRouter from './modules/activities/activities.router';
 import zoomRouter from './modules/zoom/zoom.router';
 
-
-
-
-
-
 const app = express();
 
 // Middleware
@@ -74,10 +69,6 @@ app.use('/api/catalog', catalogRouter);
 app.use('/api/batches', batchesRouter);
 app.use('/api/activities', activitiesRouter);
 app.use('/api/zoom', zoomRouter);
-
-
-
-
 
 // Error Handling Middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

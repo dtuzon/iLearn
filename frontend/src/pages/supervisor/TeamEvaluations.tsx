@@ -134,9 +134,9 @@ export const TeamEvaluations: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex flex-col gap-2">
-        <h2 className="text-3xl font-extrabold tracking-tight text-primary flex items-center gap-3">
+        <h1 className="text-3xl font-extrabold tracking-tight text-primary flex items-center gap-3">
           <ClipboardCheck className="h-8 w-8" /> Team Impact Evaluations
-        </h2>
+        </h1>
         <p className="text-muted-foreground text-lg">
           K.A.S.H. Behavioral Change Scale (180-Day Post-Training Review)
         </p>
