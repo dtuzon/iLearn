@@ -126,8 +126,7 @@ export async function createMeeting(
       participant_video: true,
       join_before_host: true,   // Allow learners to enter before instructor starts
       waiting_room: false,       // Disable waiting room — LMS controls access via enrollment
-      approval_type: 0,          // Automatically approve
-      registration_type: 1,
+      approval_type: 2,          // No registration required — enrollment in iLearn is the gate
       mute_upon_entry: true,
       auto_recording: 'none',
     },

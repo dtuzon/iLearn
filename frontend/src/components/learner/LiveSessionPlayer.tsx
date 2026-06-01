@@ -111,9 +111,13 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
       const client = ZoomMtgEmbedded.createClient();
       zoomClientRef.current = client;
 
+      // Step 4: Initialize the SDK into the container, then join
+      setZoomState('initializing-sdk');
+
       await client.init({
         zoomAppRoot: zoomContainerRef.current,
         language: 'en-US',
+        patchJsMedia: true,   // Official SDK fix for 'require is not defined' in js_media.min.js
         customize: {
           video: { isResizable: true, viewSizes: { default: { width: 1100, height: 580 } } },
           meetingInfo: ['topic', 'host', 'mn', 'pwd', 'telPwd', 'invite', 'participant', 'dc', 'enctype'],
@@ -127,12 +131,37 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
 
       // NOTE: sdkKey is intentionally omitted from joinOptions per Zoom SDK v4.0.0+.
       // The sdkKey/appKey is embedded inside the JWT signature payload instead.
-      await client.join({
-        signature,
-        meetingNumber: liveSession.zoomMeetingId,
-        password: liveSession.zoomPasscode,
-        userName,
-        userEmail: user?.email ?? '',
+      //
+      // IMPORTANT: client.join() Promise is unreliable in React 19 — it may never resolve
+      // even when the user has actually joined (Tim Padua appears in Zoom but state stays 'CONNECTING').
+      // We instead listen to the SDK's connection-change event which fires reliably.
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Connection timed out. The meeting may not be active or your credentials may have expired.'));
+        }, 45000);
+
+        client.on('connection-change', (payload: any) => {
+          console.log('[LiveSessionPlayer] connection-change:', payload);
+          if (payload.state === 'Connected') {
+            clearTimeout(timeout);
+            resolve();
+          } else if (['Closed', 'Failed', 'Forbidden'].includes(payload.state)) {
+            clearTimeout(timeout);
+            reject(new Error(payload.reason || `Meeting connection ${payload.state.toLowerCase()}.`));
+          }
+        });
+
+        // Start the join — don't await, let connection-change drive resolution
+        client.join({
+          signature,
+          meetingNumber: liveSession.zoomMeetingId,
+          password: liveSession.zoomPasscode,
+          userName,
+          userEmail: user?.email ?? '',
+        }).catch((err: any) => {
+          clearTimeout(timeout);
+          reject(err);
+        });
       });
 
       setZoomState('joined');
@@ -327,7 +356,14 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
               ref={zoomContainerRef}
               id="zoom-sdk-container"
               className="w-full rounded-2xl overflow-hidden bg-slate-900"
-              style={{ minHeight: zoomState === 'joined' ? '580px' : '0px', transition: 'min-height 0.3s ease' }}
+              style={{
+                // Give the container real height during connecting so SDK can render immediately on join.
+                // 0px only when fully idle / error / session-not-found (before user clicked Launch).
+                minHeight: ['loading-session', 'loading-signature', 'initializing-sdk', 'joined'].includes(zoomState)
+                  ? '580px'
+                  : '0px',
+                transition: 'min-height 0.3s ease'
+              }}
             />
           )}
 

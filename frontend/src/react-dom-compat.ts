@@ -49,12 +49,14 @@ if (typeof window !== 'undefined') {
     hydrateRoot,
   };
   
-  // Custom shim for require in the browser to prevent Zoom SDK crashes
+  // Custom shim for require in the browser to prevent Zoom SDK crashes.
+  // Returns known modules; silently returns null for unknown ones (SDK probes optional modules).
   if (!(window as any).require) {
     (window as any).require = (name: string) => {
       if (name === 'react') return React;
       if (name === 'react-dom') return (window as any).ReactDOM;
-      throw new Error(`Cannot find module '${name}'`);
+      // Return null for unknown modules (e.g. 'disk-file-writer') — SDK handles missing optionals
+      return null;
     };
   }
 }
