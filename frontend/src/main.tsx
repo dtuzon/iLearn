@@ -19,6 +19,9 @@ const shimReactObject = (obj: any) => {
       if (prop === 'ReactCurrentOwner') {
         return target.ReactCurrentOwner || { current: null };
       }
+      if (prop === 'ReactCurrentBatchConfig') {
+        return target.ReactCurrentBatchConfig || { transition: 0 };
+      }
       return Reflect.get(target, prop, receiver);
     }
   });
@@ -51,9 +54,11 @@ const shimReactObject = (obj: any) => {
 shimReactObject(anyReact);
 shimReactObject(anyReact.default);
 if (typeof window !== 'undefined') {
-  (window as any).React = anyReact;
-  shimReactObject((window as any).React);
-  shimReactObject((window as any).React.default);
+  if (!(window as any).React) {
+    (window as any).React = anyReact;
+    shimReactObject((window as any).React);
+    shimReactObject((window as any).React.default);
+  }
 }
 
 // Shim for ReactDOM compatibility with legacy library calls to ReactDOM.createRoot
@@ -76,9 +81,11 @@ const shimReactDOMObject = (obj: any) => {
 shimReactDOMObject(anyReactDOM);
 shimReactDOMObject(anyReactDOM.default);
 if (typeof window !== 'undefined') {
-  (window as any).ReactDOM = anyReactDOM;
-  shimReactDOMObject((window as any).ReactDOM);
-  shimReactDOMObject((window as any).ReactDOM.default);
+  if (!(window as any).ReactDOM) {
+    (window as any).ReactDOM = anyReactDOM;
+    shimReactDOMObject((window as any).ReactDOM);
+    shimReactDOMObject((window as any).ReactDOM.default);
+  }
 }
 
 createRoot(document.getElementById('root')!).render(

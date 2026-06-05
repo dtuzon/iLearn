@@ -104,7 +104,11 @@ function App() {
                 </Route>
 
                 {/* Checker Routes */}
-                <Route path="/checker">
+                <Route path="/checker" element={
+                  <RoleGuard allowedRoles={['COURSE_CREATOR', 'ADMINISTRATOR', 'LEARNING_MANAGER']}>
+                    <Outlet />
+                  </RoleGuard>
+                }>
                   <Route path="portal" element={<GradingPortal />} />
                 </Route>
 

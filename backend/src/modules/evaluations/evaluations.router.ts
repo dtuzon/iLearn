@@ -1,14 +1,16 @@
 import { Router } from 'express';
 import { EvaluationsController } from './evaluations.controller';
-import { authenticate, authorize } from '../../middleware/auth.middleware';
+import { authenticate } from '../../middleware/auth.middleware';
+import { authorize } from '../../middleware/rbac.middleware';
+import { Role } from '@prisma/client';
 
 const router = Router();
 
 // Template Management (Admin & Learning Manager Only)
-router.post('/templates', authenticate, authorize('ADMINISTRATOR', 'LEARNING_MANAGER'), EvaluationsController.createTemplate);
+router.post('/templates', authenticate, authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]), EvaluationsController.createTemplate);
 router.get('/templates', authenticate, EvaluationsController.getTemplates);
 router.get('/templates/:id', authenticate, EvaluationsController.getTemplateById);
-router.put('/templates/:id', authenticate, authorize('ADMINISTRATOR', 'LEARNING_MANAGER'), EvaluationsController.updateTemplate);
+router.put('/templates/:id', authenticate, authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]), EvaluationsController.updateTemplate);
 
 
 // Evaluation Responses

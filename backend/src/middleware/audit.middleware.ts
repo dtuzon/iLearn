@@ -17,7 +17,10 @@ export const auditLog = (action: string) => {
                 method: req.method,
                 path: req.path,
                 params: req.params,
-                body: req.method !== 'GET' ? req.body : undefined,
+                body: req.method !== 'GET' ? (() => {
+                  const { password, newPassword, currentPassword, ...safeBody } = req.body || {};
+                  return safeBody;
+                })() : undefined,
               },
             },
           });

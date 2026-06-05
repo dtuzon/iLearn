@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../ui/card';
-import { Video, Calendar as CalendarIcon, ExternalLink, Key, CheckCircle, Loader2, Wifi, WifiOff, AlertTriangle } from 'lucide-react';
+import { Video, Calendar as CalendarIcon, ExternalLink, Key, CheckCircle, Loader2, Wifi, WifiOff, AlertTriangle, Maximize2, Minimize2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { coursesApi } from '../../api/courses.api';
 import { zoomApi } from '../../api/zoom.api';
@@ -19,6 +19,8 @@ interface LiveSessionPlayerProps {
   onComplete: () => void;
   /** Pass batchId to activate Embedded Zoom SDK Mode (Mode B) */
   batchId?: string | null;
+  isWidescreen?: boolean;
+  onToggleWidescreen?: () => void;
 }
 
 type ZoomPlayerState =
@@ -34,7 +36,13 @@ type ZoomPlayerState =
 // LiveSessionPlayer
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, onComplete, batchId }) => {
+export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ 
+  module, 
+  onComplete, 
+  batchId,
+  isWidescreen = false,
+  onToggleWidescreen
+}) => {
   const { user } = useAuth();
 
   // ── Shared state ──────────────────────────────────────────────────────────
@@ -53,17 +61,34 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
   const userName = user ? `${user.firstName} ${user.lastName}`.trim() : 'iLearn Learner';
   const localTime = module.scheduledAt ? format(new Date(module.scheduledAt), 'PPPP p') : 'Not Scheduled';
 
-  // ── Cleanup on unmount ────────────────────────────────────────────────────
+  // ── Cleanup and Preloading ────────────────────────────────────────────────
   useEffect(() => {
-    return () => {
+    // 1. Preload the massive 5MB Zoom SDK immediately so we don't break the browser's 
+    // user-gesture timeout window (1-2 seconds) when the user finally clicks 'Launch'.
+    if (useEmbeddedSdk) {
+      import('@zoom/meetingsdk/embedded').catch(() => {
+        // Silently ignore preload failures, it will retry on click
+      });
+    }
+
+    const cleanupZoom = () => {
       if (zoomClientRef.current) {
         try {
           zoomClientRef.current.leaveMeeting?.();
         } catch {
           // Ignore errors during cleanup
         }
-        zoomClientRef.current = null;
       }
+    };
+
+    // Handle hard refreshes and tab closures
+    window.addEventListener('beforeunload', cleanupZoom);
+
+    // Handle React component unmounts
+    return () => {
+      window.removeEventListener('beforeunload', cleanupZoom);
+      cleanupZoom();
+      zoomClientRef.current = null;
     };
   }, []);
 
@@ -71,8 +96,27 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
   const handleJoinEmbedded = useCallback(async () => {
     if (!batchId) return;
 
+    // Pre-request browser camera and microphone permissions to cache approval
     try {
-      // Step 1: Fetch BatchLiveSession credentials
+      console.log('[LiveSessionPlayer] Pre-requesting camera and microphone permissions...');
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      // Stop tracks immediately after obtaining permission to release the device
+      stream.getTracks().forEach(track => track.stop());
+      console.log('[LiveSessionPlayer] Media permissions pre-acquired successfully');
+    } catch (permErr) {
+      console.warn('[LiveSessionPlayer] Media permissions pre-acquisition warned/denied:', permErr);
+    }
+
+    // Initialize global log array
+    (window as any).zoomLogs = [];
+    const log = (msg: string, data?: any) => {
+      const entry = `[${new Date().toISOString()}] ${msg} ${data ? JSON.stringify(data) : ''}`;
+      console.log(entry);
+      (window as any).zoomLogs.push(entry);
+    };
+
+    try {
+      log('Step 1: Fetching BatchLiveSession credentials...');
       setZoomState('loading-session');
       setZoomError(null);
 
@@ -80,7 +124,9 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
       try {
         liveSession = await zoomApi.getLiveSession(batchId, module.id);
         setSession(liveSession);
+        log('Session credentials fetched successfully', liveSession);
       } catch (err: any) {
+        log('Failed to fetch session credentials', err);
         if (err?.response?.status === 404) {
           setZoomState('session-not-found');
           return;
@@ -88,87 +134,137 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
         throw err;
       }
 
-      // Step 2: Fetch SDK Signature (sdkKey is embedded in the JWT payload by the backend)
+      log('Step 2: Fetching SDK Signature...');
       setZoomState('loading-signature');
       const { signature } = await zoomApi.getSignature(liveSession.zoomMeetingId, 0);
+      log('SDK Signature fetched successfully', { signatureLength: signature?.length });
 
-      // Step 3: Dynamically import Zoom Embedded SDK (keeps it out of the main bundle)
+      log('Step 3: Dynamically importing Zoom Embedded SDK...');
       setZoomState('initializing-sdk');
 
-      // Wait for container to be ready
       if (!zoomContainerRef.current) {
         throw new Error('Zoom container element is not available.');
       }
 
-      // The embedded client lives in the /embedded subpath of @zoom/meetingsdk
       const ZoomMtgEmbedded = (await import('@zoom/meetingsdk/embedded')).default;
+      log('Zoom Embedded SDK imported successfully');
 
-      // Clean up any previous instance
       if (zoomClientRef.current) {
-        try { zoomClientRef.current.leaveMeeting?.(); } catch { /* ignore */ }
+        try { 
+          log('Cleaning up previous Zoom client instance...');
+          zoomClientRef.current.leaveMeeting?.(); 
+        } catch (cleanupErr) { 
+          log('Error cleaning up previous client', cleanupErr);
+        }
       }
 
+      log('Creating Zoom client instance...');
       const client = ZoomMtgEmbedded.createClient();
       zoomClientRef.current = client;
 
-      // Step 4: Initialize the SDK into the container, then join
+      log('Step 4: Initializing SDK into container...');
       setZoomState('initializing-sdk');
+
+      // Delay DOM measurement slightly to ensure the container has expanded from 0px
+      await new Promise(resolve => setTimeout(resolve, 50));
+      const containerWidth = zoomContainerRef.current?.clientWidth || 1000;
+      const containerHeight = isWidescreen ? window.innerHeight - 120 : 640;
+
+      log('Browser isolation status:', {
+        crossOriginIsolated: typeof window !== 'undefined' ? window.crossOriginIsolated : false,
+        sharedArrayBuffer: typeof SharedArrayBuffer !== 'undefined'
+      });
 
       await client.init({
         zoomAppRoot: zoomContainerRef.current,
         language: 'en-US',
-        patchJsMedia: true,   // Official SDK fix for 'require is not defined' in js_media.min.js
         customize: {
-          video: { isResizable: true, viewSizes: { default: { width: 1100, height: 580 } } },
-          meetingInfo: ['topic', 'host', 'mn', 'pwd', 'telPwd', 'invite', 'participant', 'dc', 'enctype'],
-          toolbar: {
-            buttons: [
-              { text: 'Leave Session', className: 'leave-btn', onClick: () => client.leaveMeeting() }
-            ]
-          }
+          video: { 
+            isResizable: true, 
+            viewSizes: { 
+              default: { 
+                width: containerWidth, 
+                height: containerHeight 
+              } 
+            } 
+          },
+          meetingInfo: ['topic', 'host', 'mn', 'pwd', 'telPwd', 'invite', 'participant', 'dc', 'enctype']
         }
       });
+      log('SDK client.init completed successfully');
 
-      // NOTE: sdkKey is intentionally omitted from joinOptions per Zoom SDK v4.0.0+.
-      // The sdkKey/appKey is embedded inside the JWT signature payload instead.
-      //
-      // IMPORTANT: client.join() Promise is unreliable in React 19 — it may never resolve
-      // even when the user has actually joined (Tim Padua appears in Zoom but state stays 'CONNECTING').
-      // We instead listen to the SDK's connection-change event which fires reliably.
+      let isSettled = false;
+      log('Entering connection promise block...');
       await new Promise<void>((resolve, reject) => {
+        log('Setting up 180s timeout guard...');
         const timeout = setTimeout(() => {
-          reject(new Error('Connection timed out. The meeting may not be active or your credentials may have expired.'));
-        }, 45000);
+          if (isSettled) return;
+          isSettled = true;
+          log('Timeout guard triggered (180s reached)');
+          reject(new Error('Connection timed out. Your internet connection might be too slow to download the Zoom media assets.'));
+        }, 180000); // 3 minutes for slow connections downloading 20MB of WASM
 
+        // Show a helpful toast if it takes longer than 10 seconds
+        const slowNetworkWarning = setTimeout(() => {
+          if (!isSettled) {
+            toast.info('Downloading Zoom media assets. This may take a moment on slower connections...');
+          }
+        }, 10000);
+
+        log('Registering connection-change event listener...');
         client.on('connection-change', (payload: any) => {
-          console.log('[LiveSessionPlayer] connection-change:', payload);
+          log('connection-change event received', payload);
           if (payload.state === 'Connected') {
-            clearTimeout(timeout);
-            resolve();
+            if (!isSettled) {
+              isSettled = true;
+              clearTimeout(timeout);
+              clearTimeout(slowNetworkWarning);
+              log('Connected successfully, resolving promise');
+              resolve();
+            } else {
+              setZoomState('joined');
+            }
           } else if (['Closed', 'Failed', 'Forbidden'].includes(payload.state)) {
-            clearTimeout(timeout);
-            reject(new Error(payload.reason || `Meeting connection ${payload.state.toLowerCase()}.`));
+            if (!isSettled) {
+              isSettled = true;
+              clearTimeout(timeout);
+              clearTimeout(slowNetworkWarning);
+              log(`Connection state: ${payload.state}, rejecting promise`, payload);
+              reject(new Error(payload.reason || `Meeting connection ${payload.state.toLowerCase()}.`));
+            } else {
+              log(`Connection closed after join: ${payload.state}`);
+              setZoomState('idle');
+            }
           }
         });
 
-        // Start the join — don't await, let connection-change drive resolution
+        log('Invoking client.join()...');
         client.join({
           signature,
           meetingNumber: liveSession.zoomMeetingId,
           password: liveSession.zoomPasscode,
           userName,
-          userEmail: user?.email ?? '',
+          // Append a random salt to the email to bypass Zoom's 60-second ghost session lock
+          userEmail: `${user?.email?.split('@')[0] || 'learner'}+${Math.random().toString(36).substring(2, 8)}@${user?.email?.split('@')[1] || 'ilearn.local'}`,
+        }).then((res: any) => {
+          log('client.join() promise resolved (note: may not mean connected yet)', res);
         }).catch((err: any) => {
-          clearTimeout(timeout);
-          reject(err);
+          log('client.join() promise rejected', err);
+          if (!isSettled) {
+            isSettled = true;
+            clearTimeout(timeout);
+            clearTimeout(slowNetworkWarning);
+            reject(err);
+          }
         });
       });
 
+      log('Zoom SDK join sequence fully finished. Transitioning to joined.');
       setZoomState('joined');
 
     } catch (err: any) {
+      log('Zoom SDK error encountered in catch block', err);
       console.error('[LiveSessionPlayer] Zoom SDK error:', err);
-      // Zoom SDK errors are non-standard objects with a `type` and `reason` field
       const zoomReason = err?.reason || err?.type;
       const message = zoomReason
         ? `Zoom error: ${zoomReason}`
@@ -293,59 +389,95 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
   // Main render
   // ─────────────────────────────────────────────────────────────────────────
 
+  const hasJoined = zoomState === 'joined';
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
       {/* ── Session Card ────────────────────────────────────────────────── */}
-      <Card className="border-none shadow-2xl overflow-hidden bg-gradient-to-br from-background to-orange-50/30">
-        <div className="h-2 bg-orange-500" />
-        <CardHeader className="p-8">
+      <Card className={`border-none shadow-2xl overflow-hidden transition-colors duration-500 ${
+        hasJoined 
+          ? 'bg-slate-950 text-white rounded-none md:rounded-2xl' 
+          : 'bg-gradient-to-br from-background to-orange-50/30'
+      }`}>
+        {!hasJoined && <div className="h-2 bg-orange-500" />}
+        <CardHeader className={`transition-all duration-300 ${hasJoined ? 'p-4 border-b border-slate-900 bg-slate-950' : 'p-8'}`}>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-2xl bg-orange-500/10 flex items-center justify-center">
-                <Video className="h-8 w-8 text-orange-600" />
+              <div className={`h-16 w-16 rounded-2xl flex items-center justify-center transition-colors ${
+                hasJoined ? 'bg-orange-500/20' : 'bg-orange-500/10'
+              }`}>
+                <Video className={`h-8 w-8 transition-colors ${hasJoined ? 'text-orange-400' : 'text-orange-600'}`} />
               </div>
               <div>
-                <CardTitle className="text-2xl font-black uppercase tracking-tight">{module.title}</CardTitle>
-                <CardDescription className="font-bold text-orange-600 uppercase tracking-widest text-xs">Live Learning Session</CardDescription>
+                <CardTitle className={`text-2xl font-black uppercase tracking-tight ${hasJoined ? 'text-white' : ''}`}>
+                  {module.title}
+                </CardTitle>
+                <CardDescription className={`font-bold uppercase tracking-widest text-xs ${
+                  hasJoined ? 'text-orange-400' : 'text-orange-600'
+                }`}>
+                  {hasJoined ? 'Active Live Session' : 'Live Learning Session'}
+                </CardDescription>
               </div>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleAddToCalendar} className="font-bold border-orange-200 hover:bg-orange-50">
-                <CalendarIcon className="mr-2 h-4 w-4" /> Add to Calendar
-              </Button>
+              {onToggleWidescreen && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={onToggleWidescreen} 
+                  className={`font-bold gap-1.5 transition-all ${
+                    hasJoined 
+                      ? 'border-slate-800 text-slate-300 hover:bg-slate-900 hover:text-white bg-slate-950' 
+                      : 'border-orange-200 hover:bg-orange-50 text-orange-600'
+                  }`}
+                >
+                  {isWidescreen ? (
+                    <><Minimize2 className="h-4 w-4" /> Normal View</>
+                  ) : (
+                    <><Maximize2 className="h-4 w-4" /> Theater Mode</>
+                  )}
+                </Button>
+              )}
+              {!hasJoined && (
+                <Button variant="outline" size="sm" onClick={handleAddToCalendar} className="font-bold border-orange-200 hover:bg-orange-50">
+                  <CalendarIcon className="mr-2 h-4 w-4" /> Add to Calendar
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="p-8 pt-0 space-y-8">
+        <CardContent className={`transition-all duration-300 ${hasJoined ? 'p-0 bg-black' : 'p-8 pt-0 space-y-8'}`}>
           {/* Schedule + URL info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="p-6 rounded-2xl bg-muted/30 border border-border/50 flex items-center gap-4">
-              <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center shadow-sm">
-                <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+          {!hasJoined && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-6 rounded-2xl bg-muted/30 border border-border/50 flex items-center gap-4">
+                <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center shadow-sm">
+                  <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter">Scheduled Time</p>
+                  <p className="font-bold text-lg">{localTime}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter">Scheduled Time</p>
-                <p className="font-bold text-lg">{localTime}</p>
+              <div className="p-6 rounded-2xl bg-muted/30 border border-border/50 flex items-center gap-4">
+                <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center shadow-sm">
+                  <ExternalLink className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter">Meeting Destination</p>
+                  <p className="font-bold truncate text-sm">
+                    {session?.joinUrl || module.meetingUrl || (useEmbeddedSdk ? 'Auto-configured via Zoom API' : 'TBA by Instructor')}
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="p-6 rounded-2xl bg-muted/30 border border-border/50 flex items-center gap-4">
-              <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center shadow-sm">
-                <ExternalLink className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter">Meeting Destination</p>
-                <p className="font-bold truncate text-sm">
-                  {session?.joinUrl || module.meetingUrl || (useEmbeddedSdk ? 'Auto-configured via Zoom API' : 'TBA by Instructor')}
-                </p>
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* SDK status feedback */}
           {useEmbeddedSdk && zoomState !== 'idle' && (
-            <div className="transition-all duration-300">
+            <div className={`transition-all duration-300 ${hasJoined ? 'px-4 py-2' : ''}`}>
               {renderZoomStatus()}
             </div>
           )}
@@ -355,49 +487,51 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({ module, on
             <div
               ref={zoomContainerRef}
               id="zoom-sdk-container"
-              className="w-full rounded-2xl overflow-hidden bg-slate-900"
+              className={`relative w-full overflow-hidden bg-black transition-all ${
+                hasJoined ? 'rounded-none' : 'rounded-2xl'
+              }`}
               style={{
-                // Give the container real height during connecting so SDK can render immediately on join.
-                // 0px only when fully idle / error / session-not-found (before user clicked Launch).
-                minHeight: ['loading-session', 'loading-signature', 'initializing-sdk', 'joined'].includes(zoomState)
-                  ? '580px'
+                height: ['loading-session', 'loading-signature', 'initializing-sdk', 'joined'].includes(zoomState)
+                  ? (isWidescreen ? 'calc(100vh - 120px)' : '640px')
                   : '0px',
-                transition: 'min-height 0.3s ease'
+                minHeight: ['loading-session', 'loading-signature', 'initializing-sdk', 'joined'].includes(zoomState)
+                  ? (isWidescreen ? 'calc(100vh - 120px)' : '640px')
+                  : '0px',
               }}
             />
           )}
 
           {/* Join button */}
-          {useEmbeddedSdk ? (
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                onClick={handleJoinEmbedded}
-                disabled={['loading-session', 'loading-signature', 'initializing-sdk', 'joined', 'session-not-found'].includes(zoomState)}
-                className="flex-1 h-16 text-lg font-black uppercase tracking-widest shadow-xl shadow-orange-500/20 bg-orange-600 hover:bg-orange-700 disabled:opacity-60"
-              >
-                {['loading-session', 'loading-signature', 'initializing-sdk'].includes(zoomState)
-                  ? <><Loader2 className="mr-3 h-6 w-6 animate-spin" /> Connecting...</>
-                  : zoomState === 'joined'
-                  ? <><Wifi className="mr-3 h-6 w-6" /> Session Active</>
-                  : <><Video className="mr-3 h-6 w-6" /> Launch Zoom Session</>
-                }
-              </Button>
-              {/* Fallback external link — always available */}
-              {(session?.joinUrl || module.meetingUrl) && (
-                <Button variant="outline" onClick={handleJoinExternal} className="h-16 px-6 font-bold border-orange-200 hover:bg-orange-50">
-                  <ExternalLink className="mr-2 h-5 w-5" /> Open in Zoom App
+          {!hasJoined && (
+            useEmbeddedSdk ? (
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  onClick={handleJoinEmbedded}
+                  disabled={['loading-session', 'loading-signature', 'initializing-sdk', 'joined', 'session-not-found'].includes(zoomState)}
+                  className="flex-1 h-16 text-lg font-black uppercase tracking-widest shadow-xl shadow-orange-500/20 bg-orange-600 hover:bg-orange-700 disabled:opacity-60"
+                >
+                  {['loading-session', 'loading-signature', 'initializing-sdk'].includes(zoomState)
+                    ? <><Loader2 className="mr-3 h-6 w-6 animate-spin" /> Connecting...</>
+                    : <><Video className="mr-3 h-6 w-6" /> Launch Zoom Session</>
+                  }
                 </Button>
-              )}
-            </div>
-          ) : (
-            <Button
-              onClick={handleJoinExternal}
-              disabled={!module.meetingUrl}
-              className="w-full h-16 text-lg font-black uppercase tracking-widest shadow-xl shadow-orange-500/20 bg-orange-600 hover:bg-orange-700"
-            >
-              <ExternalLink className="mr-3 h-6 w-6" />
-              Join Live Session Now
-            </Button>
+                {/* Fallback external link — always available */}
+                {(session?.joinUrl || module.meetingUrl) && (
+                  <Button variant="outline" onClick={handleJoinExternal} className="h-16 px-6 font-bold border-orange-200 hover:bg-orange-50">
+                    <ExternalLink className="mr-2 h-5 w-5" /> Open in Zoom App
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <Button
+                onClick={handleJoinExternal}
+                disabled={!module.meetingUrl}
+                className="w-full h-16 text-lg font-black uppercase tracking-widest shadow-xl shadow-orange-500/20 bg-orange-600 hover:bg-orange-700"
+              >
+                <ExternalLink className="mr-3 h-6 w-6" />
+                Join Live Session Now
+              </Button>
+            )
           )}
         </CardContent>
       </Card>

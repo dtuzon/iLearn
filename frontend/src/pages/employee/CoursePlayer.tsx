@@ -45,6 +45,18 @@ export const CoursePlayer: React.FC = () => {
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
   const [quizResult, setQuizResult] = useState<{ score: number, passed: boolean, message: string } | null>(null);
   const [batchLock, setBatchLock] = useState<any>(null);
+  const [isWidescreen, setIsWidescreen] = useState(false);
+
+  useEffect(() => {
+    if (isWidescreen) {
+      document.body.classList.add('zoom-widescreen-active');
+    } else {
+      document.body.classList.remove('zoom-widescreen-active');
+    }
+    return () => {
+      document.body.classList.remove('zoom-widescreen-active');
+    };
+  }, [isWidescreen]);
 
 
 
@@ -78,6 +90,7 @@ export const CoursePlayer: React.FC = () => {
       
       setIsAtIntro(false);
       setIsAtClosing(false);
+      setIsWidescreen(false);
 
       // Target the current module based on progress order
       // If at order 0, we start at step 1
@@ -290,6 +303,7 @@ export const CoursePlayer: React.FC = () => {
     setDisplayedModule(m);
     setIsAtIntro(m.type === 'INTRODUCTION');
     setIsAtClosing(m.type === 'CLOSING');
+    setIsWidescreen(false);
 
     if (m.type === 'PRE_QUIZ' || m.type === 'POST_QUIZ') {
       const questions = await quizzesApi.getModuleQuestions(m.id);
@@ -298,9 +312,13 @@ export const CoursePlayer: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row gap-8 pb-12">
+    <div className={cn(
+      "mx-auto px-4 flex flex-col md:flex-row gap-8 pb-12 w-full",
+      isWidescreen ? "max-w-none px-6" : "max-w-7xl"
+    )}>
       {/* Sidebar Navigation */}
-      <aside className="w-full md:w-72 shrink-0 space-y-6">
+      {!isWidescreen && (
+        <aside className="w-full md:w-72 shrink-0 space-y-6">
         <Button 
           variant="ghost" 
           className="w-full justify-start text-muted-foreground hover:text-primary mb-2"
@@ -387,20 +405,23 @@ export const CoursePlayer: React.FC = () => {
           </div>
         </div>
       </aside>
+    )}
 
       {/* Main Content Area */}
       <main className="flex-1 space-y-8 pb-12">
         {/* Module Header Pill */}
-        <div className="flex items-center justify-between">
-           <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-full border">
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Sequence</span>
-              <div className="h-4 w-px bg-border" />
-              <span className="text-xs font-bold">{displayedModule?.title || 'Course Overview'}</span>
-           </div>
-           <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground tabular-nums">
-             Step {displayedModule?.sequenceOrder || 0} of {totalModules}
-           </div>
-        </div>
+        {!isWidescreen && (
+          <div className="flex items-center justify-between">
+             <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-full border">
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Sequence</span>
+                <div className="h-4 w-px bg-border" />
+                <span className="text-xs font-bold">{displayedModule?.title || 'Course Overview'}</span>
+             </div>
+             <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground tabular-nums">
+               Step {displayedModule?.sequenceOrder || 0} of {totalModules}
+             </div>
+          </div>
+        )}
 
       {(isAtIntro || isAtClosing) && displayedModule ? (
         <div className="space-y-8">
@@ -469,6 +490,14 @@ export const CoursePlayer: React.FC = () => {
 
       ) : !displayedModule ? (
          <Card><CardContent className="p-8 text-center">No module available.</CardContent></Card>
+      ) : displayedModule.type === 'LIVE_SESSION' ? (
+        <LiveSessionPlayer 
+          module={displayedModule}
+          onComplete={handleCompleteModule}
+          batchId={enrollment?.batchId}
+          isWidescreen={isWidescreen}
+          onToggleWidescreen={() => setIsWidescreen(!isWidescreen)}
+        />
       ) : (
         <Card className="shadow-lg border-primary/10">
           <CardHeader className="border-b bg-muted/30">
@@ -477,7 +506,6 @@ export const CoursePlayer: React.FC = () => {
               {(displayedModule.type === 'PRE_QUIZ' || displayedModule.type === 'POST_QUIZ') && <HelpCircle className="h-6 w-6 text-primary" />}
               {(displayedModule.type === 'WORKSHOP' || displayedModule.type === 'ASSIGNMENT') && <BookOpen className="h-6 w-6 text-emerald-600" />}
               {displayedModule.type === 'EVALUATION' && <ClipboardCheck className="h-6 w-6 text-secondary-foreground" />}
-              {displayedModule.type === 'LIVE_SESSION' && <Video className="h-6 w-6 text-amber-500" />}
               <CardTitle>{displayedModule.title}</CardTitle>
 
             </div>
@@ -648,14 +676,7 @@ export const CoursePlayer: React.FC = () => {
             )}
 
 
-            {/* LIVE SESSION VIEW */}
-            {displayedModule.type === 'LIVE_SESSION' && (
-              <LiveSessionPlayer 
-                module={displayedModule}
-                onComplete={handleCompleteModule}
-                batchId={enrollment?.batchId}
-              />
-            )}
+
 
 
           </CardContent>

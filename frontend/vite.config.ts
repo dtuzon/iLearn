@@ -63,6 +63,43 @@ export default defineConfig({
               changed = true;
             }
 
+            // Prevent Zoom SDK 6.0.2 WebRTC strategy check from returning undefined
+            if (newCode.includes('window.JsMediaSDK_Instance')) {
+              newCode = newCode.replace(
+                /null\s*===\s*\(([a-zA-Z_$][\w_$]*)\s*=\s*window\.JsMediaSDK_Instance\)\s*\|\|\s*void\s*0\s*===\s*\1\s*\?\s*void\s*0\s*:\s*\1\.util\.evaluateWebRTCStrategy\(e,\s*t,\s*n\)/g,
+                '(($&) || { shouldUseWebRTC: true, errNo: 0 })'
+              );
+              changed = true;
+            }
+
+            // Prevent Zoom SDK 6.0.2 WebRTC capability check from crashing by safely wrapping the method definition
+            if (newCode.includes('getWebRTCCapability')) {
+              newCode = newCode.replace(
+                /static getWebRTCCapability\(/g,
+                'static getWebRTCCapability(e,t,n){ return this.__internal_getWebRTCCapability(e,t,n) || { shouldUseWebRTC: true, errNo: 0 }; } static __internal_getWebRTCCapability('
+              );
+              newCode = newCode.replace(
+                /key:\s*["']getWebRTCCapability["']\s*,\s*value:\s*function\s*\(/g,
+                'key:"getWebRTCCapability",value:function(e,t,n){ return this.__internal_getWebRTCCapability(e,t,n) || { shouldUseWebRTC: true, errNo: 0 }; }},{key:"__internal_getWebRTCCapability",value:function('
+              );
+              changed = true;
+            }
+            // Add null checks for ee.current to prevent "Cannot read properties of null (reading 'children')" crashes
+            if (newCode.includes('ee.current')) {
+              newCode = newCode.replace(/ee\.current\.children/g, '(ee.current ? ee.current.children : [])');
+              newCode = newCode.replace(/i\.observe\(ee\.current/g, 'ee.current && i.observe(ee.current');
+              changed = true;
+            }
+
+            // Prevent <DraggableCore> crash when findDOMNode fails in React 19
+            if (newCode.includes('<DraggableCore> not mounted on DragStart!')) {
+              newCode = newCode.replace(
+                /throw new Error\([^)]+<DraggableCore> not mounted on DragStart![^)]+\)/g,
+                'console.warn("DraggableCore prevented crash"); return'
+              );
+              changed = true;
+            }
+
             if (changed) {
               return {
                 code: newCode,
@@ -77,7 +114,7 @@ export default defineConfig({
         name: 'react-dom-compat-alias',
         enforce: 'pre',
         resolveId(source, importer, options) {
-          if (source === 'react-dom') {
+          if (source === 'react-dom' || source === 'react-dom/client') {
             if (importer && (importer.replace(/\\/g, '/').includes('node_modules/react-dom') || importer.includes('react-dom-compat'))) {
               return this.resolve(source, importer, Object.assign({ skipSelf: true }, options));
             }
@@ -105,7 +142,6 @@ export default defineConfig({
       },
     },
   },
-  // Ensure @zoom/meetingsdk is pre-bundled by Vite to resolve CommonJS require/module issues
   optimizeDeps: {
     include: ['@zoom/meetingsdk'],
     rolldownOptions: {
@@ -113,10 +149,11 @@ export default defineConfig({
         {
           name: 'zoom-react19-compat-rolldown',
           transform(code, id) {
+            const idNormalized = id.replace(/\\/g, '/');
             if (
-              id.includes('@zoom/meetingsdk') || 
-              id.includes('zoomus-websdk') || 
-              id.includes('@zoom_meetingsdk')
+              idNormalized.includes('@zoom/meetingsdk') || 
+              idNormalized.includes('zoomus-websdk') || 
+              idNormalized.includes('@zoom_meetingsdk')
             ) {
               let changed = false;
               let newCode = code;
@@ -137,6 +174,43 @@ export default defineConfig({
                 changed = true;
               }
 
+              // Prevent Zoom SDK 6.0.2 WebRTC strategy check from returning undefined
+              if (newCode.includes('window.JsMediaSDK_Instance')) {
+                newCode = newCode.replace(
+                  /null\s*===\s*\(([a-zA-Z_$][\w_$]*)\s*=\s*window\.JsMediaSDK_Instance\)\s*\|\|\s*void\s*0\s*===\s*\1\s*\?\s*void\s*0\s*:\s*\1\.util\.evaluateWebRTCStrategy\(e,\s*t,\s*n\)/g,
+                  '(($&) || { shouldUseWebRTC: true, errNo: 0 })'
+                );
+                changed = true;
+              }
+
+              // Prevent Zoom SDK 6.0.2 WebRTC capability check from crashing by safely wrapping the method definition
+              if (newCode.includes('getWebRTCCapability')) {
+                newCode = newCode.replace(
+                  /static getWebRTCCapability\(/g,
+                  'static getWebRTCCapability(e,t,n){ return this.__internal_getWebRTCCapability(e,t,n) || { shouldUseWebRTC: true, errNo: 0 }; } static __internal_getWebRTCCapability('
+                );
+                newCode = newCode.replace(
+                  /key:\s*["']getWebRTCCapability["']\s*,\s*value:\s*function\s*\(/g,
+                  'key:"getWebRTCCapability",value:function(e,t,n){ return this.__internal_getWebRTCCapability(e,t,n) || { shouldUseWebRTC: true, errNo: 0 }; }},{key:"__internal_getWebRTCCapability",value:function('
+                );
+                changed = true;
+              }
+              // Add null checks for ee.current to prevent "Cannot read properties of null (reading 'children')" crashes
+              if (newCode.includes('ee.current')) {
+                newCode = newCode.replace(/ee\.current\.children/g, '(ee.current ? ee.current.children : [])');
+                newCode = newCode.replace(/i\.observe\(ee\.current/g, 'ee.current && i.observe(ee.current');
+                changed = true;
+              }
+
+              // Prevent <DraggableCore> crash when findDOMNode fails in React 19
+              if (newCode.includes('<DraggableCore> not mounted on DragStart!')) {
+                newCode = newCode.replace(
+                  /throw new Error\([^)]+<DraggableCore> not mounted on DragStart![^)]+\)/g,
+                  'console.warn("DraggableCore prevented crash"); return'
+                );
+                changed = true;
+              }
+
               if (changed) {
                 return {
                   code: newCode,
@@ -150,9 +224,15 @@ export default defineConfig({
         {
           name: 'react-dom-compat-rolldown',
           resolveId(source, importer) {
-            if (source === 'react-dom') {
-              if (importer && (importer.replace(/\\/g, '/').includes('node_modules/react-dom') || importer.includes('react-dom-compat'))) {
-                return null; // Fallback to default resolution
+            if (source === 'react-dom' || source === 'react-dom/client') {
+              if (importer) {
+                const importerNormalized = importer.replace(/\\/g, '/');
+                if (
+                  importerNormalized.includes('node_modules/react-dom') ||
+                  importerNormalized.includes('react-dom-compat')
+                ) {
+                  return null; // Fallback to default resolution
+                }
               }
               return path.resolve(__dirname, './src/react-dom-compat.ts');
             }
@@ -161,5 +241,5 @@ export default defineConfig({
         }
       ]
     }
-  },
+  }
 });

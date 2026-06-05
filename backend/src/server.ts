@@ -12,8 +12,6 @@ initDeadlineWorker();
 initEscalationWorker();
 initBatchNotificationWorker();
 
-
-
 const server = app.listen(PORT, () => {
 
   console.log(`🚀 iLearn API running on http://localhost:${PORT}`);

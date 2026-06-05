@@ -33,7 +33,7 @@ export const sendActivityUpdateEmail = async (
   const color = isApproved ? '#10b981' : '#ef4444';
   
   const html = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; rounded: 12px;">
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
       <h2 style="color: ${color};">${title}</h2>
       <p>Hello,</p>
       <p>Your submission for the <strong>${courseName}</strong> workshop module has been reviewed.</p>
