@@ -56,6 +56,9 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({
   const zoomContainerRef = useRef<HTMLDivElement>(null);
   // Keep a reference to the Zoom client for cleanup on unmount
   const zoomClientRef = useRef<any>(null);
+  const joinAttemptRef = useRef(0);
+  const [zoomScale, setZoomScale] = useState(1);
+  const [zoomHeight, setZoomHeight] = useState(600);
 
   const useEmbeddedSdk = !!batchId;
   const userName = user ? `${user.firstName} ${user.lastName}`.trim() : 'iLearn Learner';
@@ -90,6 +93,62 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({
       cleanupZoom();
       zoomClientRef.current = null;
     };
+  }, []);
+
+  // ── Dynamic Zoom Sizing and CSS Transform Scaling ──────────────────────────
+  const updateScale = useCallback(() => {
+    const containerEl = zoomContainerRef.current;
+    if (!containerEl) return;
+    
+    const containerWidth = containerEl.clientWidth || 800;
+    const targetWidth = 960;
+    const targetHeight = 600;
+    
+    const scale = containerWidth / targetWidth;
+    setZoomScale(scale);
+    setZoomHeight(targetHeight * scale);
+    
+    const child = containerEl.firstElementChild as HTMLElement;
+    if (child) {
+      child.style.transform = `scale(${scale})`;
+      child.style.transformOrigin = 'top left';
+      child.style.width = `${targetWidth}px`;
+      child.style.height = `${targetHeight}px`;
+      child.style.position = 'absolute';
+      child.style.top = '0px';
+      child.style.left = '0px';
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!['loading-session', 'loading-signature', 'initializing-sdk', 'joined'].includes(zoomState)) return;
+    
+    const containerEl = zoomContainerRef.current;
+    if (!containerEl) return;
+    
+    // Set up MutationObserver to detect when Zoom SDK mounts its child element
+    const observer = new MutationObserver(() => {
+      updateScale();
+    });
+    
+    observer.observe(containerEl, { childList: true });
+    
+    // Run initial scale update
+    updateScale();
+    
+    window.addEventListener('resize', updateScale);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateScale);
+    };
+  }, [zoomState, isWidescreen, updateScale]);
+
+  // ── Helper: Destroy the current Zoom client safely ─────────────────────────
+  const destroyZoomClient = useCallback(() => {
+    if (zoomClientRef.current) {
+      try { zoomClientRef.current.leaveMeeting?.(); } catch { /* ignore */ }
+      zoomClientRef.current = null;
+    }
   }, []);
 
   // ── Mode B: Join the embedded Zoom meeting ────────────────────────────────
@@ -150,41 +209,46 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({
       log('Zoom Embedded SDK imported successfully');
 
       if (zoomClientRef.current) {
-        try { 
-          log('Cleaning up previous Zoom client instance...');
-          zoomClientRef.current.leaveMeeting?.(); 
-        } catch (cleanupErr) { 
-          log('Error cleaning up previous client', cleanupErr);
-        }
+        log('Cleaning up previous Zoom client instance...');
+        destroyZoomClient();
       }
 
       log('Creating Zoom client instance...');
       const client = ZoomMtgEmbedded.createClient();
       zoomClientRef.current = client;
+      joinAttemptRef.current += 1;
+      const currentAttempt = joinAttemptRef.current;
 
       log('Step 4: Initializing SDK into container...');
       setZoomState('initializing-sdk');
 
-      // Delay DOM measurement slightly to ensure the container has expanded from 0px
-      await new Promise(resolve => setTimeout(resolve, 50));
-      const containerWidth = zoomContainerRef.current?.clientWidth || 1000;
-      const containerHeight = isWidescreen ? window.innerHeight - 120 : 640;
+      const containerEl = zoomContainerRef.current!;
+
+      // Delay to ensure the container has its final layout dimensions
+      await new Promise(resolve => setTimeout(resolve, 200));
+      const containerWidth = containerEl.clientWidth || 800;
+      const containerHeight = containerEl.clientHeight || Math.min(900, Math.max(780, Math.round(window.innerHeight * 0.8)));
 
       log('Browser isolation status:', {
         crossOriginIsolated: typeof window !== 'undefined' ? window.crossOriginIsolated : false,
         sharedArrayBuffer: typeof SharedArrayBuffer !== 'undefined'
       });
 
+      log('Container dimensions at init:', { containerWidth, containerHeight });
+
       await client.init({
-        zoomAppRoot: zoomContainerRef.current,
+        zoomAppRoot: containerEl,
         language: 'en-US',
         customize: {
           video: { 
-            isResizable: true, 
+            isResizable: false, 
+            popper: {
+              disableDraggable: true
+            },
             viewSizes: { 
               default: { 
-                width: containerWidth, 
-                height: containerHeight 
+                width: 960, 
+                height: 600 
               } 
             } 
           },
@@ -196,12 +260,28 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({
       let isSettled = false;
       log('Entering connection promise block...');
       await new Promise<void>((resolve, reject) => {
-        log('Setting up 180s timeout guard...');
+        // Auto-retry: if this is the first attempt and nothing happens in 30s,
+        // the WASM is likely still downloading. Destroy and retry (assets will be cached).
+        const autoRetryTimeout = currentAttempt <= 1 ? setTimeout(() => {
+          if (!isSettled) {
+            isSettled = true;
+            log('Auto-retry: no connection after 30s on first attempt, retrying...');
+            toast.info('Reconnecting to Zoom (assets are now cached)...');
+            destroyZoomClient();
+            // Schedule retry on next tick to let state settle
+            setTimeout(() => handleJoinEmbedded(), 500);
+            // Resolve (don't reject) — the retry will handle the new attempt
+            resolve();
+          }
+        }, 30000) : null;
+
+        log(`Setting up 180s timeout guard (attempt ${currentAttempt})...`);
         const timeout = setTimeout(() => {
           if (isSettled) return;
           isSettled = true;
+          if (autoRetryTimeout) clearTimeout(autoRetryTimeout);
           log('Timeout guard triggered (180s reached)');
-          reject(new Error('Connection timed out. Your internet connection might be too slow to download the Zoom media assets.'));
+          reject(new Error('Connection timed out. Please check that the meeting host has started the session and try again.'));
         }, 180000); // 3 minutes for slow connections downloading 20MB of WASM
 
         // Show a helpful toast if it takes longer than 10 seconds
@@ -219,6 +299,7 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({
               isSettled = true;
               clearTimeout(timeout);
               clearTimeout(slowNetworkWarning);
+              if (autoRetryTimeout) clearTimeout(autoRetryTimeout);
               log('Connected successfully, resolving promise');
               resolve();
             } else {
@@ -229,6 +310,7 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({
               isSettled = true;
               clearTimeout(timeout);
               clearTimeout(slowNetworkWarning);
+              if (autoRetryTimeout) clearTimeout(autoRetryTimeout);
               log(`Connection state: ${payload.state}, rejecting promise`, payload);
               reject(new Error(payload.reason || `Meeting connection ${payload.state.toLowerCase()}.`));
             } else {
@@ -254,13 +336,17 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({
             isSettled = true;
             clearTimeout(timeout);
             clearTimeout(slowNetworkWarning);
+            if (autoRetryTimeout) clearTimeout(autoRetryTimeout);
             reject(err);
           }
         });
       });
 
-      log('Zoom SDK join sequence fully finished. Transitioning to joined.');
-      setZoomState('joined');
+      // If auto-retry triggered (resolved without rejection), don't transition — the retry handles it
+      if (zoomClientRef.current === client) {
+        log('Zoom SDK join sequence fully finished. Transitioning to joined.');
+        setZoomState('joined');
+      }
 
     } catch (err: any) {
       log('Zoom SDK error encountered in catch block', err);
@@ -492,10 +578,10 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({
               }`}
               style={{
                 height: ['loading-session', 'loading-signature', 'initializing-sdk', 'joined'].includes(zoomState)
-                  ? (isWidescreen ? 'calc(100vh - 120px)' : '640px')
+                  ? `${zoomHeight}px`
                   : '0px',
                 minHeight: ['loading-session', 'loading-signature', 'initializing-sdk', 'joined'].includes(zoomState)
-                  ? (isWidescreen ? 'calc(100vh - 120px)' : '640px')
+                  ? `${zoomHeight}px`
                   : '0px',
               }}
             />

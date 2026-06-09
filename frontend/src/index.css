@@ -181,13 +181,31 @@ body.zoom-widescreen-active .min-h-screen > .flex-1 > main > .container {
   margin: 0 !important;
 }
 
-/* Fix Zoom SDK Layout Conflicts with Tailwind Preflight */
+/* ── Zoom SDK Tailwind Conflict Fixes ──────────────────────────────────── */
+
+/* Ensure consistent box-sizing with the SDK's styled-components */
 #zoom-sdk-container,
-#zoom-sdk-container * {
-  box-sizing: content-box !important;
+#zoom-sdk-container *,
+#zoom-sdk-container *::before,
+#zoom-sdk-container *::after {
+  box-sizing: border-box !important;
 }
 
+/* Prevent Tailwind's media constraints (max-width:100%, height:auto)
+   from shrinking SDK video/canvas elements */
 #zoom-sdk-container canvas,
 #zoom-sdk-container video {
   max-width: none !important;
 }
+
+#zoom-sdk-container > div {
+  width: 960px !important;
+  height: 600px !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+}
+
+
+
+
