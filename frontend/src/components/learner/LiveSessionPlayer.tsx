@@ -8,6 +8,12 @@ import { coursesApi } from '../../api/courses.api';
 import { zoomApi } from '../../api/zoom.api';
 import type { BatchLiveSession } from '../../api/zoom.api';
 import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '../ui/dropdown-menu';
 
 interface LiveSessionPlayerProps {
   module: any;
@@ -89,6 +95,24 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({
     document.body.removeChild(link);
   };
 
+  const handleAddToGoogleCalendar = () => {
+    if (!scheduledTimeRaw) return;
+    const startDate = new Date(scheduledTimeRaw);
+    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+    
+    const fmtGoogle = (d: Date) => d.toISOString().replace(/-|:|\.\d+/g, '');
+    const datesParam = `${fmtGoogle(startDate)}/${fmtGoogle(endDate)}`;
+    
+    const title = encodeURIComponent(module.title);
+    const details = encodeURIComponent(`Live Learning webcast session. Join link: ${joinUrl || 'TBA'}`);
+    const location = encodeURIComponent(joinUrl || 'Virtual');
+    
+    const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${datesParam}&details=${details}&location=${location}`;
+    
+    window.open(googleUrl, '_blank', 'noopener,noreferrer');
+    toast.success('Redirecting to Google Calendar...');
+  };
+
   const handleVerify = async () => {
     if (!passcode.trim()) { 
       toast.error('Please enter the attendance passcode.'); 
@@ -127,14 +151,31 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({
               </div>
             </div>
             {scheduledTimeRaw && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleAddToCalendar} 
-                className="font-bold border-border hover:bg-muted text-foreground transition-all shadow-sm rounded-xl h-10 px-4 shrink-0"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" /> Add to Calendar
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="font-bold border-border hover:bg-muted text-foreground transition-all shadow-sm rounded-xl h-10 px-4 shrink-0"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" /> Add to Calendar
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 rounded-xl p-1 bg-popover border shadow-md">
+                  <DropdownMenuItem 
+                    onClick={handleAddToGoogleCalendar} 
+                    className="cursor-pointer hover:bg-muted font-bold rounded-lg py-2"
+                  >
+                    Google Calendar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={handleAddToCalendar} 
+                    className="cursor-pointer hover:bg-muted font-bold rounded-lg py-2"
+                  >
+                    Outlook / Apple (.ics)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </CardHeader>
