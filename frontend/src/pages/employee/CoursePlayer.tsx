@@ -45,18 +45,6 @@ export const CoursePlayer: React.FC = () => {
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
   const [quizResult, setQuizResult] = useState<{ score: number, passed: boolean, message: string } | null>(null);
   const [batchLock, setBatchLock] = useState<any>(null);
-  const [isWidescreen, setIsWidescreen] = useState(false);
-
-  useEffect(() => {
-    if (isWidescreen) {
-      document.body.classList.add('zoom-widescreen-active');
-    } else {
-      document.body.classList.remove('zoom-widescreen-active');
-    }
-    return () => {
-      document.body.classList.remove('zoom-widescreen-active');
-    };
-  }, [isWidescreen]);
 
 
 
@@ -90,7 +78,6 @@ export const CoursePlayer: React.FC = () => {
       
       setIsAtIntro(false);
       setIsAtClosing(false);
-      setIsWidescreen(false);
 
       // Target the current module based on progress order
       // If at order 0, we start at step 1
@@ -312,13 +299,9 @@ export const CoursePlayer: React.FC = () => {
   };
 
   return (
-    <div className={cn(
-      "mx-auto px-4 flex flex-col md:flex-row gap-8 pb-12 w-full",
-      isWidescreen ? "max-w-none px-6" : "max-w-7xl"
-    )}>
+    <div className="mx-auto px-4 flex flex-col md:flex-row gap-8 pb-12 w-full max-w-7xl">
       {/* Sidebar Navigation */}
-      {!isWidescreen && (
-        <aside className="w-full md:w-72 shrink-0 space-y-6">
+      <aside className="w-full md:w-72 shrink-0 space-y-6">
         <Button 
           variant="ghost" 
           className="w-full justify-start text-muted-foreground hover:text-primary mb-2"
@@ -405,23 +388,20 @@ export const CoursePlayer: React.FC = () => {
           </div>
         </div>
       </aside>
-    )}
 
       {/* Main Content Area */}
-      <main className="flex-1 space-y-8 pb-12">
+      <main className="flex-1 min-w-0 space-y-8 pb-12">
         {/* Module Header Pill */}
-        {!isWidescreen && (
-          <div className="flex items-center justify-between">
-             <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-full border">
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Sequence</span>
-                <div className="h-4 w-px bg-border" />
-                <span className="text-xs font-bold">{displayedModule?.title || 'Course Overview'}</span>
-             </div>
-             <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground tabular-nums">
-               Step {displayedModule?.sequenceOrder || 0} of {totalModules}
-             </div>
-          </div>
-        )}
+        <div className="flex items-center justify-between">
+           <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-full border">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Sequence</span>
+              <div className="h-4 w-px bg-border" />
+              <span className="text-xs font-bold">{displayedModule?.title || 'Course Overview'}</span>
+           </div>
+           <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground tabular-nums">
+             Step {displayedModule?.sequenceOrder || 0} of {totalModules}
+           </div>
+        </div>
 
       {(isAtIntro || isAtClosing) && displayedModule ? (
         <div className="space-y-8">
@@ -495,8 +475,6 @@ export const CoursePlayer: React.FC = () => {
           module={displayedModule}
           onComplete={handleCompleteModule}
           batchId={enrollment?.batchId}
-          isWidescreen={isWidescreen}
-          onToggleWidescreen={() => setIsWidescreen(!isWidescreen)}
         />
       ) : (
         <Card className="shadow-lg border-primary/10">
