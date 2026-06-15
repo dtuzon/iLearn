@@ -33,7 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const response = await apiClient.get('/auth/me');
           setUser(response.data);
         } catch (error) {
-          console.error('Failed to restore session:', error);
+          // Session restoration failed — user will be redirected to login
           localStorage.removeItem('token');
         }
       }

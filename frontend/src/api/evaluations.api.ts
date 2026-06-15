@@ -40,21 +40,30 @@ export interface EvaluationTemplate {
   createdAt: string;
 }
 
+export interface PendingTeamEvaluation {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  courseId: string;
+  courseName: string;
+  completionDate: string;
+}
+
 export const evaluationsApi = {
   // Templates
-  createTemplate: async (data: any) => {
+  createTemplate: async (data: Omit<EvaluationTemplate, 'id' | 'createdAt' | 'isActive'>): Promise<EvaluationTemplate> => {
     const response = await apiClient.post('/evaluations/templates', data);
     return response.data;
   },
-  getTemplates: async (category?: TemplateCategory) => {
+  getTemplates: async (category?: TemplateCategory): Promise<EvaluationTemplate[]> => {
     const response = await apiClient.get('/evaluations/templates', { params: { category } });
     return response.data;
   },
-  getTemplateById: async (id: string) => {
+  getTemplateById: async (id: string): Promise<EvaluationTemplate> => {
     const response = await apiClient.get(`/evaluations/templates/${id}`);
     return response.data;
   },
-  updateTemplate: async (id: string, data: any) => {
+  updateTemplate: async (id: string, data: Partial<Omit<EvaluationTemplate, 'id' | 'createdAt'>>): Promise<EvaluationTemplate> => {
     const response = await apiClient.put(`/evaluations/templates/${id}`, data);
     return response.data;
   },
@@ -63,23 +72,33 @@ export const evaluationsApi = {
   submitResponse: async (data: {
     courseId: string;
     templateId: string;
-    answers: Record<string, any>;
+    answers: Record<string, string | number>;
     evaluatorId?: string;
-  }) => {
+  }): Promise<{ id: string }> => {
     const response = await apiClient.post('/evaluations/responses', data);
     return response.data;
   },
-  getResponsesByCourse: async (courseId: string) => {
+  getResponsesByCourse: async (courseId: string): Promise<any[]> => {
     const response = await apiClient.get(`/evaluations/responses/course/${courseId}`);
     return response.data;
   },
 
   // Legacy/Compatibility methods for Supervisor evaluations (to be migrated later if needed)
-  getPendingTeam: async () => {
+  getPendingTeam: async (): Promise<PendingTeamEvaluation[]> => {
     const response = await apiClient.get('/evaluations/pending-team');
     return response.data;
   },
-  submitBehavioralEvaluation: async (data: any) => {
+  submitBehavioralEvaluation: async (data: {
+    employeeId: string;
+    courseId: string;
+    moduleRatings: {
+      moduleName: string;
+      beforeRating: number;
+      afterRating: number;
+      explanation: string;
+    }[];
+    overallImpact: string;
+  }): Promise<{ message: string }> => {
     const response = await apiClient.post('/evaluations/behavioral', data);
     return response.data;
   }

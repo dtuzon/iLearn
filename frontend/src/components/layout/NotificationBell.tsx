@@ -23,8 +23,8 @@ export const NotificationBell: React.FC = () => {
     try {
       const data = await notificationsApi.getAll();
       setNotifications(data);
-    } catch (error) {
-      console.error('Failed to fetch notifications', error);
+    } catch {
+      // Notification fetch failed silently
     }
   };
 
@@ -46,8 +46,8 @@ export const NotificationBell: React.FC = () => {
         setIsOpen(false);
         navigate(link);
       }
-    } catch (error) {
-      console.error('Failed to mark notification as read', error);
+    } catch {
+      // Non-critical — notification state unchanged
     }
   };
 
@@ -55,8 +55,8 @@ export const NotificationBell: React.FC = () => {
     try {
       await notificationsApi.markAllAsRead();
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-    } catch (error) {
-      console.error('Failed to mark all as read', error);
+    } catch {
+      // Non-critical — notification state unchanged
     }
   };
 

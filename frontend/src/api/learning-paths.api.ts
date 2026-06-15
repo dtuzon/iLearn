@@ -1,14 +1,23 @@
 import apiClient from './client';
+import type { Course } from './courses.api';
 
-export type LearningPathCourse = {
+export interface CertificateTemplate {
+  id: string;
+  backgroundImageUrl: string | null;
+  designConfig: any; // We can keep designConfig as any since it is a JSON object with arbitrary keys
+  learningPathId?: string | null;
+  courseId?: string | null;
+}
+
+export interface LearningPathCourse {
   id: string;
   learningPathId: string;
   courseId: string;
   order: number;
-  course: any;
-};
+  course: Course;
+}
 
-export type LearningPath = {
+export interface LearningPath {
   id: string;
   title: string;
   description: string | null;
@@ -25,9 +34,27 @@ export type LearningPath = {
   createdAt: string;
   updatedAt: string;
   pathCourses: LearningPathCourse[];
-  certificateTemplate?: any;
-};
+  certificateTemplate?: CertificateTemplate;
+}
 
+export interface LearningPathEnrollment {
+  id: string;
+  userId: string;
+  learningPathId: string;
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+  enrolledAt: string;
+  completedAt: string | null;
+  dueDate: string | null;
+  learningPath: LearningPath & {
+    certificates?: { id: string; userId: string; issuedAt: string }[];
+  };
+  batch?: {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+  } | null;
+}
 
 export const learningPathsApi = {
   getAll: async (): Promise<LearningPath[]> => {
@@ -59,18 +86,17 @@ export const learningPathsApi = {
     return response.data;
   },
   
-  enroll: async (id: string, userId?: string, dueDate?: Date): Promise<any> => {
+  enroll: async (id: string, userId?: string, dueDate?: Date): Promise<LearningPathEnrollment> => {
     const response = await apiClient.post(`/learning-paths/${id}/enroll`, { userId, dueDate });
     return response.data;
   },
 
-
-  getUserEnrollments: async (userId: string): Promise<any[]> => {
+  getUserEnrollments: async (userId: string): Promise<LearningPathEnrollment[]> => {
     const response = await apiClient.get(`/users/${userId}/learning-paths`);
     return response.data;
   },
 
-  updateCertificateTemplate: async (id: string, formData: FormData): Promise<any> => {
+  updateCertificateTemplate: async (id: string, formData: FormData): Promise<CertificateTemplate> => {
     const response = await apiClient.put(`/learning-paths/${id}/certificate-template`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
@@ -82,7 +108,7 @@ export const learningPathsApi = {
     return response.data;
   },
 
-  uploadThumbnail: async (id: string, file: File): Promise<any> => {
+  uploadThumbnail: async (id: string, file: File): Promise<{ thumbnailUrl: string }> => {
     const formData = new FormData();
     formData.append('thumbnail', file);
     const response = await apiClient.post(`/learning-paths/${id}/thumbnail`, formData, {

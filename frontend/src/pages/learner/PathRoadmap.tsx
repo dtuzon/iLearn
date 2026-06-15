@@ -163,8 +163,7 @@ export const PathRoadmap: React.FC = () => {
                         </div>
                         <h3 className="text-xl font-bold">{pc.course.title}</h3>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> 45 mins</span>
-                          <span className="flex items-center gap-1"><Award className="h-3 w-3" /> Certificate</span>
+                          <span className="flex items-center gap-1"><Award className="h-3 w-3" /> Step {index + 1} of {path.pathCourses.length}</span>
                         </div>
                       </div>
 

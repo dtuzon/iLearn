@@ -39,8 +39,8 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({
       try {
         const liveSession = await zoomApi.getLiveSession(batchId, module.id);
         setSession(liveSession);
-      } catch (err: any) {
-        console.warn('[LiveSessionPlayer] Failed to load dynamic live session:', err);
+      } catch {
+        // Live session details unavailable — UI will show fallback
       } finally {
         setIsLoadingSession(false);
       }

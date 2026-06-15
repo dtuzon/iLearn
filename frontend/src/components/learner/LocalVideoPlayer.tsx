@@ -44,10 +44,9 @@ export const LocalVideoPlayer: React.FC<LocalVideoPlayerProps> = ({
   const cleanUrl = url.startsWith('/') ? url : `/${url}`;
   const fullUrl = url.startsWith('http') ? url : `${baseUrl}${cleanUrl}`;
 
-  console.log('Video Player Source:', { original: url, resolved: fullUrl });
 
-  const handleVideoError = (e: any) => {
-    console.error('Video loading error:', e);
+
+  const handleVideoError = () => {
     toast.error('Failed to load video. Please check the source or your connection.');
   };
 

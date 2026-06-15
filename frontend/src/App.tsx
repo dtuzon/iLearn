@@ -34,6 +34,7 @@ import { ActivityApprovals } from './pages/approvals/ActivityApprovals';
 import { Dashboard } from './pages/Dashboard';
 import { DiscoverCatalog } from './pages/learner/DiscoverCatalog';
 import { PathRoadmap } from './pages/learner/PathRoadmap';
+import { LearningCalendar } from './pages/learner/LearningCalendar';
 
 function App() {
   return (
@@ -91,6 +92,7 @@ function App() {
                   <Route path="certificates" element={<MyCertificates />} />
                   <Route path="discover" element={<DiscoverCatalog />} />
                   <Route path="paths/:id" element={<PathRoadmap />} />
+                  <Route path="calendar" element={<LearningCalendar />} />
                 </Route>
 
                 {/* Supervisor Routes */}

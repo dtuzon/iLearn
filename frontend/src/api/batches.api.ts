@@ -1,4 +1,62 @@
 import apiClient from './client';
+import type { LearningPathCourse } from './learning-paths.api';
+
+export interface BatchCourseSchedule {
+  id: string;
+  batchId: string;
+  courseId: string;
+  startDate: string | null;
+  endDate: string | null;
+  order: number;
+  course: { title: string };
+}
+
+export interface BatchActivityChecker {
+  id: string;
+  batchId: string;
+  userId: string;
+  user: {
+    firstName: string | null;
+    lastName: string | null;
+    username: string;
+    role: string;
+  };
+}
+
+export interface BatchEnrollment {
+  id: string;
+  batchId: string;
+  userId: string;
+  status: string;
+  enrolledAt: string;
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    username: string;
+    email: string | null;
+    department: { name: string } | null;
+  };
+}
+
+export interface CreateBatchInput {
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  checkerIds: string[];
+  learnerIds: string[];
+  notifyScheduleChanges: boolean;
+  requires180DayEval: boolean;
+  courseSchedules: {
+    courseId: string;
+    startDate: string | null;
+    endDate: string | null;
+    order: number;
+  }[];
+  courseId: string | null;
+  learningPathId: string | null;
+}
 
 export interface Batch {
   id: string;
@@ -9,11 +67,11 @@ export interface Batch {
   courseId?: string;
   learningPathId?: string;
   course?: { title: string };
-  learningPath?: { title: string; pathCourses?: any[] };
-  courseSchedules?: any[];
-  activityCheckers?: any[];
-  enrollments?: any[];
-  learningPathEnrollments?: any[];
+  learningPath?: { title: string; pathCourses?: LearningPathCourse[] };
+  courseSchedules?: BatchCourseSchedule[];
+  activityCheckers?: BatchActivityChecker[];
+  enrollments?: BatchEnrollment[];
+  learningPathEnrollments?: BatchEnrollment[];
   requires180DayEval?: boolean;
   liveSessions?: {
     id: string;
@@ -42,12 +100,12 @@ export const batchesApi = {
     return response.data as Batch;
   },
 
-  create: async (data: any) => {
+  create: async (data: CreateBatchInput) => {
     const response = await apiClient.post('/batches', data);
     return response.data as Batch;
   },
 
-  update: async (id: string, data: any) => {
+  update: async (id: string, data: Partial<CreateBatchInput>) => {
     const response = await apiClient.put(`/batches/${id}`, data);
     return response.data as Batch;
   },

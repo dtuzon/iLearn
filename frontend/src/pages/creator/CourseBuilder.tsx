@@ -443,8 +443,8 @@ export const CourseBuilder: React.FC = () => {
         const pId = data.parentId || data.id;
         const vData = await coursesApi.getVersions(pId);
         setLineageVersions(vData);
-      } catch (err) {
-        console.error("Failed to fetch version lineage", err);
+      } catch {
+        // Version lineage fetch failed — non-critical
       }
 
     } catch (error) {
@@ -476,8 +476,8 @@ export const CourseBuilder: React.FC = () => {
     try {
       const data = await departmentsApi.getAll();
       setDepartments(data);
-    } catch (error) {
-      console.error('Failed to fetch departments');
+    } catch {
+      // Department fetch failed — non-critical
     }
   };
 
@@ -608,8 +608,8 @@ export const CourseBuilder: React.FC = () => {
       try {
         const parentCourse = await coursesApi.getById(course.parentId);
         autoSummary = generateAutoDiff(course, identityForm, parentCourse);
-      } catch (err) {
-        console.error("Failed to generate auto-diff", err);
+      } catch {
+        // Auto-diff generation failed — use fallback summary
         autoSummary = autoSummary || '• Changes from previous version.';
       }
     } else {
@@ -703,8 +703,8 @@ export const CourseBuilder: React.FC = () => {
       const data = await coursesApi.getActiveLearners(courseId);
       setActiveLearners(data);
       setIsUnpublishDialogOpen(true);
-    } catch (err) {
-      console.error("Failed to fetch active learners", err);
+    } catch {
+      // Learner fetch failed — open dialog with empty list
       setActiveLearners([]);
       setIsUnpublishDialogOpen(true);
     } finally {

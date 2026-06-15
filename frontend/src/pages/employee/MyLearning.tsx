@@ -125,8 +125,21 @@ export const MyLearning: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {pathEnrollments.map((enrollment) => {
                 const path = enrollment.learningPath;
-                // Simulating progress based on courses inside (logic will be more complex in prod)
-                const progress = 33; // Placeholder
+                const totalCourses = path.pathCourses?.length || 0;
+
+                // Compute real progress from enrollment data
+                const completedCourses = path.pathCourses?.filter((pc: any) => {
+                  const courseEnrollment = enrollments.find(e => e.course.id === pc.courseId);
+                  return courseEnrollment?.status === 'COMPLETED';
+                }).length || 0;
+                const progress = totalCourses > 0 ? Math.round((completedCourses / totalCourses) * 100) : 0;
+
+                // Find the actual active step (first non-completed course)
+                const activeStepIndex = path.pathCourses?.findIndex((pc: any) => {
+                  const courseEnrollment = enrollments.find(e => e.course.id === pc.courseId);
+                  return !courseEnrollment || courseEnrollment.status !== 'COMPLETED';
+                }) ?? 0;
+                const activeCourse = path.pathCourses?.[activeStepIndex];
                 
                 return (
                   <Card key={enrollment.id} className="group border-none shadow-lg hover:shadow-xl transition-all duration-300 bg-background/50 backdrop-blur-sm overflow-hidden flex flex-col">
@@ -135,7 +148,7 @@ export const MyLearning: React.FC = () => {
                       <div className="flex justify-between items-start mb-1">
                         <div className="flex flex-wrap gap-1.5 items-center">
                           <Badge variant="secondary" className="bg-primary/5 text-primary border-none text-[10px] font-bold">
-                            {path.pathCourses.length} COURSES
+                            {totalCourses} COURSES
                           </Badge>
                           {enrollment.batch && (
                             <Badge variant="outline" className="text-primary border-primary/30 bg-primary/5 text-[10px] font-semibold uppercase tracking-tight">
@@ -165,18 +178,20 @@ export const MyLearning: React.FC = () => {
                         <Progress value={progress} className="h-1.5 bg-primary/5" />
                       </div>
                       
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Active Step</p>
-                        <div className="p-3 rounded-xl bg-muted/30 border border-primary/5 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                            2
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold truncate">{path.pathCourses[1]?.course.title || 'Next Course'}</p>
-                            <p className="text-[10px] text-muted-foreground">Continue where you left off</p>
+                      {activeCourse && progress < 100 && (
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Active Step</p>
+                          <div className="p-3 rounded-xl bg-muted/30 border border-primary/5 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                              {activeStepIndex + 1}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold truncate">{activeCourse.course.title}</p>
+                              <p className="text-[10px] text-muted-foreground">Continue where you left off</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
                     </CardContent>
                     <CardFooter className="bg-muted/5 pt-4">
                       <Button 

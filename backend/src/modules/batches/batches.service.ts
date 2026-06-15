@@ -552,11 +552,11 @@ export class BatchesService {
     }
 
     // 3.5 Calculate Real KASH Metrics
-    const skillsScore = allScores.length > 0 ? averageScore : 70; // Fallback to 70 if no activities
-    const knowledgeScore = postQuizAvg > 0 ? postQuizAvg : (preQuizAvg > 0 ? preQuizAvg : 70);
+    const skillsScore = allScores.length > 0 ? averageScore : 0; // Fallback to 0 if no activities
+    const knowledgeScore = postQuizAvg > 0 ? postQuizAvg : (preQuizAvg > 0 ? preQuizAvg : 0);
     
     // Habits: Percentage of completed enrollments that were on time (before due date)
-    let habitsScore = 75; // Default
+    let habitsScore = 0; // Default to 0
     if (validUserIds.length > 0 && batchCourseIds.length > 0) {
       const courseEnrollmentsForHabits = await prisma.enrollment.findMany({
         where: {
@@ -573,7 +573,7 @@ export class BatchesService {
     }
 
     // Attitude: Try to get from KASH evaluations if they exist
-    let attitudeScore = 80; // Default
+    let attitudeScore = 0; // Default to 0
     
     // First find templates that are KASH evaluations
     const kashTemplates = await prisma.evaluationTemplate.findMany({
@@ -606,12 +606,12 @@ export class BatchesService {
       if (totalEvalCount > 0) attitudeScore = Math.round(totalEvalScore / totalEvalCount);
     }
 
-    const kashMetrics = [
+    const kashMetrics = kashEvaluations.length > 0 ? [
       { domain: 'Knowledge', score: knowledgeScore },
       { domain: 'Attitude', score: attitudeScore },
       { domain: 'Skills', score: skillsScore },
       { domain: 'Habits', score: habitsScore }
-    ];
+    ] : null;
 
     // 4. Learner Breakdown Data
     const learnerDetails = await Promise.all(allEnrollments.map(async e => {

@@ -1,4 +1,5 @@
 import apiClient from './client';
+import type { LearningPathCourse } from './learning-paths.api';
 
 export interface CatalogItem {
   id: string;
@@ -9,7 +10,7 @@ export interface CatalogItem {
   targetAudience?: string;
   targetDepartments: string[];
   createdAt: string;
-  pathCourses?: any[];
+  pathCourses?: LearningPathCourse[];
   _count: {
     enrollments: number;
   };

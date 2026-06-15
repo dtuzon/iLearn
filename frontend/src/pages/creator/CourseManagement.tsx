@@ -129,8 +129,8 @@ export const CourseManagement: React.FC = () => {
     try {
       const data = await departmentsApi.getAll();
       setDepartments(data);
-    } catch (error) {
-      console.error('Failed to fetch departments');
+    } catch {
+      // Department fetch failed silently
     }
   };
 

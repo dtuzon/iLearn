@@ -21,7 +21,8 @@ import {
   ShieldCheck,
   UserPlus,
   LayoutGrid,
-  Zap
+  Zap,
+  Calendar
 } from 'lucide-react';
 
 
@@ -165,6 +166,7 @@ export const AppShell: React.FC = () => {
               Overview
             </div>
             <NavLink to="/dashboard" icon={LayoutDashboard}>Dashboard</NavLink>
+            <NavLink to="/learning/calendar" icon={Calendar}>Calendar</NavLink>
             
             {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
               <NavLink to="/admin/bulletin" icon={Newspaper}>Manage Bulletin</NavLink>

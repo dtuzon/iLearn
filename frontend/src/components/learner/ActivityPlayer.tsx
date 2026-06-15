@@ -57,7 +57,7 @@ export const ActivityPlayer: React.FC<ActivityPlayerProps> = ({ module, onComple
         setTextResponse(data.textResponse || '');
       }
     } catch (error) {
-      console.error('Failed to fetch submission', error);
+      // Submission fetch failed — handled gracefully
     } finally {
       setIsLoading(false);
     }

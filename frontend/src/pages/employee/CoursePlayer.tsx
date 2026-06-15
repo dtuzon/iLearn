@@ -108,9 +108,8 @@ export const CoursePlayer: React.FC = () => {
         }
       }
 
-    } catch (error: any) {
+    } catch {
       toast.error('Failed to load course content');
-      console.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -290,7 +289,7 @@ export const CoursePlayer: React.FC = () => {
     setDisplayedModule(m);
     setIsAtIntro(m.type === 'INTRODUCTION');
     setIsAtClosing(m.type === 'CLOSING');
-    setIsWidescreen(false);
+
 
     if (m.type === 'PRE_QUIZ' || m.type === 'POST_QUIZ') {
       const questions = await quizzesApi.getModuleQuestions(m.id);
@@ -505,7 +504,7 @@ export const CoursePlayer: React.FC = () => {
 
                     <div className="text-white text-center p-8">
                       <Video className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Video content placeholder. [Backend: {displayedModule.contentUrlOrText || 'No URL'}]</p>
+                      <p className="text-white/70 font-medium">Video content is not available for this module.</p>
                     </div>
                   )}
                 </div>

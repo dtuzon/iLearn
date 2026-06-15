@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { batchesApi } from '../../api/batches.api';
 import { departmentsApi } from '../../api/departments.api';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Loader2, Users, CheckCircle2, TrendingUp, Trophy, Download, FileText, Filter, BookOpen, ArrowUpRight } from 'lucide-react';
+import { Loader2, Users, CheckCircle2, TrendingUp, Trophy, Download, FileText, Filter, BookOpen, ArrowUpRight, Award } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Button } from '../../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
@@ -18,8 +18,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Badge } from '../../components/ui/badge';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas-pro';
+import { pdf } from '@react-pdf/renderer';
+import { BatchReportPDF } from '../../components/admin/BatchReportPDF';
 import * as XLSX from 'xlsx';
 import { cn } from '../../lib/utils';
 
@@ -37,7 +38,6 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
   const [isExporting, setIsExporting] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const printRef = useRef<HTMLDivElement>(null);
-  const reportRef = useRef<HTMLDivElement>(null);
 
   const [filters, setFilters] = useState({
     departmentId: 'all',
@@ -50,7 +50,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
 
   useEffect(() => {
     if (isOpen) {
-      departmentsApi.getAll().then(setDepartments).catch(console.error);
+      departmentsApi.getAll().then(setDepartments).catch(() => {});
     }
   }, [isOpen]);
 
@@ -85,59 +85,70 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
     : filters.status.replace('_', ' ');
 
   const handleExportPDF = async () => {
-    if (!reportRef.current) return;
     setIsExporting(true);
     toast.info('Generating Executive Summary PDF...');
     try {
-      // Small timeout to guarantee DOM styles have resolved
-      setTimeout(async () => {
-        try {
-          const element = reportRef.current!;
-          const pages = element.querySelectorAll('.pdf-page');
-          
-          const pdf = new jsPDF('p', 'mm', 'a4');
-          
-          for (let i = 0; i < pages.length; i++) {
-            const pageEl = pages[i] as HTMLElement;
-            const canvas = await html2canvas(pageEl, { 
-              scale: 3, 
-              useCORS: true,
-              logging: false,
-              backgroundColor: '#ffffff',
-              windowWidth: 800,
-              windowHeight: 1130
-            });
-            const imgData = canvas.toDataURL('image/png');
-            
-            if (i > 0) {
-              pdf.addPage();
-            }
-            pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
-          }
-          
-          // Use a custom bulletproof download trigger by appending to DOM
-          const blob = pdf.output('blob');
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          const cleanBatchName = batchName && batchName.trim() ? batchName.trim().replace(/\s+/g, '_') : 'Batch';
-          a.download = `${cleanBatchName}_Executive_Report.pdf`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-          
-          toast.success('Executive Report PDF Exported Successfully');
-        } catch (error) {
-          console.error('[PDF Export Error]:', error);
-          toast.error('Failed to generate PDF. Check console for details.');
-        } finally {
-          setIsExporting(false);
-        }
-      }, 500);
-    } catch (e) {
-      console.error('[PDF Export Trigger Error]:', e);
-      toast.error('Failed to start PDF generation');
+      const chartPrePostEl = document.getElementById('chart-pre-post');
+      const chartStatusDistEl = document.getElementById('chart-status-dist');
+      const chartKashEl = document.getElementById('chart-kash');
+
+      let prePostImg: string | null = null;
+      let statusDistImg: string | null = null;
+      let kashImg: string | null = null;
+
+      const captureOptions = {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      };
+
+      if (chartPrePostEl) {
+        const canvas = await html2canvas(chartPrePostEl, captureOptions);
+        prePostImg = canvas.toDataURL('image/png');
+      }
+      if (chartStatusDistEl) {
+        const canvas = await html2canvas(chartStatusDistEl, captureOptions);
+        statusDistImg = canvas.toDataURL('image/png');
+      }
+      if (chartKashEl) {
+        const canvas = await html2canvas(chartKashEl, captureOptions);
+        kashImg = canvas.toDataURL('image/png');
+      }
+
+      const logoUrl = window.location.origin + '/pdf-logo.png';
+
+      const doc = (
+        <BatchReportPDF
+          batchName={batchName}
+          logoUrl={logoUrl}
+          data={data}
+          filters={filters}
+          departments={departments}
+          charts={{
+            prePost: prePostImg,
+            statusDist: statusDistImg,
+            kash: kashImg,
+          }}
+        />
+      );
+
+      const blob = await pdf(doc).toBlob();
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      const cleanBatchName = batchName && batchName.trim() ? batchName.trim().replace(/\s+/g, '_') : 'Batch';
+      a.download = `${cleanBatchName}_Executive_Report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success('Executive Report PDF Exported Successfully');
+    } catch (error) {
+      toast.error('Failed to generate PDF.');
+    } finally {
       setIsExporting(false);
     }
   };
@@ -202,7 +213,6 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
       XLSX.writeFile(wb, `${cleanBatchName}_RawData.xlsx`);
       toast.success('Excel Data Exported Successfully');
     } catch (e) {
-      console.error('[Excel Export Error]:', e);
       toast.error('Failed to export Excel data');
     }
   };
@@ -222,17 +232,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
     }
   };
 
-  function chunkArray<T>(arr: T[], size: number): T[][] {
-    const chunks: T[][] = [];
-    for (let i = 0; i < arr.length; i += size) {
-      chunks.push(arr.slice(i, i + size));
-    }
-    return chunks;
-  }
 
-  const learnerChunks = data?.learnerDetails ? chunkArray(data.learnerDetails, 18) : [[]];
-  const courseChunks = data?.courseDetails ? chunkArray(data.courseDetails, 15) : [[]];
-  const totalReportPages = 1 + learnerChunks.length + courseChunks.length;
 
   if (!isOpen) return null;
 
@@ -377,17 +377,17 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                   <Card className="rounded-3xl border-none shadow-lg" style={{ boxShadow: '0 10px 15px -3px rgba(217, 167, 42, 0.05)', backgroundImage: 'linear-gradient(to bottom right, rgba(217, 167, 42, 0.1), transparent)' }}>
                     <CardContent className="p-6 flex items-center gap-4">
                       <div className="h-12 w-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(217, 167, 42, 0.2)' }}><Trophy className="h-6 w-6" style={{ color: '#D9A72A' }} /></div>
-                      <div><p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: 'rgba(217, 167, 42, 0.8)' }}>Avg Score</p><p className="text-3xl font-black" style={{ color: '#D9A72A' }}>{data.averageScore}%</p></div>
+                      <div><p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: 'rgba(217, 167, 42, 0.8)' }}>Avg Activity Score</p><p className="text-3xl font-black" style={{ color: '#D9A72A' }}>{data.averageScore}</p></div>
                     </CardContent>
                   </Card>
 
                   <Card className="rounded-3xl border-none shadow-lg shadow-blue-500/5 bg-gradient-to-br from-blue-500/10 to-transparent">
                     <CardContent className="p-6 flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center"><TrendingUp className="h-6 w-6 text-blue-500" /></div>
+                      <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center"><Award className="h-6 w-6 text-blue-500" /></div>
                       <div>
-                        <p className="text-xs font-black uppercase tracking-widest text-blue-600/70 mb-1">Knowledge Gain</p>
-                        <p className={cn("text-3xl font-black", (data.knowledgeDelta?.percentageIncrease || 0) >= 0 ? "text-blue-600" : "text-rose-600")}>
-                          {(data.knowledgeDelta?.percentageIncrease || 0) >= 0 ? '+' : ''}{data.knowledgeDelta?.percentageIncrease}%
+                        <p className="text-xs font-black uppercase tracking-widest text-blue-600/70 mb-1">Avg Post Quiz Score</p>
+                        <p className="text-3xl font-black text-blue-600">
+                          {data.knowledgeDelta?.postQuizAvg || 0}
                         </p>
                       </div>
                     </CardContent>
@@ -398,8 +398,15 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Knowledge Delta Graph */}
                   <Card className="rounded-3xl border-none shadow-lg shadow-black/5 lg:col-span-1">
-                    <CardHeader><CardTitle className="font-black text-lg tracking-tight">Pre vs Post Quiz</CardTitle></CardHeader>
-                    <CardContent className="h-[250px]">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="font-black text-lg tracking-tight">Pre vs Post Quiz</CardTitle>
+                      {data.knowledgeDelta?.percentageIncrease !== undefined && (
+                        <Badge className="bg-blue-500 hover:bg-blue-600 text-white font-black uppercase text-[10px] tracking-tight py-0.5 px-2">
+                          Gain: {data.knowledgeDelta.percentageIncrease >= 0 ? '+' : ''}{data.knowledgeDelta.percentageIncrease}%
+                        </Badge>
+                      )}
+                    </CardHeader>
+                    <CardContent className="h-[250px]" id="chart-pre-post">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={[
                           { name: 'Pre-Quiz', score: data.knowledgeDelta?.preQuizAvg || 0 },
@@ -423,7 +430,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
 
                   <Card className="rounded-3xl border-none shadow-lg shadow-black/5 lg:col-span-1">
                     <CardHeader><CardTitle className="font-black text-lg tracking-tight">Status Distribution</CardTitle></CardHeader>
-                    <CardContent className="h-[250px]">
+                    <CardContent className="h-[250px]" id="chart-status-dist">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
@@ -439,16 +446,23 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
 
                   <Card className="rounded-3xl border-none shadow-lg shadow-black/5 lg:col-span-1">
                     <CardHeader><CardTitle className="font-black text-lg tracking-tight">Overall K.A.S.H.</CardTitle></CardHeader>
-                    <CardContent className="h-[250px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RadarChart cx="50%" cy="50%" outerRadius="65%" data={data.kashMetrics}>
-                          <PolarGrid strokeOpacity={0.2} />
-                          <PolarAngleAxis dataKey="domain" tick={{ fill: '#64748b', fontWeight: 800, fontSize: 10 }} />
-                          <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                          <Radar name="Average Score" dataKey="score" stroke="#10B981" fill="#10B981" fillOpacity={0.3} strokeWidth={3} />
-                          <RechartsTooltip contentStyle={{ borderRadius: '1rem', border: 'none', fontWeight: 'bold' }} />
-                        </RadarChart>
-                      </ResponsiveContainer>
+                    <CardContent className="h-[250px]" id="chart-kash">
+                      {data.kashMetrics ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart cx="50%" cy="50%" outerRadius="65%" data={data.kashMetrics}>
+                            <PolarGrid strokeOpacity={0.2} />
+                            <PolarAngleAxis dataKey="domain" tick={{ fill: '#64748b', fontWeight: 800, fontSize: 10 }} />
+                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                            <Radar name="Average Score" dataKey="score" stroke="#10B981" fill="#10B981" fillOpacity={0.3} strokeWidth={3} />
+                            <RechartsTooltip contentStyle={{ borderRadius: '1rem', border: 'none', fontWeight: 'bold' }} />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                          <p className="text-sm font-bold text-muted-foreground">K.A.S.H. Evaluation Pending</p>
+                          <p className="text-[10px] text-muted-foreground/60 mt-1 max-w-[180px]">No evaluation responses have been submitted for this batch yet.</p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -511,9 +525,9 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                                 <p className="text-[10px] text-muted-foreground font-medium">{l.department}</p>
                               </div>
                             </TableCell>
-                            <TableCell className="text-center font-black text-blue-600 text-sm">{l.preQuizAvg}%</TableCell>
-                            <TableCell className="text-center font-black text-sm" style={{ color: '#D9A72A' }}>{l.postQuizAvg}%</TableCell>
-                            <TableCell className="text-center font-black text-emerald-600 text-sm">{l.activityScoreAvg}%</TableCell>
+                            <TableCell className="text-center font-black text-blue-600 text-sm">{Math.round(l.preQuizAvg)}</TableCell>
+                            <TableCell className="text-center font-black text-sm" style={{ color: '#D9A72A' }}>{Math.round(l.postQuizAvg)}</TableCell>
+                            <TableCell className="text-center font-black text-emerald-600 text-sm">{Math.round(l.activityScoreAvg)}</TableCell>
                             <TableCell className="text-right">{getStatusBadge(l.status)}</TableCell>
                           </TableRow>
                           {expandedLearnerId === l.id && l.courses?.map((c) => (
@@ -524,13 +538,13 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                                 {c.title}
                               </TableCell>
                               <TableCell className="py-2 text-center font-bold text-blue-600/80 text-xs">
-                                {c.preQuizScore}%
+                                {c.preQuizScore}
                               </TableCell>
                               <TableCell className="py-2 text-center font-bold text-xs" style={{ color: '#D9A72A' }}>
-                                {c.postQuizScore}%
+                                {c.postQuizScore}
                               </TableCell>
                               <TableCell className="py-2 text-center font-bold text-emerald-600/80 text-xs">
-                                {c.activityScore}%
+                                {c.activityScore}
                               </TableCell>
                               <TableCell className="py-2 text-right pr-4">
                                 <Badge className={cn(
@@ -625,10 +639,10 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                                 {getStatusBadge(s.status)}
                               </TableCell>
                               <TableCell className="py-2 text-right font-bold text-blue-600/80 text-xs pr-4">
-                                {s.quizScore}%
+                                {s.quizScore}
                               </TableCell>
                               <TableCell className="py-2 text-right font-bold text-emerald-600/80 text-xs pr-4">
-                                {s.activityScore}%
+                                {s.activityScore}
                               </TableCell>
                               <TableCell className="py-2 text-right pr-4">
                                 <Badge className={cn(
@@ -654,260 +668,6 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
           </Tabs>
         ) : null}
       </DialogContent>
-      
-      {/* Hidden Printable Executive Summary Report Container */}
-      <div ref={reportRef} className="absolute left-[-9999px] top-[-9999px] font-sans">
-        {/* PAGE 1: Overview & KPIs */}
-        <div className="pdf-page w-[800px] h-[1130px] p-12 bg-white text-slate-800 flex flex-col justify-between" style={{ color: '#1e293b', backgroundColor: '#ffffff' }}>
-          <div className="space-y-6">
-            {/* Header Section */}
-            <div className="border-b-2 pb-4 flex justify-between items-end" style={{ borderColor: '#d9a72a' }}>
-              <div className="flex items-center gap-3">
-                <img src="/pdf-logo.png" className="h-10 w-10 object-contain animate-none" style={{ display: 'block', maxWidth: '40px', maxHeight: '40px' }} alt="Standard Insurance Logo" />
-                <div>
-                  <h1 className="text-2xl font-black tracking-tight" style={{ color: '#d9a72a' }}>Standard Insurance Co., Inc.</h1>
-                  <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">iLearn Portal • Executive Batch Analytics Report</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-lg font-black" style={{ color: '#d9a72a' }}>{batchName}</div>
-                <div className="text-xs text-slate-400 font-medium">Generated: {format(new Date(), 'MMMM dd, yyyy • hh:mm a')}</div>
-              </div>
-            </div>
-
-            {/* Active Filters Summary Box */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-3 gap-4 text-xs font-semibold text-slate-600">
-              <div>
-                <span className="text-slate-400 uppercase tracking-wider block font-bold text-[10px]">Department Filter</span>
-                <span className="font-bold" style={{ color: '#D9A72A' }}>{activeDeptName}</span>
-              </div>
-              <div>
-                <span className="text-slate-400 uppercase tracking-wider block font-bold text-[10px]">Role Filter</span>
-                <span className="font-bold capitalize" style={{ color: '#D9A72A' }}>{activeRole}</span>
-              </div>
-              <div>
-                <span className="text-slate-400 uppercase tracking-wider block font-bold text-[10px]">Status Filter</span>
-                <span className="font-bold capitalize" style={{ color: '#D9A72A' }}>{activeStatus}</span>
-              </div>
-            </div>
-
-            {/* Batch Schedule Details Box */}
-            {data && (
-              <div className="rounded-xl p-4 grid grid-cols-3 gap-4 text-xs font-semibold text-slate-600 border" style={{ backgroundColor: 'rgba(217, 167, 42, 0.03)', borderColor: 'rgba(217, 167, 42, 0.15)' }}>
-                <div>
-                  <span className="uppercase tracking-wider block font-bold text-[10px]" style={{ color: '#D9A72A' }}>Start Date</span>
-                  <span className="text-slate-800 font-bold">{format(new Date(data.startDate), 'MMMM dd, yyyy')}</span>
-                </div>
-                <div>
-                  <span className="uppercase tracking-wider block font-bold text-[10px]" style={{ color: '#D9A72A' }}>End Date</span>
-                  <span className="text-slate-800 font-bold">{format(new Date(data.endDate), 'MMMM dd, yyyy')}</span>
-                </div>
-                <div>
-                  <span className="uppercase tracking-wider block font-bold text-[10px]" style={{ color: '#D9A72A' }}>Batch Status</span>
-                  <span className={cn(
-                    "font-black uppercase text-[10px] tracking-wider",
-                    data.status === 'COMPLETED' ? 'text-emerald-600' :
-                    data.status === 'ACTIVE' ? 'text-blue-600' : ''
-                  )}
-                  style={data.status !== 'COMPLETED' && data.status !== 'ACTIVE' ? { color: '#D9A72A' } : undefined}>
-                    {data.status.replace('_', ' ')}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* SECTION 1: Overview & Performance KPIs */}
-            <div className="space-y-4">
-              <h2 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider">
-                1. Batch Overview & KPIs
-              </h2>
-              <div className="grid grid-cols-4 gap-4">
-                <div className="rounded-2xl p-4 text-center border" style={{ backgroundColor: 'rgba(217, 167, 42, 0.05)', borderColor: 'rgba(217, 167, 42, 0.15)' }}>
-                  <span className="text-[10px] uppercase font-bold tracking-wider block mb-1" style={{ color: '#D9A72A' }}>Total Enrolled</span>
-                  <span className="text-3xl font-black text-slate-800" style={{ color: '#D9A72A' }}>{data?.totalLearners || 0}</span>
-                </div>
-                <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 text-center">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400 block mb-1">Completion Rate</span>
-                  <span className="text-3xl font-black text-emerald-900">{data?.completionRate || 0}%</span>
-                </div>
-                <div className="rounded-2xl p-4 text-center border" style={{ backgroundColor: 'rgba(217, 167, 42, 0.05)', borderColor: 'rgba(217, 167, 42, 0.15)' }}>
-                  <span className="text-[10px] uppercase font-bold tracking-wider block mb-1" style={{ color: '#D9A72A' }}>Average Score</span>
-                  <span className="text-3xl font-black" style={{ color: '#D9A72A' }}>{data?.averageScore || 0}%</span>
-                </div>
-                <div className="bg-sky-50/50 border border-sky-100 rounded-2xl p-4 text-center">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-sky-400 block mb-1">Knowledge Gain</span>
-                  <span className="text-3xl font-black text-sky-900">{data?.knowledgeDelta?.percentageIncrease || 0}%</span>
-                </div>
-              </div>
-
-              {/* KASH Metrics Overview */}
-              {data?.kashMetrics && data.kashMetrics.length > 0 && (
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">K.A.S.H. Performance Breakdown</h3>
-                  <div className="grid grid-cols-4 gap-4 text-center">
-                    {data.kashMetrics.map((m, idx) => (
-                      <div key={idx} className="border-r border-slate-200 last:border-r-0">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block">{m.domain}</span>
-                        <span className="text-xl font-bold text-slate-800">{m.score}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="text-center text-[8px] font-bold text-slate-400 uppercase tracking-widest">
-            Confidential • Standard Insurance Portal Analytics Engine • Page 1 of {totalReportPages}
-          </div>
-        </div>
-
-        {/* PAGE 2+: Learner Performance Breakdown (Dynamic Multi-page Chunked Loop) */}
-        {learnerChunks.map((chunk, chunkIdx) => (
-          <div key={`pdf-learner-page-${chunkIdx}`} className="pdf-page w-[800px] h-[1130px] p-12 bg-white text-slate-800 flex flex-col justify-between" style={{ color: '#1e293b', backgroundColor: '#ffffff' }}>
-            <div className="space-y-6">
-              {/* Header Section */}
-              <div className="border-b-2 pb-4 flex justify-between items-end" style={{ borderColor: '#d9a72a' }}>
-                <div className="flex items-center gap-3">
-                  <img src="/pdf-logo.png" className="h-10 w-10 object-contain animate-none" style={{ display: 'block', maxWidth: '40px', maxHeight: '40px' }} alt="Standard Insurance Logo" />
-                  <div>
-                    <h1 className="text-2xl font-black tracking-tight" style={{ color: '#d9a72a' }}>Standard Insurance Co., Inc.</h1>
-                    <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">iLearn Portal • Executive Batch Analytics Report</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-black" style={{ color: '#d9a72a' }}>{batchName}</div>
-                  <div className="text-xs text-slate-400 font-medium">Generated: {format(new Date(), 'MMMM dd, yyyy • hh:mm a')}</div>
-                </div>
-              </div>
-
-              {/* SECTION 2: Learner Performance Breakdown */}
-              <div className="space-y-4">
-                <h2 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider flex justify-between">
-                  <span>2. Learner Breakdown</span>
-                  {learnerChunks.length > 1 && (
-                    <span className="text-xs font-black uppercase tracking-widest" style={{ color: '#D9A72A' }}>
-                      Part {chunkIdx + 1} of {learnerChunks.length}
-                    </span>
-                  )}
-                </h2>
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="text-white font-bold uppercase tracking-wider" style={{ backgroundColor: '#D9A72A' }}>
-                      <th className="p-2 rounded-l-lg">Name</th>
-                      <th className="p-2">Department</th>
-                      <th className="p-2">Role</th>
-                      <th className="p-2">Status</th>
-                      <th className="p-2 rounded-r-lg text-right">Avg Score</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {chunk && chunk.length > 0 ? (
-                      chunk.map((l, idx) => (
-                        <tr key={idx} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50" style={{ height: '38px' }}>
-                          <td className="p-2 font-bold text-slate-800">{l.name}</td>
-                          <td className="p-2 text-slate-600">{l.department}</td>
-                          <td className="p-2 text-slate-600 capitalize">{l.role.toLowerCase().replace('_', ' ')}</td>
-                          <td className="p-2">
-                            <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] ${
-                              l.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' :
-                              l.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
-                              'bg-slate-100 text-slate-800'
-                            }`}>
-                              {l.status.replace('_', ' ')}
-                            </span>
-                          </td>
-                          <td className="p-2 text-right font-black" style={{ color: '#D9A72A' }}>{l.averageScore}%</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={5} className="p-4 text-center text-slate-400 italic">No learners found matching active filters</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div className="text-center text-[8px] font-bold text-slate-400 uppercase tracking-widest">
-              Confidential • Standard Insurance Portal Analytics Engine • Page {2 + chunkIdx} of {totalReportPages}
-            </div>
-          </div>
-        ))}
-
-        {/* PAGE 3+: Content Insights & Metrics (Dynamic Multi-page Chunked Loop) */}
-        {courseChunks.map((chunk, chunkIdx) => (
-          <div key={`pdf-course-page-${chunkIdx}`} className="pdf-page w-[800px] h-[1130px] p-12 bg-white text-slate-800 flex flex-col justify-between" style={{ color: '#1e293b', backgroundColor: '#ffffff' }}>
-            <div className="space-y-6">
-              {/* Header Section */}
-              <div className="border-b-2 pb-4 flex justify-between items-end" style={{ borderColor: '#d9a72a' }}>
-                <div className="flex items-center gap-3">
-                  <img src="/pdf-logo.png" className="h-10 w-10 object-contain animate-none" style={{ display: 'block', maxWidth: '40px', maxHeight: '40px' }} alt="Standard Insurance Logo" />
-                  <div>
-                    <h1 className="text-2xl font-black tracking-tight" style={{ color: '#d9a72a' }}>Standard Insurance Co., Inc.</h1>
-                    <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">iLearn Portal • Executive Batch Analytics Report</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-black" style={{ color: '#d9a72a' }}>{batchName}</div>
-                  <div className="text-xs text-slate-400 font-medium">Generated: {format(new Date(), 'MMMM dd, yyyy • hh:mm a')}</div>
-                </div>
-              </div>
-
-              {/* SECTION 3: Content Insights */}
-              <div className="space-y-4">
-                <h2 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider flex justify-between">
-                  <span>3. Content Insights & Metrics</span>
-                  {courseChunks.length > 1 && (
-                    <span className="text-xs font-black uppercase tracking-widest" style={{ color: '#D9A72A' }}>
-                      Part {chunkIdx + 1} of {courseChunks.length}
-                    </span>
-                  )}
-                </h2>
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="text-white font-bold uppercase tracking-wider" style={{ backgroundColor: '#D9A72A' }}>
-                      <th className="p-2 rounded-l-lg">Course Title</th>
-                      <th className="p-2 text-center">Completion Rate</th>
-                      <th className="p-2 text-center">Avg Quiz Score</th>
-                      <th className="p-2 text-center">Avg Activity Score</th>
-                      <th className="p-2 rounded-r-lg text-right">Overall Course Avg</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {chunk && chunk.length > 0 ? (
-                      chunk.map((c, idx) => (
-                        <tr key={idx} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50" style={{ height: '38px' }}>
-                          <td className="p-2">
-                            <div className="font-bold text-slate-800">{c.title}</div>
-                            <div className="text-[9px] text-slate-400 font-medium">
-                              Schedule: {format(new Date(c.startDate), 'MMM dd, yyyy')} - {format(new Date(c.endDate), 'MMM dd, yyyy')}
-                            </div>
-                          </td>
-                          <td className="p-2 text-center font-bold text-slate-700">{c.completionRate}%</td>
-                          <td className="p-2 text-center text-slate-600">{c.avgQuizScore}%</td>
-                          <td className="p-2 text-center text-slate-600">{c.avgActivityScore}%</td>
-                          <td className="p-2 text-right font-black" style={{ color: '#D9A72A' }}>{c.averageScore}%</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={5} className="p-4 text-center text-slate-400 italic">No course analytics available</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              {/* Footer Disclaimer */}
-              <div className="border-t border-slate-200 pt-4 text-center text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                Confidential • Standard Insurance Portal Analytics Engine • Page {2 + learnerChunks.length + chunkIdx} of {totalReportPages}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
     </Dialog>
   );
 };
