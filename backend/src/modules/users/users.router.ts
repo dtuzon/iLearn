@@ -25,6 +25,19 @@ router.post(
   UsersController.create
 );
 
+router.get(
+  '/profile',
+  authenticate,
+  UsersController.getProfile
+);
+
+router.put(
+  '/profile',
+  authenticate,
+  auditLog('UPDATE_PROFILE'),
+  UsersController.updateProfile
+);
+
 router.put(
   '/:id',
   authenticate,

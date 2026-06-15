@@ -52,10 +52,22 @@ export const CoursePlayer: React.FC = () => {
     if (!courseId) return;
     setIsLoading(true);
     try {
-      const [courseData, progressData] = await Promise.all([
-        coursesApi.getById(courseId),
-        enrollmentsApi.getProgress(courseId)
-      ]);
+      const courseData = await coursesApi.getById(courseId);
+      let progressData;
+      try {
+        progressData = await enrollmentsApi.getProgress(courseId);
+        if (progressData.status === 'NOT_ENROLLED') {
+          await enrollmentsApi.enroll(courseId);
+          progressData = await enrollmentsApi.getProgress(courseId);
+        }
+      } catch (err: any) {
+        if (err.response?.status === 404) {
+          await enrollmentsApi.enroll(courseId);
+          progressData = await enrollmentsApi.getProgress(courseId);
+        } else {
+          throw err;
+        }
+      }
 
       setCourse(courseData);
       setEnrollment(progressData);

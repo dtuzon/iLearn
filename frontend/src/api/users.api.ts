@@ -54,6 +54,14 @@ export const usersApi = {
     const response = await apiClient.get('/users/my-team');
     return response.data;
   },
+  updateProfile: async (data: Partial<UserResponse> & { password?: string }) => {
+    const response = await apiClient.put('/users/profile', data);
+    return response.data as UserResponse;
+  },
+  getProfile: async () => {
+    const response = await apiClient.get('/users/profile');
+    return response.data as UserResponse;
+  },
 
   bulkImport: async (file: File) => {
     const formData = new FormData();

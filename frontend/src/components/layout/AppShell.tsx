@@ -108,7 +108,6 @@ export const AppShell: React.FC = () => {
             <div className="flex items-center gap-1 sm:mr-2">
               <NotificationBell />
             </div>
-
             <div className="h-8 w-px bg-border/60 mx-1 hidden sm:block"></div>
 
             <DropdownMenu>
@@ -129,11 +128,23 @@ export const AppShell: React.FC = () => {
                 <DropdownMenuLabel className="px-3 py-2">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-bold leading-none">My Account</p>
-                    <p className="text-xs leading-none text-muted-foreground italic">Standard Insurance Employee</p>
+                    <p className="text-xs leading-none text-muted-foreground italic">
+                      Standard Insurance {
+                        user?.role === 'ADMINISTRATOR' ? 'Administrator' :
+                        user?.role === 'LEARNING_MANAGER' ? 'Learning Manager' :
+                        user?.role === 'DEPARTMENT_HEAD' ? 'Department Head' :
+                        user?.role === 'COURSE_CREATOR' ? 'Course Creator' :
+                        user?.role === 'SUPERVISOR' ? 'Supervisor' :
+                        'Employee'
+                      }
+                    </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-border/50" />
-                <DropdownMenuItem className="gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors focus:bg-accent focus:text-accent-foreground">
+                <DropdownMenuItem 
+                  onClick={() => navigate('/profile-settings')}
+                  className="gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors focus:bg-accent focus:text-accent-foreground"
+                >
                   <User className="h-4 w-4" />
                   <span>Profile Settings</span>
                 </DropdownMenuItem>

@@ -368,6 +368,25 @@ export class UsersService {
       }
     });
   }
+
+  static async getProfile(id: string) {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        department: true,
+        immediateSuperior: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    });
+    if (!user) throw new Error('User not found');
+    const { passwordHash, ...safeUser } = user as any;
+    return safeUser;
+  }
 }
 
 

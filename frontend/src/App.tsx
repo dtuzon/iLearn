@@ -32,6 +32,7 @@ import { ActivityApprovals } from './pages/approvals/ActivityApprovals';
 
 
 import { Dashboard } from './pages/Dashboard';
+import { ProfileSettings } from './pages/ProfileSettings';
 import { DiscoverCatalog } from './pages/learner/DiscoverCatalog';
 import { PathRoadmap } from './pages/learner/PathRoadmap';
 import { LearningCalendar } from './pages/learner/LearningCalendar';
@@ -49,6 +50,7 @@ function App() {
               <Route element={<AppShell />}>
 
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/profile-settings" element={<ProfileSettings />} />
                 
                 {/* Admin & HR Routes */}
                 <Route path="/admin" element={

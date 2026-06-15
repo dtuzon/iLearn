@@ -67,5 +67,58 @@ export class UsersController {
       res.status(500).json({ message: error.message });
     }
   }
+
+  static async updateProfile(req: AuthenticatedRequest, res: Response) {
+    try {
+      const id = req.user!.userId;
+      const { 
+        firstName, 
+        lastName, 
+        middleInitial, 
+        nickname, 
+        mobileNumber, 
+        personalEmail, 
+        email, 
+        password 
+      } = req.body;
+      
+      const updateData: any = {
+        firstName,
+        lastName,
+        middleInitial,
+        nickname,
+        mobileNumber,
+        personalEmail,
+        email
+      };
+
+      if (password) {
+        updateData.password = password;
+      }
+
+      // Remove undefined fields
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) {
+          delete updateData[key];
+        }
+      });
+
+      const user = await UsersService.update(id, updateData);
+      const { passwordHash, ...safeUser } = user as any;
+      res.json(safeUser);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  static async getProfile(req: AuthenticatedRequest, res: Response) {
+    try {
+      const id = req.user!.userId;
+      const user = await UsersService.getProfile(id);
+      res.json(user);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
 }
 

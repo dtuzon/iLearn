@@ -38,7 +38,10 @@ export class EnrollmentsController {
       const progress = await EnrollmentsService.getProgress(req.user!.userId, courseId as string);
       res.json(progress);
     } catch (error: any) {
-      res.status(404).json({ message: error.message });
+      if (error.message === 'Enrollment not found') {
+        return res.json({ status: 'NOT_ENROLLED' });
+      }
+      res.status(500).json({ message: error.message });
     }
   }
 
