@@ -52,7 +52,18 @@ export const CoursePlayer: React.FC = () => {
     if (!courseId) return;
     setIsLoading(true);
     try {
-      const courseData = await coursesApi.getById(courseId);
+      let courseData;
+      try {
+        courseData = await coursesApi.getById(courseId);
+      } catch (err: any) {
+        if (err.response?.status === 404) {
+          setCourse(null);
+          setIsLoading(false);
+          return;
+        }
+        throw err;
+      }
+
       let progressData;
       try {
         progressData = await enrollmentsApi.getProgress(courseId);
@@ -190,7 +201,29 @@ export const CoursePlayer: React.FC = () => {
     return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
-  if (!course) return <div>Course not found</div>;
+  if (!course) {
+    return (
+      <div className="max-w-md mx-auto py-16 px-4 text-center">
+        <Card className="border border-border/50 bg-card shadow-lg p-8 rounded-xl flex flex-col items-center">
+          <div className="bg-destructive/10 p-4 rounded-full mb-6">
+            <AlertCircle className="h-12 w-12 text-destructive animate-pulse" />
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight mb-2">Course Not Found</h2>
+          <p className="text-muted-foreground text-sm mb-6">
+            The course you are trying to access does not exist or may have been retired by the standard administration.
+          </p>
+          <div className="flex gap-4 w-full">
+            <Button variant="outline" className="flex-1" onClick={() => navigate('/learning/my-courses')}>
+              My Courses
+            </Button>
+            <Button className="flex-1 font-semibold" onClick={() => navigate('/discover')}>
+              Browse Catalog
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   if (batchLock) {
     return (
