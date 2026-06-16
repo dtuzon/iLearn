@@ -81,12 +81,20 @@ export const ResetPasswordPage: React.FC = () => {
         className="relative z-10 w-full md:w-[500px] flex flex-col justify-center px-10 shadow-2xl"
         style={{ backgroundColor: 'hsl(var(--primary))' }}
       >
-        <div className="mb-12">
-          {settings?.companyLogoUrl ? (
-            <img src={`${baseUrl}${settings.companyLogoUrl}`} alt="Logo" className="h-16 w-auto object-contain" />
-          ) : (
-            <h1 className="text-white text-3xl font-black tracking-tighter">iLearn</h1>
+        <div className="mb-8 flex items-center gap-3">
+          {settings?.companyLogoUrl && (
+            <>
+              <img 
+                src={`${baseUrl}${settings.companyLogoUrl}`} 
+                alt="Logo" 
+                className="h-10 w-auto object-contain brightness-0 invert" 
+              />
+              <div className="h-8 w-px bg-white/30" />
+            </>
           )}
+          <span className="text-white text-xl font-semibold tracking-wide">
+            iLearn
+          </span>
         </div>
 
         <div className="space-y-6 text-white">
