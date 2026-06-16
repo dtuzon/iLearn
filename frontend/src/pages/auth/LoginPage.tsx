@@ -156,9 +156,9 @@ export const LoginPage: React.FC = () => {
 
          <div className="flex flex-wrap justify-between items-center gap-4 border-t border-white/10 pt-8 mt-auto animate-in fade-in duration-1000 delay-500">
             <div className="flex gap-6 text-xs font-medium text-white/60 whitespace-nowrap">
-               <a href="#" className="hover:text-white transition-colors">About</a>
-               <a href="#" className="hover:text-white transition-colors">Privacy</a>
-               <a href="#" className="hover:text-white transition-colors">Contact Us</a>
+               <a href="https://www.standard-insurance.com/about-us.html" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">About</a>
+               <a href="https://www.standard-insurance.com/privacy-policy.html#/claim-form" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Privacy</a>
+               <a href="https://www.standard-insurance.com/contact-us.html#/contact-us-form" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Contact Us</a>
             </div>
             <p className="text-xs text-white/30 uppercase tracking-widest text-right">
                {settings?.footerText || '© 2024 Standard Insurance Co., Inc. All Rights Reserved.'}
