@@ -446,16 +446,11 @@ export const BatchReportPDF: React.FC<BatchReportPDFProps> = ({
     return styles.statusOther;
   };
 
+
   const getStatusBadge = (status: string) => {
     if (status === 'COMPLETED') return <Text style={styles.badgeCompleted}>Completed</Text>;
     if (status === 'IN_PROGRESS') return <Text style={styles.badgeInProgress}>In Progress</Text>;
     return <Text style={styles.badgeOther}>{status.replace('_', ' ')}</Text>;
-  };
-
-  const getResultBadge = (result: string) => {
-    if (result === 'Passed') return <Text style={styles.badgePassed}>Passed</Text>;
-    if (result === 'Failed') return <Text style={styles.badgeFailed}>Failed</Text>;
-    return <Text style={styles.badgeOther}>{result}</Text>;
   };
 
   return (
@@ -600,7 +595,7 @@ export const BatchReportPDF: React.FC<BatchReportPDFProps> = ({
               {data.topPerformers.map((performer: any, i: number) => (
                 <View key={i} style={styles.performerCard}>
                   <Text style={styles.performerRank}>#{i + 1}</Text>
-                  <Text style={styles.performerName} numberOfLines={1}>
+                  <Text style={styles.performerName} {...({ numberOfLines: 1 } as any)}>
                     {performer.name}
                   </Text>
                   <Text style={styles.performerScore}>{performer.averageScore}%</Text>

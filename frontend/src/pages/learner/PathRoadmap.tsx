@@ -14,7 +14,6 @@ import {
   Lock, 
   Route,
   ArrowRight,
-  Clock,
   Award
 } from 'lucide-react';
 import { toast } from 'sonner';

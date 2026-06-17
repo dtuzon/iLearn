@@ -67,8 +67,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { cn } from '../../lib/utils';
 import {
   Avatar,
-  AvatarFallback,
-  AvatarImage
+  AvatarFallback
 } from '../../components/ui/avatar';
 import {
   Table,
@@ -349,7 +348,6 @@ export const ManageBatches: React.FC = () => {
                   <div className="flex -space-x-3">
                     {batch.activityCheckers?.map((checker) => (
                       <Avatar key={checker.id} className="border-4 border-background h-10 w-10 ring-2 ring-primary/5 shadow-sm">
-                        <AvatarImage src={checker.user?.thumbnailUrl || undefined} />
                         <AvatarFallback className="bg-primary/10 text-primary font-black text-[10px]">
                           {checker.user?.firstName?.[0]}{checker.user?.lastName?.[0]}
                         </AvatarFallback>
@@ -437,7 +435,6 @@ export const ManageBatches: React.FC = () => {
                       {viewingBatch.activityCheckers?.map(checker => (
                         <div key={checker.id} className="flex items-center gap-3 p-3 pr-6 rounded-2xl border bg-background shadow-sm">
                           <Avatar className="h-10 w-10">
-                            <AvatarImage src={checker.user?.thumbnailUrl || undefined} />
                             <AvatarFallback>{checker.user?.firstName?.[0]}{checker.user?.lastName?.[0]}</AvatarFallback>
                           </Avatar>
                           <div>

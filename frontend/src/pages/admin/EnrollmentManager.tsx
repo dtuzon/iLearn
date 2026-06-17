@@ -174,7 +174,7 @@ export const EnrollmentManager: React.FC = () => {
         dueDate
       });
       
-      toast.success(`Deployment Successful! Enrolled ${result.count} users.`);
+      toast.success(`Deployment Successful! Enrolled ${result.enrolledCount} users.`);
       setSelectedUserIds([]);
       setDueDate(undefined);
     } catch (error: any) {

@@ -781,7 +781,7 @@ export const LearningPathBuilder: React.FC = () => {
             <CertificateBuilder
               learningPathId={path.id}
               initialData={{
-                backgroundUrl: path.certificateTemplate?.backgroundImageUrl,
+                backgroundUrl: path.certificateTemplate?.backgroundImageUrl || undefined,
                 designConfig: path.certificateTemplate?.designConfig
               }}
               isEnabled={path.hasCertificate}
