@@ -130,6 +130,12 @@ export const LearningCalendar: React.FC = () => {
           dot: 'bg-emerald-500',
           label: 'Course Schedule',
         };
+      default:
+        return {
+          bg: 'bg-muted/10 hover:bg-muted/20 text-muted-foreground border-muted/20',
+          dot: 'bg-muted-foreground',
+          label: 'Event',
+        };
     }
   };
 

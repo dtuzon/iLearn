@@ -11,20 +11,22 @@ import { cn } from '../../lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { useAuth } from '../../context/AuthContext';
 
 export const MyCertificates: React.FC = () => {
+  const { user } = useAuth();
   const [completedEnrollments, setCompletedEnrollments] = useState<Enrollment[]>([]);
   const [completedPaths, setCompletedPaths] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
 
   const fetchData = async () => {
+    if (!user?.id) return;
     setIsLoading(true);
     try {
-      const { userId } = JSON.parse(localStorage.getItem('user') || '{}');
       const [courses, paths] = await Promise.all([
         enrollmentsApi.getMyCourses(),
-        learningPathsApi.getUserEnrollments(userId)
+        learningPathsApi.getUserEnrollments(user.id)
       ]);
       
       setCompletedEnrollments(courses.filter(e => e.status === 'COMPLETED'));
@@ -38,7 +40,7 @@ export const MyCertificates: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [user]);
 
   const handleDownloadCourse = async (courseId: string) => {
     setIsDownloading(courseId);

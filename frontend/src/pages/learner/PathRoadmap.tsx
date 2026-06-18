@@ -14,7 +14,8 @@ import {
   Lock, 
   Route,
   ArrowRight,
-  Award
+  Award,
+  AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
@@ -75,7 +76,18 @@ export const PathRoadmap: React.FC = () => {
     );
   }
 
-  if (!path) return <div>Path not found</div>;
+  if (!path) {
+    return (
+      <div className="flex h-[60vh] flex-col items-center justify-center gap-4 text-center">
+        <AlertCircle className="h-16 w-16 text-destructive opacity-80" />
+        <h3 className="text-2xl font-black italic uppercase">Learning Path Not Found</h3>
+        <p className="text-muted-foreground text-sm max-w-sm">The path you are looking for may have been unpublished or removed.</p>
+        <Button onClick={() => navigate('/learning/my-courses')} className="mt-2 rounded-xl">
+          Back to Dashboard
+        </Button>
+      </div>
+    );
+  }
 
   const completedCount = Object.values(courseStatus).filter(s => s === 'COMPLETED').length;
   const progress = (completedCount / path.pathCourses.length) * 100;

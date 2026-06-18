@@ -132,8 +132,8 @@ export const CoursePlayer: React.FC = () => {
         }
       }
 
-    } catch {
-      toast.error('Failed to load course content');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to load course content');
     } finally {
       setIsLoading(false);
     }

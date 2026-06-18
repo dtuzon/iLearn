@@ -279,7 +279,7 @@ export const MyLearning: React.FC = () => {
                         </div>
                         <Progress value={progress} className="h-1.5 bg-purple-500/5" />
                         <p className="text-[10px] text-muted-foreground italic">
-                          Module {enrollment.currentModuleOrder + 1} of {totalModules}
+                          {enrollment.status === 'COMPLETED' || progress === 100 ? 'All modules completed' : `Module ${enrollment.currentModuleOrder + 1} of ${totalModules}`}
                         </p>
                       </div>
                     </CardContent>

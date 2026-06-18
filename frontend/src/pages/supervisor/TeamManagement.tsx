@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { usersApi } from '../../api/users.api';
 import { learningPathsApi } from '../../api/learning-paths.api';
 import type { LearningPath } from '../../api/learning-paths.api';
+import { coursesApi } from '../../api/courses.api';
+import { enrollmentsApi } from '../../api/enrollments.api';
 import { Button } from '../../components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
@@ -45,12 +47,11 @@ export const TeamManagement: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [teamData, pathData, { coursesApi }] = await Promise.all([
+      const [teamData, pathData, courseData] = await Promise.all([
         (usersApi as any).getMyTeam(),
         learningPathsApi.getAll(),
-        import('../../api/courses.api')
+        coursesApi.getAll('active')
       ]);
-      const courseData = await coursesApi.getAll('active');
       setTeam(teamData);
       setLearningPaths(pathData.filter(p => p.status === 'PUBLISHED'));
       setCourses(courseData);
@@ -84,7 +85,6 @@ export const TeamManagement: React.FC = () => {
         await learningPathsApi.enroll(selectedPathId, selectedUser.id, dueDate);
         toast.success(`Path assigned to ${selectedUser.firstName}`);
       } else {
-        const { enrollmentsApi } = await import('../../api/enrollments.api');
         await enrollmentsApi.enroll(selectedCourseId, selectedUser.id, dueDate);
         toast.success(`Course assigned to ${selectedUser.firstName}`);
       }
