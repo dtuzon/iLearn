@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import { useParams, useNavigate } from 'react-router-dom';
 import { enrollmentsApi } from '../../api/enrollments.api';
 import { coursesApi } from '../../api/courses.api';
@@ -459,7 +460,7 @@ export const CoursePlayer: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-10 quill-content">
-              <div dangerouslySetInnerHTML={{ __html: displayedModule.contentUrlOrText || '' }} />
+              <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(displayedModule.contentUrlOrText || '') }} />
             </CardContent>
             <CardFooter className="bg-muted/50 p-8 flex justify-between border-t items-center">
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { SettingsController } from './settings.controller';
-import { authenticate } from '../../middleware/auth.middleware';
+import { authenticate, permissiveAuthenticate } from '../../middleware/auth.middleware';
 import { authorize } from '../../middleware/rbac.middleware';
 import { auditLog } from '../../middleware/audit.middleware';
 import { Role } from '@prisma/client';
@@ -9,7 +9,7 @@ import { upload } from '../../middleware/upload.middleware';
 const router = Router();
 
 // PUBLIC: To allow theme fetching before login
-router.get('/', SettingsController.getSettings);
+router.get('/', permissiveAuthenticate, SettingsController.getSettings);
 
 router.put(
   '/',

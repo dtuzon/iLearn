@@ -40,7 +40,13 @@ export class StorageService {
 
     // Convert public URL back to a local filesystem path
     const relativePath = fileUrl.replace('/uploads/', '');
-    const filePath = path.join(this.uploadDir, relativePath);
+    const resolvedUploadDir = path.resolve(this.uploadDir);
+    const filePath = path.resolve(this.uploadDir, relativePath);
+
+    // Prevent path traversal
+    if (!filePath.startsWith(resolvedUploadDir)) {
+      throw new Error('Access denied: Path traversal detected');
+    }
 
     if (fs.existsSync(filePath)) {
       // In production (S3), we would call the S3 delete object command

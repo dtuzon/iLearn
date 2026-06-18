@@ -37,6 +37,34 @@ export class EnrollmentsService {
   }
 
   static async enroll(userId: string, courseId: string, dueDate?: Date) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { department: true }
+    });
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const course = await prisma.course.findUnique({
+      where: { id: courseId }
+    });
+    if (!course) {
+      throw new Error('Course not found');
+    }
+
+    // 1. Check course status (must be PUBLISHED)
+    if (course.status !== CourseStatus.PUBLISHED) {
+      throw new Error('You cannot enroll in this course as it is not currently published.');
+    }
+
+    // 2. Check department restriction (if set)
+    if (course.targetDepartments && course.targetDepartments.length > 0) {
+      const userDeptName = user.department?.name;
+      if (!userDeptName || !course.targetDepartments.some(d => d.toLowerCase() === userDeptName.toLowerCase())) {
+        throw new Error('This course is not authorized for your department.');
+      }
+    }
+
     return prisma.enrollment.upsert({
       where: {
         userId_courseId: {

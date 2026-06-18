@@ -8,13 +8,31 @@ export class AuthController {
   static async login(req: Request, res: Response) {
     try {
       const { username, password } = req.body;
-      console.log('Login attempt for:', username);
+      const sanitizedUsername = String(username || '').replace(/[\r\n]/g, '');
+      console.log('Login attempt for:', sanitizedUsername);
       const result = await AuthService.login(username, password);
+
+      res.cookie('token', result.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 8 * 60 * 60 * 1000 // 8 hours
+      });
+
       res.json(result);
     } catch (error: any) {
       console.error('Login error:', error.message);
       res.status(401).json({ message: error.message });
     }
+  }
+
+  static async logout(req: Request, res: Response) {
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict'
+    });
+    res.json({ message: 'Logged out successfully' });
   }
 
   static async getMe(req: AuthenticatedRequest, res: Response) {

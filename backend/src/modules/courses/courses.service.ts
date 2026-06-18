@@ -121,12 +121,25 @@ export class CoursesService {
   }
 
   static async create(lecturerId: string, data: any) {
+    const allowed = {
+      title: data.title,
+      description: data.description,
+      thumbnailUrl: data.thumbnailUrl,
+      versionTag: data.versionTag,
+      introContent: data.introContent,
+      closingContent: data.closingContent,
+      passingGrade: typeof data.passingGrade === 'number' ? data.passingGrade : undefined,
+      targetAudience: data.targetAudience,
+      targetDepartments: data.targetDepartments,
+      hasCertificate: data.hasCertificate,
+      evaluationFormId: data.evaluationFormId,
+      isLatest: true,
+      version: 1
+    };
     return prisma.course.create({
       data: {
-        ...data,
-        lecturerId,
-        isLatest: true,
-        version: 1
+        ...allowed,
+        lecturerId
       }
     });
   }
@@ -140,9 +153,26 @@ export class CoursesService {
 
     const sequenceOrder = (lastModule?.sequenceOrder ?? -1) + 1;
 
+    const allowed = {
+      title: data.title,
+      type: data.type,
+      contentUrlOrText: data.contentUrlOrText,
+      durationSeconds: typeof data.durationSeconds === 'number' ? data.durationSeconds : undefined,
+      shuffleQuestions: data.shuffleQuestions,
+      shuffleOptions: data.shuffleOptions,
+      activityInstructions: data.activityInstructions,
+      activityTemplateUrl: data.activityTemplateUrl,
+      checkerType: data.checkerType,
+      specificCheckerId: data.specificCheckerId,
+      meetingUrl: data.meetingUrl,
+      scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
+      attendanceCode: data.attendanceCode,
+      evaluationTemplateId: data.evaluationTemplateId,
+    };
+
     return prisma.courseModule.create({
       data: {
-        ...data,
+        ...allowed,
         courseId,
         sequenceOrder
       }
@@ -182,16 +212,43 @@ export class CoursesService {
   }
 
   static async partialUpdate(id: string, data: any) {
+    const allowed: any = {};
+    const allowedKeys = [
+      'title', 'description', 'thumbnailUrl', 'versionTag', 'changeSummary',
+      'introContent', 'closingContent', 'passingGrade', 'targetAudience',
+      'targetDepartments', 'hasCertificate', 'evaluationFormId'
+    ];
+    for (const key of allowedKeys) {
+      if (data[key] !== undefined) {
+        allowed[key] = data[key];
+      }
+    }
     return prisma.course.update({
       where: { id },
-      data
+      data: allowed
     });
   }
 
   static async updateModule(id: string, data: any) {
+    const allowed: any = {};
+    const allowedKeys = [
+      'title', 'type', 'contentUrlOrText', 'durationSeconds', 'shuffleQuestions',
+      'shuffleOptions', 'activityInstructions', 'activityTemplateUrl', 'checkerType',
+      'specificCheckerId', 'meetingUrl', 'scheduledAt', 'attendanceCode',
+      'evaluationTemplateId'
+    ];
+    for (const key of allowedKeys) {
+      if (data[key] !== undefined) {
+        if (key === 'scheduledAt') {
+          allowed[key] = data[key] ? new Date(data[key]) : null;
+        } else {
+          allowed[key] = data[key];
+        }
+      }
+    }
     return prisma.courseModule.update({
       where: { id },
-      data
+      data: allowed
     });
   }
 

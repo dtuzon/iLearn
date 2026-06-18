@@ -40,12 +40,18 @@ export class SettingsService {
     allowedFileTypes: string;
   }>) {
     const current = await prisma.systemSettings.findFirst();
+    const updateData = { ...data };
+
+    if (!updateData.smtpPassword) {
+      delete updateData.smtpPassword;
+    }
+
     if (!current) {
-      return prisma.systemSettings.create({ data: data as any });
+      return prisma.systemSettings.create({ data: updateData as any });
     }
     return prisma.systemSettings.update({
       where: { id: current.id },
-      data
+      data: updateData
     });
   }
 }

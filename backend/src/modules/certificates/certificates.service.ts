@@ -5,6 +5,23 @@ import puppeteer from 'puppeteer';
 import path from 'path';
 import fs from 'fs';
 
+function escapeHtml(str: string): string {
+  return str.replace(/[&<>'"]/g, 
+    (tag) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
+  );
+}
+
+function cleanCssValue(val: any, pattern: RegExp, fallback: string): string {
+  const str = String(val).trim();
+  return pattern.test(str) ? str : fallback;
+}
+
 export class CertificatesService {
   static async createTemplate(courseId: string, data: { designConfig: any; backgroundImageUrl?: string; signatureImageUrl?: string }) {
     return prisma.certificateTemplate.upsert({
@@ -93,9 +110,16 @@ export class CertificatesService {
       if (p.key === '{{CourseName}}') value = course.title;
       if (p.key === '{{Date}}') value = date;
 
+      const safeLeft = cleanCssValue(p.x, /^[0-9]+(?:\.[0-9]+)?$/, '0');
+      const safeTop = cleanCssValue(p.y, /^[0-9]+(?:\.[0-9]+)?$/, '0');
+      const safeFontSize = cleanCssValue(p.fontSize, /^[0-9]+(?:\.[0-9]+)?$/, '12');
+      const safeColor = cleanCssValue(p.color, /^(#[0-9a-fA-F]{3,8}|rgba?\(.*\)|[a-zA-Z]{3,20})$/, '#000000');
+      const safeFontFamily = cleanCssValue(p.fontFamily, /^[a-zA-Z0-9\s\-',]+$/, 'sans-serif');
+      const safeFontWeight = cleanCssValue(p.fontWeight, /^[a-zA-Z0-9]+$/, 'normal');
+
       html += `
-        <div class="placeholder" style="left: ${p.x}px; top: ${p.y}px; font-size: ${p.fontSize}px; color: ${p.color}; font-family: ${p.fontFamily}; font-weight: ${p.fontWeight};">
-          ${value}
+        <div class="placeholder" style="left: ${safeLeft}px; top: ${safeTop}px; font-size: ${safeFontSize}px; color: ${safeColor}; font-family: ${safeFontFamily}; font-weight: ${safeFontWeight};">
+          ${escapeHtml(value)}
         </div>
       `;
     }
@@ -104,8 +128,7 @@ export class CertificatesService {
 
     // Generate PDF with Puppeteer
     const browser = await puppeteer.launch({ 
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'] 
+      headless: true
     });
     const page = await browser.newPage();
     await page.setViewport({ width: 1123, height: 794 });
@@ -182,9 +205,16 @@ export class CertificatesService {
       if (p.key === '{{CourseName}}') value = lp.title; // Learning Path name for Macro-Credentials
       if (p.key === '{{Date}}') value = date;
 
+      const safeLeft = cleanCssValue(p.x, /^[0-9]+(?:\.[0-9]+)?$/, '0');
+      const safeTop = cleanCssValue(p.y, /^[0-9]+(?:\.[0-9]+)?$/, '0');
+      const safeFontSize = cleanCssValue(p.fontSize, /^[0-9]+(?:\.[0-9]+)?$/, '12');
+      const safeColor = cleanCssValue(p.color, /^(#[0-9a-fA-F]{3,8}|rgba?\(.*\)|[a-zA-Z]{3,20})$/, '#000000');
+      const safeFontFamily = cleanCssValue(p.fontFamily, /^[a-zA-Z0-9\s\-',]+$/, 'sans-serif');
+      const safeFontWeight = cleanCssValue(p.fontWeight, /^[a-zA-Z0-9]+$/, 'normal');
+
       html += `
-        <div class="placeholder" style="left: ${p.x}px; top: ${p.y}px; font-size: ${p.fontSize}px; color: ${p.color}; font-family: ${p.fontFamily}; font-weight: ${p.fontWeight};">
-          ${value}
+        <div class="placeholder" style="left: ${safeLeft}px; top: ${safeTop}px; font-size: ${safeFontSize}px; color: ${safeColor}; font-family: ${safeFontFamily}; font-weight: ${safeFontWeight};">
+          ${escapeHtml(value)}
         </div>
       `;
     }
@@ -192,8 +222,7 @@ export class CertificatesService {
     html += `</body></html>`;
 
     const browser = await puppeteer.launch({ 
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'] 
+      headless: true
     });
     const page = await browser.newPage();
     await page.setViewport({ width: 1123, height: 794 });

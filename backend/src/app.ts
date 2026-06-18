@@ -31,7 +31,25 @@ const app = express();
 
 // Middleware
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP for local development to avoid blocking assets
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://source.zoom.us"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://source.zoom.us"],
+      imgSrc: ["'self'", "data:", "blob:", "*"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      connectSrc: [
+        "'self'", 
+        "https://api.pusher.com", 
+        "wss://ws-ap1.pusher.com",
+        "*.zoom.us",
+        "https://*.zoom.us"
+      ],
+      mediaSrc: ["'self'", "data:", "blob:", "*"],
+      objectSrc: ["'none'"],
+      frameSrc: ["'self'", "*.zoom.us"]
+    }
+  },
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 app.use(cors({
@@ -39,8 +57,8 @@ app.use(cors({
   credentials: true
 }));
 app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
 
 // Static Files

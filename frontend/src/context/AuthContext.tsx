@@ -29,16 +29,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const restoreSession = async () => {
       const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const response = await apiClient.get('/auth/me');
-          setUser(response.data);
-        } catch (error) {
-          // Session restoration failed — user will be redirected to login
+      // Always attempt to restore using cookie first, or fallback to localStorage token
+      try {
+        const response = await apiClient.get('/auth/me');
+        setUser(response.data);
+      } catch (error) {
+        if (token) {
           localStorage.removeItem('token');
         }
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     restoreSession();
@@ -49,7 +50,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(userData);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await apiClient.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
     localStorage.removeItem('token');
     setUser(null);
   };

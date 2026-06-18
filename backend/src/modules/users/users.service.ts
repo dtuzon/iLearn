@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import { hashPassword } from '../../utils/password';
+import { hashPassword, validatePasswordComplexity } from '../../utils/password';
 import { Role } from '@prisma/client';
 import { parse } from 'csv-parse/sync';
 import { sendWelcomeEmail } from '../../lib/email-service';
@@ -119,6 +119,9 @@ export class UsersService {
     }
 
     // Generate a temporary password if not provided (8-character alphanumeric)
+    if (password) {
+      validatePasswordComplexity(password);
+    }
     const tempPassword = password || crypto.randomBytes(4).toString('hex').toUpperCase();
     const passwordHash = await hashPassword(tempPassword);
 
@@ -171,6 +174,7 @@ export class UsersService {
     
     if (data.password !== undefined) {
       if (data.password) {
+        validatePasswordComplexity(data.password);
         updateData.passwordHash = await hashPassword(data.password);
         updateData.requiresPasswordChange = true;
       }
@@ -358,7 +362,7 @@ export class UsersService {
   }
 
   static async changePassword(userId: string, newPassword: string) {
-
+    validatePasswordComplexity(newPassword);
     const passwordHash = await hashPassword(newPassword);
     return prisma.user.update({
       where: { id: userId },

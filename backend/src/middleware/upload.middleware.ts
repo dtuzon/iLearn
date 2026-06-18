@@ -8,7 +8,7 @@ const fileFilter = (req: any, file: any, cb: any) => {
   const mimetype = allowedTypes.test(file.mimetype);
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
 
-  if (mimetype || extname) {
+  if (mimetype && extname) {
     return cb(null, true);
   }
   cb(new Error('File type not allowed'));

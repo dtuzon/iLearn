@@ -5,7 +5,13 @@ export class SettingsController {
   static async getSettings(req: Request, res: Response) {
     try {
       const settings = await SettingsService.getSettings();
-      res.json(settings);
+      const user = (req as any).user;
+      const sanitized = { ...settings };
+      if (!user || user.role !== 'ADMINISTRATOR') {
+        delete (sanitized as any).smtpUser;
+        delete (sanitized as any).smtpPassword;
+      }
+      res.json(sanitized);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
