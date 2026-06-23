@@ -2,6 +2,7 @@ import { prisma } from '../../lib/prisma';
 import { pusher } from '../../lib/pusher';
 import { SubmissionStatus, EnrollmentStatus, Role } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EnrollmentsService } from '../enrollments/enrollments.service';
 
 export class ActivitiesService {
   static async submit(userId: string, moduleId: string, data: { fileUrl?: string; textResponse?: string }) {
@@ -155,6 +156,8 @@ export class ActivitiesService {
           });
         }
       }
+
+      await EnrollmentsService.updateEnrollmentCompletionState(tx, submission.userId, submission.module.courseId);
 
       return result;
     });

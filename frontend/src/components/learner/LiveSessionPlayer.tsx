@@ -300,13 +300,13 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({
         </CardContent>
       </Card>
 
-      {/* ── Attendance verification gateway ─────────────────────────── */}
+      {/* ── Attendance verification ─────────────────────────── */}
       <Card className="border-dashed border-2 border-primary/20 shadow-none overflow-hidden bg-primary/5 rounded-3xl animate-in fade-in slide-in-from-bottom-6 duration-1000">
         <CardHeader className="text-center p-8">
           <div className="rounded-full flex items-center justify-center mx-auto mb-3 h-12 w-12 bg-primary/10">
             <Key className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-xl font-bold">Verification Gateway</CardTitle>
+          <CardTitle className="text-xl font-bold">Attendance Verification</CardTitle>
           <CardDescription>
             Enter the secret passcode announced by the instructor at the end of the session to unlock your progress.
           </CardDescription>

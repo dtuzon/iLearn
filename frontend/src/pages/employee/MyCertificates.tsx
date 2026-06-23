@@ -82,8 +82,8 @@ export const MyCertificates: React.FC = () => {
   return (
     <div className="space-y-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 p-8 rounded-3xl border shadow-sm">
-        <div className="flex items-center gap-5">
-          <div className="h-16 w-16 rounded-2xl bg-primary shadow-xl shadow-primary/20 flex items-center justify-center">
+        <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+          <div className="h-16 w-16 rounded-2xl bg-primary shadow-xl shadow-primary/20 flex items-center justify-center shrink-0">
             <Award className="h-10 w-10 text-primary-foreground" />
           </div>
           <div>
@@ -91,12 +91,12 @@ export const MyCertificates: React.FC = () => {
             <p className="text-muted-foreground text-lg mt-1">Showcase your verified professional milestones.</p>
           </div>
         </div>
-        <div className="flex gap-4">
-          <div className="bg-background/80 backdrop-blur-sm border px-6 py-3 rounded-2xl flex flex-col items-center">
+        <div className="flex gap-4 justify-center sm:justify-start w-full md:w-auto">
+          <div className="flex-1 sm:flex-none bg-background/80 backdrop-blur-sm border px-6 py-3 rounded-2xl flex flex-col items-center">
             <span className="text-2xl font-black text-primary">{completedEnrollments.length}</span>
             <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Courses</span>
           </div>
-          <div className="bg-background/80 backdrop-blur-sm border px-6 py-3 rounded-2xl flex flex-col items-center border-primary/20">
+          <div className="flex-1 sm:flex-none bg-background/80 backdrop-blur-sm border px-6 py-3 rounded-2xl flex flex-col items-center border-primary/20">
             <span className="text-2xl font-black text-primary">{completedPaths.length}</span>
             <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Macro-Credentials</span>
           </div>
@@ -104,12 +104,12 @@ export const MyCertificates: React.FC = () => {
       </div>
 
       <Tabs defaultValue="macro" className="w-full">
-        <TabsList className="bg-muted/50 p-1.5 rounded-2xl border mb-8 h-14">
-          <TabsTrigger value="macro" className="rounded-xl px-8 h-full data-[state=active]:bg-background data-[state=active]:shadow-lg gap-2 font-bold transition-all">
+        <TabsList className="grid grid-cols-2 bg-muted/50 p-1.5 rounded-2xl border mb-8 h-14 max-w-md">
+          <TabsTrigger value="macro" className="rounded-xl h-full data-[state=active]:bg-background data-[state=active]:shadow-lg gap-2 font-bold transition-all flex items-center justify-center">
             <Sparkles className="h-4 w-4" />
             Macro-Credentials
           </TabsTrigger>
-          <TabsTrigger value="course" className="rounded-xl px-8 h-full data-[state=active]:bg-background data-[state=active]:shadow-lg gap-2 font-bold transition-all">
+          <TabsTrigger value="course" className="rounded-xl h-full data-[state=active]:bg-background data-[state=active]:shadow-lg gap-2 font-bold transition-all flex items-center justify-center">
             <Award className="h-4 w-4" />
             Course Certificates
           </TabsTrigger>
@@ -164,8 +164,8 @@ export const MyCertificates: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="course" className="space-y-6">
-          <div className="border-none shadow-xl rounded-[2rem] overflow-hidden bg-background/50 backdrop-blur-sm border">
-            <Table>
+          <div className="border-none shadow-xl rounded-[2rem] overflow-x-auto bg-background/50 backdrop-blur-sm border">
+            <Table className="min-w-[600px] md:min-w-full">
               <TableHeader className="bg-muted/30">
                 <TableRow className="border-none hover:bg-transparent">
                   <TableHead className="py-6 px-8 font-black uppercase text-[10px] tracking-widest">Course Curriculum</TableHead>

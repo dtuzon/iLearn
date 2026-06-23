@@ -11,6 +11,8 @@ export interface CatalogItem {
   targetDepartments: string[];
   createdAt: string;
   pathCourses?: LearningPathCourse[];
+  isEnrolled?: boolean;
+  enrollmentStatus?: 'NOT_STARTED' | 'IN_PROGRESS' | 'PENDING_GRADING' | 'COMPLETED' | null;
   _count: {
     enrollments: number;
   };

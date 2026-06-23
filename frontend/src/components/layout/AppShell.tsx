@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -22,16 +22,16 @@ import {
   UserPlus,
   LayoutGrid,
   Zap,
-  Calendar
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  HelpCircle
 } from 'lucide-react';
-
-
 
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
 import { NotificationBell } from './NotificationBell';
-
-
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '../ui/sheet';
 
 import {
   DropdownMenu,
@@ -47,11 +47,10 @@ import {
 
 export const AppShell: React.FC = () => {
   const { user, logout } = useAuth();
-
   const navigate = useNavigate();
   const location = useLocation();
-
-
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -60,22 +59,147 @@ export const AppShell: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const NavLink = ({ to, icon: Icon, children }: { to: string, icon: any, children: React.ReactNode }) => (
-    <Link to={to} className="w-full">
+  const NavLink = ({ to, icon: Icon, children, onClick }: { to: string, icon: any, children: React.ReactNode, onClick?: () => void }) => (
+    <Link to={to} className="w-full" onClick={onClick}>
       <Button 
         variant="ghost" 
         className={cn(
           "w-full justify-start gap-3 px-3 py-2 h-10 transition-all duration-200",
           isActive(to) 
             ? "bg-accent text-accent-foreground font-semibold shadow-sm" 
-            : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+            : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
+          sidebarCollapsed && "justify-center px-0"
         )}
+        title={sidebarCollapsed ? String(children) : undefined}
       >
-        <Icon className={cn("h-4 w-4", isActive(to) ? "text-primary" : "text-muted-foreground")} />
-        {children}
+        <Icon className={cn("h-4 w-4 shrink-0", isActive(to) ? "text-primary" : "text-muted-foreground")} />
+        {!sidebarCollapsed && <span className="truncate">{children}</span>}
       </Button>
     </Link>
   );
+
+  const renderSidebarContent = (isCollapsed: boolean, onLinkClick?: () => void) => {
+    const SectionHeader = ({ children }: { children: React.ReactNode }) => {
+      if (isCollapsed) {
+        return <div className="h-px bg-border/50 my-4" />;
+      }
+      return (
+        <div className="mt-6 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest opacity-70">
+          {children}
+        </div>
+      );
+    };
+
+    return (
+      <div className="flex flex-col h-full justify-between">
+        <div className="flex flex-col gap-1">
+          {/* Header & Toggle Button */}
+          <div className={cn(
+            "flex items-center px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest opacity-70 justify-between",
+            isCollapsed && "justify-center"
+          )}>
+            {!isCollapsed && <span>Overview</span>}
+            {!onLinkClick && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
+                title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+              >
+                {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+              </Button>
+            )}
+          </div>
+
+          <NavLink to="/dashboard" icon={LayoutDashboard} onClick={onLinkClick}>Dashboard</NavLink>
+          <NavLink to="/learning/calendar" icon={Calendar} onClick={onLinkClick}>Calendar</NavLink>
+          
+          {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
+            <NavLink to="/admin/bulletin" icon={Newspaper} onClick={onLinkClick}>Manage Bulletin</NavLink>
+          )}
+
+          {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
+            <>
+              <SectionHeader>Administration</SectionHeader>
+              {user?.role === 'ADMINISTRATOR' && <NavLink to="/admin/users" icon={Users} onClick={onLinkClick}>User Management</NavLink>}
+              <NavLink to="/admin/batches" icon={LayoutGrid} onClick={onLinkClick}>Manage Batches</NavLink>
+              <NavLink to="/admin/enrollments" icon={UserPlus} onClick={onLinkClick}>Manage Enrollments</NavLink>
+              {user?.role === 'ADMINISTRATOR' && (
+                <>
+                  <NavLink to="/admin/departments" icon={Building2} onClick={onLinkClick}>Departments</NavLink>
+                  <NavLink to="/admin/settings" icon={Settings} onClick={onLinkClick}>System Settings</NavLink>
+                </>
+              )}
+            </>
+          )}
+
+          {(user?.role === 'ADMINISTRATOR' || user?.role === 'COURSE_CREATOR' || user?.role === 'LEARNING_MANAGER') && (
+            <>
+              <SectionHeader>Course Studio</SectionHeader>
+              <NavLink to="/creator/courses" icon={BookOpen} onClick={onLinkClick}>Manage Courses</NavLink>
+              
+              {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
+                <NavLink to="/creator/learning-paths" icon={Route} onClick={onLinkClick}>Learning Paths</NavLink>
+              )}
+
+              {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
+                <NavLink to="/admin/evaluation-templates" icon={ClipboardList} onClick={onLinkClick}>Evaluation Templates</NavLink>
+              )}
+            </>
+          )}
+
+          <>
+            <SectionHeader>Learning Center</SectionHeader>
+            <NavLink to="/learning/discover" icon={Compass} onClick={onLinkClick}>Discover</NavLink>
+            <NavLink to="/learning/my-courses" icon={GraduationCap} onClick={onLinkClick}>My Learning</NavLink>
+            <NavLink to="/learning/certificates" icon={Award} onClick={onLinkClick}>My Certificates</NavLink>
+          </>
+
+          {(user?.role === 'SUPERVISOR' || user?.role === 'DEPARTMENT_HEAD' || user?.role === 'ADMINISTRATOR') && (
+            <>
+              <SectionHeader>Supervisor</SectionHeader>
+              <NavLink to="/supervisor/team-management" icon={Users} onClick={onLinkClick}>Team Management</NavLink>
+              <NavLink to="/supervisor/team-evaluations" icon={ClipboardCheck} onClick={onLinkClick}>Team Evaluations</NavLink>
+            </>
+          )}
+
+          {(user?.role === 'SUPERVISOR' || user?.role === 'DEPARTMENT_HEAD' || user?.role === 'ADMINISTRATOR' || user?.role === 'COURSE_CREATOR' || user?.role === 'LEARNING_MANAGER') && (
+            <>
+              <SectionHeader>Compliance</SectionHeader>
+              <NavLink to="/approvals/activities" icon={ClipboardCheck} onClick={onLinkClick}>Activity Approvals</NavLink>
+            </>
+          )}
+
+          {(user?.role === 'SUPERVISOR' || user?.role === 'DEPARTMENT_HEAD' || user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
+            <>
+              <SectionHeader>Cohort Grading</SectionHeader>
+              <NavLink to="/checker/portal" icon={Zap} onClick={onLinkClick}>Live Grading Portal</NavLink>
+            </>
+          )}
+        </div>
+        
+        <div className="mt-8 pt-4 border-t border-border/50 flex justify-center">
+          {isCollapsed ? (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-10 w-10 text-primary bg-primary/5 rounded-xl hover:bg-primary/10 shrink-0"
+              title="Contact IT Helpdesk"
+            >
+              <HelpCircle className="h-5 w-5" />
+            </Button>
+          ) : (
+            <div className="bg-primary/5 rounded-xl p-4 border border-primary/10 w-full">
+              <p className="text-sm font-medium text-primary mb-1">Learning Support</p>
+              <p className="text-xs text-muted-foreground">Need help with your courses?</p>
+              <Button variant="link" className="h-auto p-0 text-xs text-primary mt-2">Contact IT Helpdesk</Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-muted/20 flex flex-col">
@@ -85,9 +209,27 @@ export const AppShell: React.FC = () => {
           
           {/* Left: Brand Hierarchy */}
           <div className="flex items-center gap-6">
-            <Button variant="ghost" size="icon" className="md:hidden">
-              <Menu className="h-5 w-5" />
-            </Button>
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-4 flex flex-col h-full">
+                <SheetHeader className="pb-4 border-b text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-primary text-primary-foreground p-1.5 rounded-xl shadow-lg shadow-primary/20">
+                      <GraduationCap className="h-6 w-6" />
+                    </div>
+                    <SheetTitle className="text-xl font-bold tracking-tight text-foreground">iLearn</SheetTitle>
+                  </div>
+                </SheetHeader>
+                <div className="flex-1 overflow-y-auto mt-4 pr-1">
+                  {renderSidebarContent(false, () => setMobileMenuOpen(false))}
+                </div>
+              </SheetContent>
+            </Sheet>
+
             <Link to="/dashboard" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
               <div className="bg-primary text-primary-foreground p-1.5 rounded-xl shadow-lg shadow-primary/20">
                 <GraduationCap className="h-6 w-6" />
@@ -100,8 +242,6 @@ export const AppShell: React.FC = () => {
             </Link>
           </div>
 
-
-          
           {/* Right: Utilities & Profile */}
           <div className="flex items-center gap-1 sm:gap-3">
             
@@ -167,107 +307,14 @@ export const AppShell: React.FC = () => {
         </div>
       </header>
 
-
       {/* Main Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
-        <aside className="hidden md:flex w-64 flex-col border-r bg-background/50 backdrop-blur-sm p-4 overflow-y-auto">
-           <nav className="flex flex-col gap-1">
-            <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest opacity-70">
-              Overview
-            </div>
-            <NavLink to="/dashboard" icon={LayoutDashboard}>Dashboard</NavLink>
-            <NavLink to="/learning/calendar" icon={Calendar}>Calendar</NavLink>
-            
-            {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
-              <NavLink to="/admin/bulletin" icon={Newspaper}>Manage Bulletin</NavLink>
-            )}
-
-
-
-            {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
-              <>
-                <div className="mt-6 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest opacity-70">
-                  Administration
-                </div>
-                {user?.role === 'ADMINISTRATOR' && <NavLink to="/admin/users" icon={Users}>User Management</NavLink>}
-                <NavLink to="/admin/batches" icon={LayoutGrid}>Manage Batches</NavLink>
-                <NavLink to="/admin/enrollments" icon={UserPlus}>Manage Enrollments</NavLink>
-                {user?.role === 'ADMINISTRATOR' && (
-                  <>
-                    <NavLink to="/admin/departments" icon={Building2}>Departments</NavLink>
-                    <NavLink to="/admin/settings" icon={Settings}>System Settings</NavLink>
-                  </>
-                )}
-              </>
-            )}
-
-
-            {(user?.role === 'ADMINISTRATOR' || user?.role === 'COURSE_CREATOR' || user?.role === 'LEARNING_MANAGER') && (
-              <>
-                <div className="mt-6 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest opacity-70">
-                  Course Studio
-                </div>
-                <NavLink to="/creator/courses" icon={BookOpen}>Manage Courses</NavLink>
-                
-                {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
-                  <NavLink to="/creator/learning-paths" icon={Route}>Learning Paths</NavLink>
-                )}
-
-                {(user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
-                  <NavLink to="/admin/evaluation-templates" icon={ClipboardList}>Evaluation Templates</NavLink>
-                )}
-              </>
-            )}
-
-              <>
-                <div className="mt-6 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest opacity-70">
-                  Learning Center
-                </div>
-                <NavLink to="/learning/discover" icon={Compass}>Discover</NavLink>
-                <NavLink to="/learning/my-courses" icon={GraduationCap}>My Learning</NavLink>
-                <NavLink to="/learning/certificates" icon={Award}>My Certificates</NavLink>
-              </>
-
-            {(user?.role === 'SUPERVISOR' || user?.role === 'DEPARTMENT_HEAD' || user?.role === 'ADMINISTRATOR') && (
-              <>
-                <div className="mt-6 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest opacity-70">
-                  Supervisor
-                </div>
-                <NavLink to="/supervisor/team-management" icon={Users}>Team Management</NavLink>
-                <NavLink to="/supervisor/team-evaluations" icon={ClipboardCheck}>Team Evaluations</NavLink>
-              </>
-            )}
-
-            {(user?.role === 'SUPERVISOR' || user?.role === 'DEPARTMENT_HEAD' || user?.role === 'ADMINISTRATOR' || user?.role === 'COURSE_CREATOR' || user?.role === 'LEARNING_MANAGER') && (
-
-              <>
-                <div className="mt-6 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest opacity-70">
-                  Compliance
-                </div>
-                <NavLink to="/approvals/activities" icon={ClipboardCheck}>Activity Approvals</NavLink>
-              </>
-            )}
-
-            {(user?.role === 'SUPERVISOR' || user?.role === 'DEPARTMENT_HEAD' || user?.role === 'ADMINISTRATOR' || user?.role === 'LEARNING_MANAGER') && (
-              <>
-                <div className="mt-6 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest opacity-70">
-                  Cohort Grading
-                </div>
-                <NavLink to="/checker/portal" icon={Zap}>Live Grading Portal</NavLink>
-              </>
-            )}
-
-
-           </nav>
-           
-           <div className="mt-auto p-4 border-t border-border/50">
-              <div className="bg-primary/5 rounded-xl p-4 border border-primary/10">
-                <p className="text-sm font-medium text-primary mb-1">Learning Support</p>
-                <p className="text-xs text-muted-foreground">Need help with your courses?</p>
-                <Button variant="link" className="h-auto p-0 text-xs text-primary mt-2">Contact IT Helpdesk</Button>
-              </div>
-           </div>
+        <aside className={cn(
+          "hidden md:flex flex-col border-r bg-background/50 backdrop-blur-sm p-4 overflow-y-auto transition-all duration-300",
+          sidebarCollapsed ? "w-20" : "w-64"
+        )}>
+          {renderSidebarContent(sidebarCollapsed)}
         </aside>
 
         {/* Content */}
@@ -280,5 +327,7 @@ export const AppShell: React.FC = () => {
     </div>
   );
 };
+
+
 
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { catalogApi, type CatalogItem } from '../../api/catalog.api';
 import { learningPathsApi } from '../../api/learning-paths.api';
 import { enrollmentsApi } from '../../api/enrollments.api';
+import { cn } from '../../lib/utils';
 import { departmentsApi, type Department } from '../../api/departments.api';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../../components/ui/card';
@@ -18,7 +19,9 @@ import {
   ArrowUpDown,
   Zap,
   Star,
-  LayoutGrid
+  LayoutGrid,
+  CheckCircle2,
+  ExternalLink
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '../../components/ui/input';
@@ -104,39 +107,62 @@ export const DiscoverCatalog: React.FC = () => {
   };
 
   const CourseCard = ({ item }: { item: CatalogItem }) => (
-    <Card key={item.id} className="group flex flex-col border-none shadow-md hover:shadow-xl transition-all duration-300 bg-background/50 backdrop-blur-sm overflow-hidden border-t-4 border-purple-500">
+    <Card key={item.id} className="group flex flex-col border-none shadow-md hover:shadow-xl transition-all duration-300 bg-background/50 backdrop-blur-sm overflow-hidden border-t-4 border-primary">
       <div className="relative h-40 overflow-hidden bg-muted">
         {item.thumbnailUrl ? (
           <img src={item.thumbnailUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-purple-500/20 to-indigo-500/20 flex items-center justify-center">
-            <BookOpen className="h-10 w-10 text-purple-500/40" />
+          <div className="w-full h-full bg-gradient-to-br from-primary/20 to-blue-500/20 flex items-center justify-center">
+            <BookOpen className="h-10 w-10 text-primary/40" />
           </div>
         )}
         <div className="absolute top-2 right-2">
-          <Badge className="bg-purple-500 hover:bg-purple-600 border-none">COURSE</Badge>
+          <Badge className="bg-primary hover:bg-primary/90 border-none">COURSE</Badge>
         </div>
       </div>
       <CardHeader className="p-4 pb-2">
-        <CardTitle className="text-lg line-clamp-1 group-hover:text-purple-600 transition-colors">{item.title}</CardTitle>
+        <CardTitle className="text-lg line-clamp-1 group-hover:text-primary transition-colors">{item.title}</CardTitle>
         <CardDescription className="line-clamp-2 text-xs h-8">{item.description || 'No description available.'}</CardDescription>
       </CardHeader>
       <CardContent className="p-4 pt-0 flex-1">
         <div className="flex flex-wrap gap-1 mt-2">
            {item.targetDepartments.map((dept, i) => (
-             <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 border-purple-200 text-purple-700">{dept}</Badge>
+             <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 border-primary/20 text-primary">{dept}</Badge>
            ))}
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
         <Button 
-          variant="outline"
-          className="w-full border-purple-200 hover:bg-purple-50 text-purple-700 font-bold text-xs h-9"
-          onClick={() => handleEnroll(item)}
+          variant={item.isEnrolled ? "outline" : "default"}
+          className={cn(
+            "w-full font-bold text-xs h-9 transition-all duration-300",
+            item.isEnrolled 
+              ? "border-primary/30 hover:bg-primary/5 text-primary" 
+              : "shadow-lg shadow-primary/20"
+          )}
+          onClick={() => item.isEnrolled ? navigate(`/learning/course/${item.id}`) : handleEnroll(item)}
           disabled={isEnrolling === item.id}
         >
-          {isEnrolling === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-3 w-3 mr-2" />}
-          Enroll Course
+          {isEnrolling === item.id ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : item.isEnrolled ? (
+            item.enrollmentStatus === 'COMPLETED' ? (
+              <>
+                <CheckCircle2 className="h-3 w-3 mr-2" />
+                Completed - Review Course
+              </>
+            ) : (
+              <>
+                <ExternalLink className="h-3 w-3 mr-2" />
+                {item.enrollmentStatus === 'NOT_STARTED' ? 'Start Course' : 'Continue Course'}
+              </>
+            )
+          ) : (
+            <>
+              <Plus className="h-3 w-3 mr-2" />
+              Enroll Course
+            </>
+          )}
         </Button>
       </CardFooter>
     </Card>
@@ -175,12 +201,36 @@ export const DiscoverCatalog: React.FC = () => {
       </CardContent>
       <CardFooter className="p-4 pt-0">
         <Button 
-          className="w-full font-bold text-xs h-9 shadow-lg shadow-primary/20"
-          onClick={() => handleEnroll(item)}
+          variant={item.isEnrolled ? "outline" : "default"}
+          className={cn(
+            "w-full font-bold text-xs h-9 transition-all duration-300",
+            item.isEnrolled 
+              ? "border-primary/30 hover:bg-primary/5 text-primary" 
+              : "shadow-lg shadow-primary/20"
+          )}
+          onClick={() => item.isEnrolled ? navigate(`/learning/paths/${item.id}`) : handleEnroll(item)}
           disabled={isEnrolling === item.id}
         >
-          {isEnrolling === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-3 w-3 mr-2" />}
-          Enroll in Path
+          {isEnrolling === item.id ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : item.isEnrolled ? (
+            item.enrollmentStatus === 'COMPLETED' ? (
+              <>
+                <CheckCircle2 className="h-3 w-3 mr-2" />
+                Completed - Review Roadmap
+              </>
+            ) : (
+              <>
+                <ExternalLink className="h-3 w-3 mr-2" />
+                {item.enrollmentStatus === 'NOT_STARTED' ? 'Start Journey' : 'Continue Journey'}
+              </>
+            )
+          ) : (
+            <>
+              <Zap className="h-3 w-3 mr-2" />
+              Enroll in Path
+            </>
+          )}
         </Button>
       </CardFooter>
     </Card>
@@ -289,7 +339,7 @@ export const DiscoverCatalog: React.FC = () => {
                 <div className="space-y-6">
                    <div className="flex items-center justify-between border-b pb-4">
                     <h2 className="text-xl font-black italic uppercase flex items-center gap-2">
-                      <Zap className="h-5 w-5 text-purple-500 fill-purple-500" />
+                      <Zap className="h-5 w-5 text-primary fill-primary" />
                       Available Individual Courses
                     </h2>
                     <Button variant="ghost" size="sm" onClick={() => setActiveTab('courses')} className="font-bold text-xs uppercase tracking-widest">View All</Button>

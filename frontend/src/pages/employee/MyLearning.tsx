@@ -98,12 +98,12 @@ export const MyLearning: React.FC = () => {
       </div>
 
       <Tabs defaultValue="paths" className="w-full">
-        <TabsList className="bg-muted/50 p-1 mb-8">
-          <TabsTrigger value="paths" className="px-8 py-2.5 flex items-center gap-2">
+        <TabsList className="grid grid-cols-2 bg-muted/50 p-1 mb-8 max-w-md">
+          <TabsTrigger value="paths" className="py-2.5 flex items-center justify-center gap-2">
             <Route className="h-4 w-4" />
             Learning Paths
           </TabsTrigger>
-          <TabsTrigger value="courses" className="px-8 py-2.5 flex items-center gap-2">
+          <TabsTrigger value="courses" className="py-2.5 flex items-center justify-center gap-2">
             <BookOpen className="h-4 w-4" />
             Individual Courses
           </TabsTrigger>
@@ -227,7 +227,7 @@ export const MyLearning: React.FC = () => {
 
                 return (
                   <Card key={enrollment.id} className="group border-none shadow-lg hover:shadow-xl transition-all duration-300 bg-background/50 backdrop-blur-sm overflow-hidden flex flex-col">
-                    <div className="h-1.5 w-full bg-purple-500/10 group-hover:bg-purple-500 transition-colors" />
+                    <div className="h-1.5 w-full bg-primary/10 group-hover:bg-primary transition-colors" />
                     
                     <div className="h-40 w-full relative overflow-hidden bg-muted/20">
                       {enrollment.course.thumbnailUrl ? (
@@ -237,8 +237,8 @@ export const MyLearning: React.FC = () => {
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
                         />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-purple-500/20 via-background to-primary/20 flex items-center justify-center">
-                           <BookOpen className="h-12 w-12 text-purple-500/20" />
+                        <div className="w-full h-full bg-gradient-to-br from-primary/20 via-background to-primary/10 flex items-center justify-center">
+                           <BookOpen className="h-12 w-12 text-primary/20" />
                         </div>
                       )}
                       <div className="absolute top-3 left-3">
@@ -249,6 +249,10 @@ export const MyLearning: React.FC = () => {
                       {enrollment.status === 'COMPLETED' ? (
                          <div className="absolute top-3 right-3 bg-success rounded-full p-1 shadow-lg">
                            <CheckCircle2 className="h-4 w-4 text-white" />
+                         </div>
+                      ) : enrollment.status === 'PENDING_GRADING' ? (
+                         <div className="absolute top-3 right-3 bg-amber-500 rounded-full p-1 shadow-lg flex items-center justify-center" title="Awaiting Grading">
+                           <Clock className="h-4 w-4 text-white" />
                          </div>
                       ) : (
                         <div className="absolute top-3 right-3">
@@ -261,12 +265,12 @@ export const MyLearning: React.FC = () => {
                     <CardHeader>
                       {enrollment.batch && (
                         <div className="mb-2">
-                          <Badge variant="outline" className="text-purple-500 border-purple-500/30 bg-purple-500/5 text-[10px] font-semibold uppercase tracking-tight">
+                          <Badge variant="outline" className="text-primary border-primary/30 bg-primary/5 text-[10px] font-semibold uppercase tracking-tight">
                             Batch: {enrollment.batch.name}
                           </Badge>
                         </div>
                       )}
-                      <CardTitle className="line-clamp-2 leading-tight group-hover:text-purple-500 transition-colors min-h-[3rem]">
+                      <CardTitle className="line-clamp-2 leading-tight group-hover:text-primary transition-colors min-h-[3rem]">
                         {enrollment.course.title}
                       </CardTitle>
                     </CardHeader>
@@ -277,7 +281,7 @@ export const MyLearning: React.FC = () => {
                           <span>Course Completion</span>
                           <span>{progress}%</span>
                         </div>
-                        <Progress value={progress} className="h-1.5 bg-purple-500/5" />
+                        <Progress value={progress} className="h-1.5 bg-primary/5" />
                         <p className="text-[10px] text-muted-foreground italic">
                           {enrollment.status === 'COMPLETED' || progress === 100 ? 'All modules completed' : `Module ${enrollment.currentModuleOrder + 1} of ${totalModules}`}
                         </p>
@@ -285,11 +289,12 @@ export const MyLearning: React.FC = () => {
                     </CardContent>
                     <CardFooter className="bg-muted/5 pt-4">
                       <Button 
-                        className="w-full shadow-lg shadow-purple-500/20 group-hover:translate-x-1 transition-transform" 
-                        variant={enrollment.status === 'COMPLETED' ? 'outline' : 'default'}
+                        className="w-full shadow-lg shadow-primary/20 group-hover:translate-x-1 transition-transform" 
+                        variant={(enrollment.status === 'COMPLETED' || enrollment.status === 'PENDING_GRADING') ? 'outline' : 'default'}
                         onClick={() => navigate(`/learning/course/${enrollment.course.id}`)}
                       >
-                        {enrollment.status === 'COMPLETED' ? 'Review Course' : (
+                        {enrollment.status === 'COMPLETED' ? 'Review Course' : 
+                         enrollment.status === 'PENDING_GRADING' ? 'Awaiting Review' : (
                           <>
                             <PlayCircle className="mr-2 h-4 w-4" />
                             {enrollment.currentModuleOrder === 0 ? 'Start Course' : 'Continue Course'}

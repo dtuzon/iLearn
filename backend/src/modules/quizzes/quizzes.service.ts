@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { shuffle } from '../../utils/shuffle';
 import { ModuleType, CourseModule, QuestionType } from '@prisma/client';
+import { EnrollmentsService } from '../enrollments/enrollments.service';
 
 interface ExtendedCourseModule extends CourseModule {
   shuffleQuestions: boolean;
@@ -317,7 +318,14 @@ export class QuizzesService {
     // Fetch submission to validate score against maxScore
     const submission = await prisma.essaySubmission.findUnique({
       where: { id: submissionId },
-      include: { question: { select: { maxScore: true } } },
+      include: { 
+        question: { 
+          select: { 
+            maxScore: true,
+            module: { select: { courseId: true } }
+          } 
+        } 
+      },
     });
     if (!submission) throw new Error('Submission not found');
 
@@ -327,7 +335,7 @@ export class QuizzesService {
     }
     if (score < 0) throw new Error('Score cannot be negative');
 
-    return prisma.essaySubmission.update({
+    const updated = await prisma.essaySubmission.update({
       where: { id: submissionId },
       data: {
         score,
@@ -337,5 +345,13 @@ export class QuizzesService {
         status:     'APPROVED',
       },
     });
+
+    await EnrollmentsService.updateEnrollmentCompletionState(
+      prisma,
+      submission.userId,
+      submission.question.module.courseId
+    );
+
+    return updated;
   }
 }

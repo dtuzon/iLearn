@@ -5,7 +5,10 @@ import {
   Lock, 
   Play, 
   Pause,
-  AlertCircle
+  AlertCircle,
+  Maximize,
+  Minimize,
+  Tv
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -25,11 +28,13 @@ export const LocalVideoPlayer: React.FC<LocalVideoPlayerProps> = ({
   className 
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [highestWatchedTime, setHighestWatchedTime] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Reset state when URL changes
   React.useEffect(() => {
@@ -38,6 +43,44 @@ export const LocalVideoPlayer: React.FC<LocalVideoPlayerProps> = ({
     setProgress(0);
     setIsPlaying(false);
   }, [url]);
+
+  React.useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().catch((err) => {
+        toast.error(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  const togglePictureInPicture = async () => {
+    if (!videoRef.current) return;
+    if (videoRef.current.readyState === 0) {
+      toast.error('Please wait for the video to load before enabling Picture-in-Picture.');
+      return;
+    }
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else {
+        await videoRef.current.requestPictureInPicture();
+      }
+    } catch (error) {
+      toast.error('Picture-in-Picture mode is not supported or failed to launch.');
+    }
+  };
 
   // Get full URL for local assets
   const baseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace('/api', '');
@@ -95,13 +138,23 @@ export const LocalVideoPlayer: React.FC<LocalVideoPlayerProps> = ({
     if (isPlaying) {
       videoRef.current.pause();
     } else {
-      videoRef.current.play();
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn("Video play failed or was interrupted:", err);
+        });
+      }
     }
-    setIsPlaying(!isPlaying);
   };
 
   return (
-    <div className={cn("relative group rounded-3xl overflow-hidden bg-black shadow-2xl", className)}>
+    <div 
+      ref={containerRef}
+      className={cn(
+        "relative group bg-black shadow-2xl transition-all duration-300", 
+        isFullscreen ? "w-screen h-screen flex items-center justify-center rounded-none" : cn("rounded-3xl overflow-hidden", className)
+      )}
+    >
       {/* Warning Overlay */}
       <div className={cn(
         "absolute top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-500",
@@ -127,7 +180,10 @@ export const LocalVideoPlayer: React.FC<LocalVideoPlayerProps> = ({
         ref={videoRef}
         src={fullUrl}
         preload="auto"
-        className="w-full h-full aspect-video cursor-pointer"
+        className={cn(
+          "cursor-pointer",
+          isFullscreen ? "w-full max-h-screen" : "w-full h-full aspect-video"
+        )}
         onTimeUpdate={handleTimeUpdate}
         onSeeking={handleSeeking}
         onError={handleVideoError}
@@ -178,12 +234,36 @@ export const LocalVideoPlayer: React.FC<LocalVideoPlayerProps> = ({
               </div>
             </div>
 
-            {isCompleted && (
-              <Badge className="bg-success text-white border-none py-2 px-4 animate-in zoom-in-95">
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Sequence Validated
-              </Badge>
-            )}
+            <div className="flex items-center gap-3">
+              {isCompleted && (
+                <Badge className="bg-success text-white border-none py-2 px-4 animate-in zoom-in-95 mr-2">
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Sequence Validated
+                </Badge>
+              )}
+
+              {/* Picture-in-Picture Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={togglePictureInPicture}
+                className="h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 text-white border-none shrink-0"
+                title="Picture-in-Picture"
+              >
+                <Tv className="h-5 w-5" />
+              </Button>
+
+              {/* Fullscreen Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleFullscreen}
+                className="h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 text-white border-none shrink-0"
+                title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+              >
+                {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

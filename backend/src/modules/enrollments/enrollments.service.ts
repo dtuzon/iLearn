@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import { EnrollmentStatus, Role, CourseStatus } from '@prisma/client';
+import { EnrollmentStatus, Role, CourseStatus, SubmissionStatus, ModuleType } from '@prisma/client';
 import { CertificatesService } from '../certificates/certificates.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { sendEmail, sendBulkEmails } from '../../lib/email';
@@ -200,40 +200,139 @@ export class EnrollmentsService {
     const isFinished = nextOrder >= totalModules;
 
     if (shouldAdvance) {
-      const updatedEnrollment = await prisma.enrollment.update({
+      await prisma.enrollment.update({
         where: { id: enrollment.id },
         data: {
           currentModuleOrder: nextOrder,
-          status: isFinished ? EnrollmentStatus.COMPLETED : EnrollmentStatus.IN_PROGRESS,
-          completedAt: isFinished ? new Date() : undefined
+        }
+      });
+      await this.updateEnrollmentCompletionState(prisma, userId, module.courseId);
+    } else if (isFinished && enrollment.status !== EnrollmentStatus.COMPLETED) {
+      await this.updateEnrollmentCompletionState(prisma, userId, module.courseId);
+    }
+
+    return { message: 'Module completed' };
+  }
+
+  static async updateEnrollmentCompletionState(tx: any, userId: string, courseId: string) {
+    const enrollment = await tx.enrollment.findUnique({
+      where: { userId_courseId: { userId, courseId } }
+    });
+
+    if (!enrollment) return;
+
+    // Check total modules
+    const totalModules = await tx.courseModule.count({
+      where: { courseId }
+    });
+
+    // Check if the user has completed the sequence
+    const hasFinishedSequence = enrollment.currentModuleOrder >= totalModules;
+
+    if (!hasFinishedSequence) {
+      if (enrollment.status !== EnrollmentStatus.IN_PROGRESS) {
+        await tx.enrollment.update({
+          where: { id: enrollment.id },
+          data: { status: EnrollmentStatus.IN_PROGRESS, completedAt: null }
+        });
+      }
+      return;
+    }
+
+    // Check manual approvals
+    // 1. Workshop & Assignment modules in this course
+    const manualReviewModules = await tx.courseModule.findMany({
+      where: {
+        courseId,
+        type: { in: [ModuleType.WORKSHOP, ModuleType.ASSIGNMENT] }
+      }
+    });
+
+    let allManualApproved = true;
+    let hasRejectionsOrMissing = false;
+
+    if (manualReviewModules.length > 0) {
+      const submissions = await tx.activitySubmission.findMany({
+        where: {
+          userId,
+          moduleId: { in: manualReviewModules.map((m: any) => m.id) }
+        }
+      });
+
+      for (const m of manualReviewModules) {
+        const sub = submissions.find((s: any) => s.moduleId === m.id);
+        if (!sub) {
+          allManualApproved = false;
+          hasRejectionsOrMissing = true;
+        } else if (sub.status === SubmissionStatus.APPROVED) {
+          // OK
+        } else {
+          allManualApproved = false;
+          if (sub.status === SubmissionStatus.REJECTED || sub.status === SubmissionStatus.NEEDS_REVISION) {
+            hasRejectionsOrMissing = true;
+          }
+        }
+      }
+    }
+
+    // 2. Essays in quizzes
+    let allEssaysApproved = true;
+    if (allManualApproved) {
+      const essaySubmissions = await tx.essaySubmission.findMany({
+        where: {
+          userId,
+          question: { module: { courseId } }
+        }
+      });
+
+      const essayQuestionsCount = await tx.quizQuestion.count({
+        where: {
+          type: 'ESSAY',
+          module: { courseId }
+        }
+      });
+
+      if (essayQuestionsCount > 0) {
+        if (essaySubmissions.length < essayQuestionsCount) {
+          allEssaysApproved = false;
+          hasRejectionsOrMissing = true;
+        } else {
+          for (const sub of essaySubmissions) {
+            if (sub.status === 'APPROVED') {
+              // OK
+            } else {
+              allEssaysApproved = false;
+              if (sub.status === 'REJECTED' || sub.status === 'NEEDS_REVISION') {
+                hasRejectionsOrMissing = true;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const finalStatus = (allManualApproved && allEssaysApproved)
+      ? EnrollmentStatus.COMPLETED
+      : hasRejectionsOrMissing
+        ? EnrollmentStatus.IN_PROGRESS
+        : EnrollmentStatus.PENDING_GRADING;
+
+    if (enrollment.status !== finalStatus) {
+      const updatedEnrollment = await tx.enrollment.update({
+        where: { id: enrollment.id },
+        data: {
+          status: finalStatus,
+          completedAt: finalStatus === EnrollmentStatus.COMPLETED ? new Date() : null
         },
         include: { user: true, course: true }
       });
 
-      // NEW: Learning Path Completion Logic
-      if (isFinished) {
-        await this.checkLearningPathCompletion(userId, module.courseId);
-        // NEW: Strict Accountability Hook
+      if (finalStatus === EnrollmentStatus.COMPLETED) {
+        // Trigger learning path completion check
+        await this.checkLearningPathCompletion(userId, courseId);
         await this.notifyLeadershipOnLateCompletion(updatedEnrollment, 'COURSE');
       }
-    } else if (isFinished && enrollment.status !== EnrollmentStatus.COMPLETED) {
-       // Handle case where user completes a previous module but it was the last one missing
-       // (Though unlikely with shouldAdvance logic, good for safety)
-       const updatedEnrollment = await prisma.enrollment.update({
-         where: { id: enrollment.id },
-         data: {
-           status: EnrollmentStatus.COMPLETED,
-           completedAt: new Date()
-         },
-         include: { user: true, course: true }
-       });
-       await this.checkLearningPathCompletion(userId, module.courseId);
-       await this.notifyLeadershipOnLateCompletion(updatedEnrollment, 'COURSE');
     }
-
-
-
-    return { message: 'Module completed' };
   }
 
   static async submitOnlineEvaluation(userId: string, enrollmentId: string, data: { moduleId: string, comments?: string, facilitatorRatings: any[] }) {

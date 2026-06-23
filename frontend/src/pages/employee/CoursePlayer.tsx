@@ -110,24 +110,49 @@ export const CoursePlayer: React.FC = () => {
       
       // If we haven't selected a module yet, or if we just completed one, update the display
       // Otherwise keep the user on their currently selected (back-tracked) module
-      setDisplayedModule(prev => {
-        if (!prev || (prev.sequenceOrder < furthestOrder && !isAtClosing)) {
-          return furthestModule;
+      const targetModule = (!displayedModule || (displayedModule.sequenceOrder < furthestOrder && !isAtClosing))
+        ? furthestModule
+        : (modules.find(m => m.id === displayedModule.id) || furthestModule);
+
+      let finalTargetModule: CourseModule | null = targetModule;
+
+      if (currentOrder >= modules.length) {
+        if (!displayedModule || (displayedModule.sequenceOrder === modules.length && isAtClosing)) {
+          finalTargetModule = null;
+        } else {
+          finalTargetModule = modules.find(m => m.id === displayedModule.id) || null;
         }
-        // If we were on a module that just got "completed" and it's the same as the furthest module,
-        // we should refresh it to show new state (like quiz results)
-        const updated = modules.find(m => m.id === prev.id);
-        return updated || furthestModule;
-      });
+      }
+
+      setDisplayedModule(finalTargetModule);
+
+      // Restore quiz result if user already attempted/completed this module
+      if (finalTargetModule && (finalTargetModule.type === 'PRE_QUIZ' || finalTargetModule.type === 'POST_QUIZ')) {
+        const mp = progressData.moduleProgress?.find((p: any) => p.moduleId === finalTargetModule.id);
+        if (mp) {
+          setQuizResult({
+            score: mp.score,
+            passed: mp.completed,
+            message: finalTargetModule.type === 'PRE_QUIZ'
+              ? `Pre-Quiz complete. You scored ${mp.score}%.`
+              : (mp.completed 
+                  ? `Passed! You scored ${mp.score}%.` 
+                  : `Failed. You scored ${mp.score}%. Please try again.`)
+          });
+        } else {
+          setQuizResult(null);
+        }
+      } else {
+        setQuizResult(null);
+      }
 
       // Special handling for intro/closing flags based on whatever is displayed
-      const target = furthestModule;
-      if (target) {
-        if (target.type === 'INTRODUCTION') setIsAtIntro(true);
-        if (target.type === 'CLOSING') setIsAtClosing(true);
+      if (finalTargetModule) {
+        if (finalTargetModule.type === 'INTRODUCTION') setIsAtIntro(true);
+        if (finalTargetModule.type === 'CLOSING') setIsAtClosing(true);
 
-        if (target.type === 'PRE_QUIZ' || target.type === 'POST_QUIZ') {
-          const questions = await quizzesApi.getModuleQuestions(target.id);
+        if (finalTargetModule.type === 'PRE_QUIZ' || finalTargetModule.type === 'POST_QUIZ') {
+          const questions = await quizzesApi.getModuleQuestions(finalTargetModule.id);
           setQuizQuestions(questions);
         }
       }
@@ -261,7 +286,7 @@ export const CoursePlayer: React.FC = () => {
   }
 
   // Course Completed View
-  if (!displayedModule && enrollment?.status === 'COMPLETED') {
+  if (!displayedModule && (enrollment?.status === 'COMPLETED' || enrollment?.status === 'PENDING_GRADING')) {
     const workshopModules = course.modules?.filter(m => m.type === 'WORKSHOP') || [];
     const submissions = enrollment.user?.activitySubmissions || [];
     const allApproved = workshopModules.every(m => {
@@ -330,12 +355,30 @@ export const CoursePlayer: React.FC = () => {
   const handleModuleNavigate = async (m: CourseModule) => {
     if (m.sequenceOrder > furthestOrderReached) return;
     
-    setQuizResult(null);
+    // Restore quiz result if user already attempted/completed this module
+    if (m.type === 'PRE_QUIZ' || m.type === 'POST_QUIZ') {
+      const mp = enrollment?.moduleProgress?.find((p: any) => p.moduleId === m.id);
+      if (mp) {
+        setQuizResult({
+          score: mp.score,
+          passed: mp.completed,
+          message: m.type === 'PRE_QUIZ'
+            ? `Pre-Quiz complete. You scored ${mp.score}%.`
+            : (mp.completed 
+                ? `Passed! You scored ${mp.score}%.` 
+                : `Failed. You scored ${mp.score}%. Please try again.`)
+        });
+      } else {
+        setQuizResult(null);
+      }
+    } else {
+      setQuizResult(null);
+    }
+
     setQuizAnswers({});
     setDisplayedModule(m);
     setIsAtIntro(m.type === 'INTRODUCTION');
     setIsAtClosing(m.type === 'CLOSING');
-
 
     if (m.type === 'PRE_QUIZ' || m.type === 'POST_QUIZ') {
       const questions = await quizzesApi.getModuleQuestions(m.id);
@@ -346,7 +389,7 @@ export const CoursePlayer: React.FC = () => {
   return (
     <div className="mx-auto px-4 flex flex-col md:flex-row gap-8 pb-12 w-full max-w-7xl">
       {/* Sidebar Navigation */}
-      <aside className="w-full md:w-72 shrink-0 space-y-6">
+      <aside className="w-full md:w-72 shrink-0 space-y-6 order-2 md:order-1">
         <Button 
           variant="ghost" 
           className="w-full justify-start text-muted-foreground hover:text-primary mb-2"
@@ -425,7 +468,9 @@ export const CoursePlayer: React.FC = () => {
           <div className="flex items-center justify-center gap-2">
             <div className={cn(
               "h-2 w-2 rounded-full",
-              enrollment.status === 'COMPLETED' ? "bg-emerald-500" : "bg-primary animate-pulse"
+              enrollment.status === 'COMPLETED' ? "bg-emerald-500" :
+              enrollment.status === 'PENDING_GRADING' ? "bg-amber-500 animate-pulse" :
+              "bg-primary animate-pulse"
             )} />
             <span className="text-[11px] font-black uppercase tracking-tighter text-foreground">
               {enrollment.status.replace('_', ' ')}
@@ -435,15 +480,15 @@ export const CoursePlayer: React.FC = () => {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 space-y-8 pb-12">
+      <main className="flex-1 min-w-0 space-y-8 pb-12 order-1 md:order-2">
         {/* Module Header Pill */}
-        <div className="flex items-center justify-between">
-           <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-full border">
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Sequence</span>
-              <div className="h-4 w-px bg-border" />
-              <span className="text-xs font-bold">{displayedModule?.title || 'Course Overview'}</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+           <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-full border w-fit max-w-full">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground shrink-0">Active Sequence</span>
+              <div className="h-4 w-px bg-border shrink-0" />
+              <span className="text-xs font-bold truncate">{displayedModule?.title || 'Course Overview'}</span>
            </div>
-           <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground tabular-nums">
+           <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground tabular-nums sm:text-right">
              Step {displayedModule?.sequenceOrder || 0} of {totalModules}
            </div>
         </div>

@@ -680,11 +680,40 @@ export class CoursesService {
       throw new Error('Module not found or is not a live session');
     }
 
-    if (!module.attendanceCode) {
+    const enrollment = await prisma.enrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId: module.courseId
+        }
+      }
+    });
+
+    let expectedCodes: string[] = [];
+    if (module.attendanceCode) {
+      expectedCodes.push(module.attendanceCode.trim().toLowerCase());
+    }
+
+    if (enrollment?.batchId) {
+      const liveSession = await prisma.batchLiveSession.findUnique({
+        where: {
+          batchId_courseModuleId: {
+            batchId: enrollment.batchId,
+            courseModuleId: moduleId
+          }
+        }
+      });
+      if (liveSession?.zoomPasscode) {
+        expectedCodes.push(liveSession.zoomPasscode.trim().toLowerCase());
+      }
+    }
+
+    if (expectedCodes.length === 0) {
       throw new Error('Attendance code not configured for this session');
     }
 
-    if (module.attendanceCode.trim().toLowerCase() !== passcode.trim().toLowerCase()) {
+    const inputCode = passcode.trim().toLowerCase();
+    if (!expectedCodes.includes(inputCode)) {
       throw new Error('Incorrect passcode. Please ensure you attended the session to receive the code.');
     }
 

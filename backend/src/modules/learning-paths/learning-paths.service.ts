@@ -151,7 +151,7 @@ export class LearningPathsService {
   }
 
   static async getUserEnrollments(userId: string) {
-    return prisma.learningPathEnrollment.findMany({
+    const enrollments = await prisma.learningPathEnrollment.findMany({
       where: { 
         userId,
         OR: [
@@ -184,6 +184,45 @@ export class LearningPathsService {
           }
         }
       }
+    });
+
+    const userCourseEnrollments = await prisma.enrollment.findMany({ where: { userId } });
+
+    return enrollments.map(pe => {
+      const courseIds = pe.learningPath.pathCourses.map((pc: any) => pc.courseId);
+      let status = pe.status;
+      
+      if (courseIds.length > 0) {
+        const completedCount = userCourseEnrollments.filter(
+          e => courseIds.includes(e.courseId) && e.status === EnrollmentStatus.COMPLETED
+        ).length;
+
+        let calculatedStatus: EnrollmentStatus = EnrollmentStatus.IN_PROGRESS;
+        if (completedCount === courseIds.length) {
+          calculatedStatus = EnrollmentStatus.COMPLETED;
+        } else if (completedCount > 0 || userCourseEnrollments.some(e => courseIds.includes(e.courseId) && (e.status === EnrollmentStatus.IN_PROGRESS || e.currentModuleOrder > 0))) {
+          calculatedStatus = EnrollmentStatus.IN_PROGRESS;
+        } else {
+          calculatedStatus = EnrollmentStatus.IN_PROGRESS;
+        }
+
+        if (status !== calculatedStatus) {
+          status = calculatedStatus;
+          // Self-heal: correct the out-of-sync status in the database asynchronously
+          prisma.learningPathEnrollment.update({
+            where: { id: pe.id },
+            data: { 
+              status: calculatedStatus,
+              ...(calculatedStatus === EnrollmentStatus.COMPLETED ? { completedAt: new Date() } : { completedAt: null })
+            }
+          }).catch(err => console.error('Failed to self-heal learning path enrollment status:', err));
+        }
+      }
+
+      return {
+        ...pe,
+        status
+      };
     });
   }
 
