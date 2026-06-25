@@ -59,6 +59,8 @@ export interface CourseModule {
   attendanceCode?: string;
   attachments?: CourseAttachment[];
   quizQuestions?: QuizQuestion[];
+  shuffleQuestions?: boolean;
+  shuffleOptions?: boolean;
 }
 
 

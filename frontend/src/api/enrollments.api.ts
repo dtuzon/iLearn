@@ -28,7 +28,7 @@ export const enrollmentsApi = {
     const response = await apiClient.get('/enrollments/my-courses');
     return response.data;
   },
-  getProgress: async (courseId: string): Promise<{ progress: number; currentModuleOrder: number; status: string; batchLock?: { message: string; unlockDate: string } | null }> => {
+  getProgress: async (courseId: string): Promise<any> => {
     const response = await apiClient.get(`/enrollments/${courseId}/progress`);
     return response.data;
   },

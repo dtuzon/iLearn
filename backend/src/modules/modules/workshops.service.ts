@@ -3,6 +3,7 @@ import { EnrollmentStatus, SubmissionStatus, CheckerType, Role } from '@prisma/c
 
 import { sendActivityUpdateEmail, sendActivitySubmissionEmail } from '../../lib/email-service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EnrollmentsService } from '../enrollments/enrollments.service';
 
 
 export class WorkshopsService {
@@ -49,6 +50,7 @@ export class WorkshopsService {
         update: { completed: true, completedAt: new Date(), submittedAt: new Date() },
         create: { enrollmentId: enrollment.id, moduleId, completed: true, completedAt: new Date(), submittedAt: new Date() }
       });
+      await EnrollmentsService.updateEnrollmentCompletionState(prisma, userId, module.courseId);
     }
 
     // Notify Checker
@@ -202,10 +204,13 @@ export class WorkshopsService {
       data: {
         status: data.status,
         feedback: data.feedback,
-        reviewedAt: new Date()
+        gradedAt: new Date(),
+        gradedById: checkerId
       },
       include: { module: { include: { course: true } } }
     });
+    
+    await EnrollmentsService.updateEnrollmentCompletionState(prisma, submission.userId, submission.module.courseId);
 
     // Notify Student
     const user = await prisma.user.findUnique({ where: { id: submission.userId } });

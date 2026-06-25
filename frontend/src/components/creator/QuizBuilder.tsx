@@ -73,7 +73,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ courseId, moduleId, mo
       try {
         const [qs, mod] = await Promise.all([
           quizzesApi.getModuleQuestions(moduleId),
-          fetch(`/api/courses/modules/${moduleId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(r => r.json()),
+          coursesApi.getModule(moduleId),
         ]);
         setQuestions(qs as DraftQuestion[]);
         setSettings({ shuffleQuestions: mod.shuffleQuestions || false, shuffleOptions: mod.shuffleOptions || false });

@@ -3,6 +3,16 @@ import { prisma } from './prisma';
 
 
 const getTransporter = async () => {
+  if (process.env.MOCK_EMAIL === 'true') {
+    return {
+      sendMail: async (options: any) => {
+        console.log(`[MOCK EMAIL] To: ${options.to}, Subject: ${options.subject}`);
+        return { messageId: 'mock-id' };
+      },
+      close: () => {}
+    } as any;
+  }
+
   const settings = await prisma.systemSettings.findFirst();
   
   // Use DB settings ONLY if they are actually configured (not example placeholders)

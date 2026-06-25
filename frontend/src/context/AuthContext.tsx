@@ -15,7 +15,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (token: string, userData: User) => void;
+  login: (userData: User) => void;
   logout: () => void;
   updateUser: (userData: User) => void;
 }
@@ -28,15 +28,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const restoreSession = async () => {
-      const token = localStorage.getItem('token');
-      // Always attempt to restore using cookie first, or fallback to localStorage token
       try {
         const response = await apiClient.get('/auth/me');
         setUser(response.data);
       } catch (error) {
-        if (token) {
-          localStorage.removeItem('token');
-        }
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -45,8 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     restoreSession();
   }, []);
 
-  const login = (token: string, userData: User) => {
-    localStorage.setItem('token', token);
+  const login = (userData: User) => {
     setUser(userData);
   };
 
@@ -56,7 +51,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Logout error:', error);
     }
-    localStorage.removeItem('token');
     setUser(null);
   };
 

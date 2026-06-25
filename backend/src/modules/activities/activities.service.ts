@@ -55,6 +55,8 @@ export class ActivitiesService {
       await pusher.trigger(`batch-${batchId}`, 'new-submission', submission);
     }
 
+    await EnrollmentsService.updateEnrollmentCompletionState(prisma, userId, module.courseId);
+
     return submission;
   }
 

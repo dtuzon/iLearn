@@ -29,9 +29,9 @@ export const LoginPage: React.FC = () => {
 
     try {
       const response = await apiClient.post('/auth/login', { username, password });
-      const { token, user } = response.data;
+      const { user } = response.data;
       
-      login(token, user);
+      login(user);
       
       // Redirect based on password change requirement
       if (user.requiresPasswordChange) {
