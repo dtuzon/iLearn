@@ -319,7 +319,12 @@ export const AppShell: React.FC = () => {
 
         {/* Content */}
         <main className="flex-1 overflow-y-auto bg-muted/10">
-          <div className="container mx-auto p-6 md:p-8 space-y-8 max-w-7xl animate-in fade-in duration-500">
+          <div className={cn(
+            "animate-in fade-in duration-500",
+            location.pathname.startsWith('/learning/course/')
+              ? "w-full min-h-full"
+              : "container mx-auto p-6 md:p-8 space-y-8 max-w-7xl"
+          )}>
             <Outlet />
           </div>
         </main>

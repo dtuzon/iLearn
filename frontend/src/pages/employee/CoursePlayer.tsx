@@ -15,9 +15,8 @@ import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 
 import { Progress } from '../../components/ui/progress';
-import { Alert, AlertTitle, AlertDescription } from '../../components/ui/alert';
 
-import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, Clock, Video, HelpCircle, BookOpen, ClipboardCheck, UploadCloud, File as FileIcon, Lock, PlayCircle, Calendar } from 'lucide-react';
+import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, Video, HelpCircle, BookOpen, ClipboardCheck, UploadCloud, File as FileIcon, Lock, PlayCircle, Calendar } from 'lucide-react';
 
 
 import { toast } from 'sonner';
@@ -118,9 +117,10 @@ export const CoursePlayer: React.FC = () => {
 
       if (currentOrder >= modules.length) {
         if (!displayedModule || (displayedModule.sequenceOrder === modules.length && isAtClosing)) {
-          finalTargetModule = null;
+          // Course is completed — default to the first module for review browsing
+          finalTargetModule = modules[0] || null;
         } else {
-          finalTargetModule = modules.find(m => m.id === displayedModule.id) || null;
+          finalTargetModule = modules.find(m => m.id === displayedModule.id) || modules[0] || null;
         }
       }
 
@@ -285,75 +285,18 @@ export const CoursePlayer: React.FC = () => {
     );
   }
 
-  // Course Completed View
-  if (!displayedModule && (enrollment?.status === 'COMPLETED' || enrollment?.status === 'PENDING_GRADING')) {
-    const workshopModules = course.modules?.filter(m => m.type === 'WORKSHOP') || [];
-    const submissions = enrollment.user?.activitySubmissions || [];
-    const allApproved = workshopModules.every(m => {
-      const sub = submissions.find((s: any) => s.moduleId === m.id);
-      return sub && sub.status === 'APPROVED';
-    });
-
-    return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-6">
-        <div className="relative">
-          <CheckCircle2 className="h-24 w-24 text-emerald-500 animate-in zoom-in-50 duration-500" />
-          {!allApproved && (
-            <div className="absolute -top-2 -right-2">
-              <AlertCircle className="h-8 w-8 text-warning fill-warning/20" />
-            </div>
-          )}
-        </div>
-        
-        <div className="text-center space-y-2">
-          <h2 className="text-4xl font-black uppercase tracking-tight italic">
-            {allApproved ? "Course Concluded" : "Sequence Finished"}
-          </h2>
-          <p className="text-muted-foreground text-lg">
-            {allApproved 
-              ? `Outstanding performance! You have mastered ${course.title}.`
-              : "You've reached the end of the modules, but your final status is pending verification."}
-          </p>
-        </div>
-
-        {!allApproved && (
-          <Alert variant="warning" className="max-w-md bg-warning/10 border-warning/20 shadow-lg">
-            <Clock className="h-4 w-4" />
-            <AlertTitle className="font-black uppercase tracking-widest text-xs">Certificate Locked</AlertTitle>
-            <AlertDescription className="text-sm font-medium">
-              Your course is complete, but your certificate is locked pending activity approval. Please wait for your assigned checker to review your submissions.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div className="flex gap-4">
-          <Button variant="outline" onClick={() => navigate('/learning/my-courses')} className="font-bold border-primary/20">
-            Back to My Learning
-          </Button>
-          <Button 
-            onClick={() => navigate('/learning/certificates')} 
-            disabled={!allApproved}
-            className={cn(
-              "font-black uppercase tracking-widest text-xs h-12 px-8",
-              allApproved ? "shadow-lg shadow-primary/20" : "opacity-50"
-            )}
-          >
-            {allApproved ? "Download Certificate" : "Awaiting Approval"}
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // Determine if we are in review mode (course already completed)
+  const isReviewMode = enrollment?.status === 'COMPLETED' || enrollment?.status === 'PENDING_GRADING';
 
 
   const totalModules = course.modules?.length || 0;
-  const furthestOrderReached = (enrollment.currentModuleOrder === 0) ? 1 : enrollment.currentModuleOrder + 1;
-  const progressPercent = totalModules > 0 
+  const furthestOrderReached = isReviewMode ? totalModules + 1 : ((enrollment.currentModuleOrder === 0) ? 1 : enrollment.currentModuleOrder + 1);
+  const progressPercent = isReviewMode ? 100 : (totalModules > 0 
     ? Math.min(100, Math.round((enrollment.currentModuleOrder / totalModules) * 100))
-    : 0;
+    : 0);
 
   const handleModuleNavigate = async (m: CourseModule) => {
-    if (m.sequenceOrder > furthestOrderReached) return;
+    if (!isReviewMode && m.sequenceOrder > furthestOrderReached) return;
     
     // Restore quiz result if user already attempted/completed this module
     if (m.type === 'PRE_QUIZ' || m.type === 'POST_QUIZ') {
@@ -387,9 +330,8 @@ export const CoursePlayer: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto px-4 flex flex-col md:flex-row gap-8 pb-12 w-full max-w-7xl">
-      {/* Sidebar Navigation */}
-      <aside className="w-full md:w-72 shrink-0 space-y-6 order-2 md:order-1">
+    <div className="flex flex-col md:flex-row w-full min-h-[calc(100vh-4rem)]">
+      <aside className="w-full md:w-72 shrink-0 space-y-4 order-2 md:order-1 border-r bg-background px-3 py-6 md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:overflow-y-auto">
         <Button 
           variant="ghost" 
           className="w-full justify-start text-muted-foreground hover:text-primary mb-2"
@@ -398,72 +340,71 @@ export const CoursePlayer: React.FC = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to My Learning
         </Button>
 
-        <Card className="border shadow-lg bg-card overflow-hidden rounded-2xl">
-          <CardHeader className="pb-4 border-b bg-muted/30">
-            <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              Course Map
-            </CardTitle>
-            <div className="space-y-2 mt-4">
-              <div className="flex justify-between text-[10px] font-bold uppercase text-muted-foreground">
-                <span>Overall Progress</span>
-                <span>{progressPercent}%</span>
-              </div>
-              <Progress value={progressPercent} className="h-1.5" />
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center gap-2 text-primary">
+            <BookOpen className="h-4 w-4" />
+            <span className="text-xs font-black uppercase tracking-widest">Course Map</span>
+          </div>
+          <div className="space-y-2 bg-muted/30 p-4 rounded-2xl border">
+            <div className="flex justify-between text-[10px] font-black uppercase text-muted-foreground">
+              <span>Overall Progress</span>
+              <span>{progressPercent}%</span>
             </div>
-          </CardHeader>
-          <CardContent className="p-2 space-y-1">
-            {course.modules?.sort((a, b) => a.sequenceOrder - b.sequenceOrder).map((m) => {
-              const isCompleted = m.sequenceOrder <= enrollment.currentModuleOrder;
-              const isCurrent = m.id === displayedModule?.id;
-              const isLocked = m.sequenceOrder > furthestOrderReached;
+            <Progress value={progressPercent} className="h-1.5" />
+          </div>
+        </div>
 
-              return (
-                <Button
-                  variant="ghost"
-                  key={m.id}
-                  disabled={isLocked}
-                  onClick={() => handleModuleNavigate(m)}
-                  className={cn(
-                    "w-full flex items-start gap-3 p-3 rounded-xl transition-all text-left group border border-transparent h-auto justify-start whitespace-normal",
-                    isCurrent ? "bg-primary/10 border-primary/20 text-primary shadow-sm hover:bg-primary/20" : 
-                    isLocked ? "opacity-40 cursor-not-allowed" : 
-                    "hover:bg-muted/50"
-                  )}
-                >
-                  <div className={cn(
-                    "mt-0.5 rounded-full p-1.5 shrink-0",
-                    isCurrent ? "bg-primary text-white" : 
-                    isCompleted ? "bg-emerald-100 text-emerald-600" : 
-                    isLocked ? "bg-muted text-muted-foreground" : 
-                    "bg-muted text-primary"
+        <div className="space-y-1.5">
+          {course.modules?.sort((a, b) => a.sequenceOrder - b.sequenceOrder).map((m) => {
+            const isCompleted = isReviewMode || m.sequenceOrder <= enrollment.currentModuleOrder;
+            const isCurrent = m.id === displayedModule?.id;
+            const isLocked = !isReviewMode && m.sequenceOrder > furthestOrderReached;
+
+            return (
+              <Button
+                variant="ghost"
+                key={m.id}
+                disabled={isLocked}
+                onClick={() => handleModuleNavigate(m)}
+                className={cn(
+                  "w-full flex items-start gap-3 p-3 rounded-xl transition-all text-left group border border-transparent h-auto justify-start whitespace-normal",
+                  isCurrent ? "bg-primary/10 border-primary/20 text-primary shadow-sm hover:bg-primary/20" : 
+                  isLocked ? "opacity-40 cursor-not-allowed" : 
+                  "hover:bg-muted/50"
+                )}
+              >
+                <div className={cn(
+                  "mt-0.5 rounded-full p-1.5 shrink-0",
+                  isCurrent ? "bg-primary text-white" : 
+                  isCompleted ? "bg-emerald-100 text-emerald-600" : 
+                  isLocked ? "bg-muted text-muted-foreground" : 
+                  "bg-muted text-primary"
+                )}>
+                  {isCompleted ? <CheckCircle2 className="h-3 w-3" /> : 
+                   isLocked ? <Lock className="h-3 w-3" /> : 
+                   <PlayCircle className="h-3 w-3" />}
+                </div>
+                <div className="min-w-0">
+                  <p className={cn(
+                    "text-[9px] font-black uppercase tracking-widest",
+                    isCurrent ? "text-primary/70" : "text-muted-foreground"
                   )}>
-                    {isCompleted ? <CheckCircle2 className="h-3 w-3" /> : 
-                     isLocked ? <Lock className="h-3 w-3" /> : 
-                     <PlayCircle className="h-3 w-3" />}
-                  </div>
-                  <div className="min-w-0">
-                    <p className={cn(
-                      "text-[9px] font-black uppercase tracking-widest",
-                      isCurrent ? "text-primary/70" : "text-muted-foreground"
-                    )}>
-                      {m.type.replace('_', ' ')}
-                    </p>
-                    <p className={cn(
-                      "text-[11px] font-bold truncate leading-tight mt-0.5",
-                      isCurrent ? "text-primary" : isLocked ? "text-muted-foreground" : "text-foreground"
-                    )}>
-                      {m.title}
-                    </p>
-                  </div>
-                </Button>
-              );
-            })}
-          </CardContent>
-        </Card>
+                    {m.type.replace('_', ' ')}
+                  </p>
+                  <p className={cn(
+                    "text-[11px] font-bold truncate leading-tight mt-0.5",
+                    isCurrent ? "text-primary" : isLocked ? "text-muted-foreground" : "text-foreground"
+                  )}>
+                    {m.title}
+                  </p>
+                </div>
+              </Button>
+            );
+          })}
+        </div>
 
         {/* Small badge for current module info */}
-        <div className="bg-white border p-4 rounded-2xl shadow-sm text-center">
+        <div className="bg-muted/30 border p-4 rounded-2xl text-center">
           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Your Status</p>
           <div className="flex items-center justify-center gap-2">
             <div className={cn(
@@ -480,11 +421,36 @@ export const CoursePlayer: React.FC = () => {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 space-y-8 pb-12 order-1 md:order-2">
+      <main className="flex-1 min-w-0 space-y-6 pb-12 order-1 md:order-2 p-6 md:p-8">
+        {/* Completion Banner for review mode */}
+        {isReviewMode && (
+          <div className="flex items-center gap-4 p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-2xl animate-in fade-in duration-500">
+            <CheckCircle2 className="h-8 w-8 text-emerald-500 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
+                {enrollment?.status === 'COMPLETED' ? 'Course Completed' : 'Pending Grading'}
+              </p>
+              <p className="text-xs text-emerald-600/80 dark:text-emerald-400/60 mt-0.5">
+                You are reviewing this course. All modules are unlocked.
+              </p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={() => navigate('/learning/my-courses')} className="text-xs font-bold border-emerald-200 dark:border-emerald-800">
+                My Learning
+              </Button>
+              {enrollment?.status === 'COMPLETED' && course.hasCertificate && (
+                <Button size="sm" onClick={() => navigate('/learning/certificates')} className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20">
+                  View Certificate
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Module Header Pill */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
            <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-full border w-fit max-w-full">
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground shrink-0">Active Sequence</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground shrink-0">{isReviewMode ? 'Reviewing' : 'Active Sequence'}</span>
               <div className="h-4 w-px bg-border shrink-0" />
               <span className="text-xs font-bold truncate">{displayedModule?.title || 'Course Overview'}</span>
            </div>
@@ -508,20 +474,28 @@ export const CoursePlayer: React.FC = () => {
               <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(displayedModule.contentUrlOrText || '') }} />
             </CardContent>
             <CardFooter className="bg-muted/50 p-8 flex justify-between border-t items-center">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                {isAtIntro ? "Ready to begin?" : "End of Learning Path"}
-              </p>
-              <Button 
-                onClick={handleCompleteModule} 
-                disabled={isSubmitting} 
-                size="lg" 
-                className={cn(
-                  "h-14 px-10 font-black uppercase tracking-widest shadow-xl",
-                  isAtIntro ? "shadow-primary/20" : "bg-success hover:bg-success/90 text-white shadow-success/20"
-                )}
-              >
-                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : isAtIntro ? "Initiate Learning Sequence" : "Finalize & Exit"}
-              </Button>
+              {isReviewMode ? (
+                <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">
+                  ✓ {isAtIntro ? 'Introduction' : 'Closing'} — Completed
+                </p>
+              ) : (
+                <>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                    {isAtIntro ? "Ready to begin?" : "End of Learning Path"}
+                  </p>
+                  <Button 
+                    onClick={handleCompleteModule} 
+                    disabled={isSubmitting} 
+                    size="lg" 
+                    className={cn(
+                      "h-14 px-10 font-black uppercase tracking-widest shadow-xl",
+                      isAtIntro ? "shadow-primary/20" : "bg-success hover:bg-success/90 text-white shadow-success/20"
+                    )}
+                  >
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : isAtIntro ? "Initiate Learning Sequence" : "Finalize & Exit"}
+                  </Button>
+                </>
+              )}
             </CardFooter>
           </Card>
 
@@ -750,27 +724,34 @@ export const CoursePlayer: React.FC = () => {
           </CardContent>
 
           <CardFooter className="border-t bg-muted/10 p-6 flex justify-between">
-            <div className="text-xs text-muted-foreground flex items-center gap-1">
-              <AlertCircle className="h-3 w-3" />
-              Strict Learning Loop active: Skipping modules is disabled.
-            </div>
-            
-            {!quizResult && (
+            {isReviewMode ? (
+              <div className="text-xs text-emerald-600 flex items-center gap-1 font-medium">
+                <CheckCircle2 className="h-3 w-3" />
+                Review Mode — This module has been completed.
+              </div>
+            ) : (
               <>
-                {(displayedModule.type === 'PRE_QUIZ' || displayedModule.type === 'POST_QUIZ') && quizQuestions.length > 0 && (
-                  <Button onClick={handleSubmitQuiz} disabled={isSubmitting}>
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Submit Answers
-                  </Button>
-                )}
+                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Strict Learning Loop active: Skipping modules is disabled.
+                </div>
                 
-                {(displayedModule.type === 'PRE_QUIZ' || displayedModule.type === 'POST_QUIZ') && quizQuestions.length === 0 && (
-                   <Button onClick={handleCompleteModule} disabled={isSubmitting}>Skip Empty Quiz</Button>
+                {!quizResult && (
+                  <>
+                    {(displayedModule.type === 'PRE_QUIZ' || displayedModule.type === 'POST_QUIZ') && quizQuestions.length > 0 && (
+                      <Button onClick={handleSubmitQuiz} disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Submit Answers
+                      </Button>
+                    )}
+                    
+                    {(displayedModule.type === 'PRE_QUIZ' || displayedModule.type === 'POST_QUIZ') && quizQuestions.length === 0 && (
+                       <Button onClick={handleCompleteModule} disabled={isSubmitting}>Skip Empty Quiz</Button>
+                    )}
+                  </>
                 )}
               </>
             )}
-
-
           </CardFooter>
         </Card>
       )}
