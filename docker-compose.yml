@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ilearn_db
     ports:
-      - "5432:5432"
+      - "5435:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -33,7 +33,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/ilearn_db?schema=public
       - JWT_SECRET=iLearn_JWT_S3cr3t_St@nd@rdIns2024_ChangeMe!
       - JWT_EXPIRES_IN=8h
-      - FRONTEND_URL=http://192.168.124.81
+      - FRONTEND_URL=http://192.168.124.81:8082
       - SMTP_USER=dtuzon@standard-insurance.com
       - SMTP_APP_PASSWORD=edqy mlou aubq rwfc
       - ZOOM_SDK_KEY=p4yCFt3qQgizI3mee3vzzg
@@ -58,7 +58,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:80"
+      - "8082:80"
 
 volumes:
   postgres_data:
