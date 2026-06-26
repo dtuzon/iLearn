@@ -17,6 +17,7 @@ RUN npm ci --omit=dev --legacy-peer-deps
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.js ./prisma.config.js
+RUN npx prisma generate
 COPY --from=builder /app/public ./public
 EXPOSE 3001
 CMD ["npm", "start"]
