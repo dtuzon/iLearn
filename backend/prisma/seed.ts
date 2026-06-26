@@ -11,6 +11,74 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log('🌱 Starting SMART STAKEHOLDER DEMO SEED...');
 
+  console.log('👥 Ensuring baseline stakeholder users exist...');
+  const defaultPasswordHash = '$2b$12$L7I/mF/X8B8yvB.oQ/7/GeY1/t/u/r/u/r/u/r/u/r/u/r/u/r/u/r'; // 'password123'
+
+  await prisma.user.upsert({
+    where: { username: 'abi' },
+    update: {},
+    create: {
+      username: 'abi',
+      email: 'abi.manuel@standardinsurance.com.ph',
+      passwordHash: defaultPasswordHash,
+      firstName: 'Abi',
+      lastName: 'Manuel',
+      role: Role.COURSE_CREATOR
+    }
+  });
+
+  await prisma.user.upsert({
+    where: { username: 'tim' },
+    update: {},
+    create: {
+      username: 'tim',
+      email: 'tim.padua@standardinsurance.com.ph',
+      passwordHash: defaultPasswordHash,
+      firstName: 'Tim',
+      lastName: 'Padua',
+      role: Role.EMPLOYEE
+    }
+  });
+
+  await prisma.user.upsert({
+    where: { username: 'harold' },
+    update: {},
+    create: {
+      username: 'harold',
+      email: 'harold.nipas@standardinsurance.com.ph',
+      passwordHash: defaultPasswordHash,
+      firstName: 'Harold',
+      lastName: 'Nipas',
+      role: Role.SUPERVISOR
+    }
+  });
+
+  await prisma.user.upsert({
+    where: { username: 'gerald' },
+    update: {},
+    create: {
+      username: 'gerald',
+      email: 'gerald.galang@standardinsurance.com.ph',
+      passwordHash: defaultPasswordHash,
+      firstName: 'Gerald',
+      lastName: 'Galang',
+      role: Role.LEARNING_MANAGER
+    }
+  });
+
+  await prisma.user.upsert({
+    where: { username: 'admin' },
+    update: {},
+    create: {
+      username: 'admin',
+      email: 'admin@standardinsurance.com.ph',
+      passwordHash: defaultPasswordHash,
+      firstName: 'Admin',
+      lastName: 'User',
+      role: Role.ADMINISTRATOR
+    }
+  });
+
   // Step 1: Safe Initialization & Fetching
   console.log('🧹 Cleaning up existing dummy content (preserving users/departments/settings)...');
   
