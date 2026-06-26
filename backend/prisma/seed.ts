@@ -12,11 +12,11 @@ async function main() {
   console.log('🌱 Starting SMART STAKEHOLDER DEMO SEED...');
 
   console.log('👥 Ensuring baseline stakeholder users exist...');
-  const defaultPasswordHash = '$2b$12$L7I/mF/X8B8yvB.oQ/7/GeY1/t/u/r/u/r/u/r/u/r/u/r/u/r/u/r'; // 'password123'
+  const defaultPasswordHash = '$2b$12$hHUoEsTWknGGEMYRrJQ4leauUvHcKCS0nXS9Lq1R1QskBreYL463S'; // 'password123'
 
   await prisma.user.upsert({
     where: { username: 'abi' },
-    update: {},
+    update: { passwordHash: defaultPasswordHash },
     create: {
       username: 'abi',
       email: 'abi.manuel@standardinsurance.com.ph',
@@ -29,7 +29,7 @@ async function main() {
 
   await prisma.user.upsert({
     where: { username: 'tim' },
-    update: {},
+    update: { passwordHash: defaultPasswordHash },
     create: {
       username: 'tim',
       email: 'tim.padua@standardinsurance.com.ph',
@@ -42,7 +42,7 @@ async function main() {
 
   await prisma.user.upsert({
     where: { username: 'harold' },
-    update: {},
+    update: { passwordHash: defaultPasswordHash },
     create: {
       username: 'harold',
       email: 'harold.nipas@standardinsurance.com.ph',
@@ -55,7 +55,7 @@ async function main() {
 
   await prisma.user.upsert({
     where: { username: 'gerald' },
-    update: {},
+    update: { passwordHash: defaultPasswordHash },
     create: {
       username: 'gerald',
       email: 'gerald.galang@standardinsurance.com.ph',
@@ -68,7 +68,7 @@ async function main() {
 
   await prisma.user.upsert({
     where: { username: 'admin' },
-    update: {},
+    update: { passwordHash: defaultPasswordHash },
     create: {
       username: 'admin',
       email: 'admin@standardinsurance.com.ph',
@@ -338,7 +338,7 @@ async function main() {
       create: {
         ...empData,
         email: `${empData.username}@standardinsurance.com.ph`,
-        passwordHash: '$2b$12$L7I/mF/X8B8yvB.oQ/7/GeY1/t/u/r/u/r/u/r/u/r/u/r/u/r/u/r', // 'password123'
+        passwordHash: '$2b$12$hHUoEsTWknGGEMYRrJQ4leauUvHcKCS0nXS9Lq1R1QskBreYL463S', // 'password123'
         role: Role.EMPLOYEE,
         immediateSuperiorId: supervisor.id,
         departmentId: infraDept.id
