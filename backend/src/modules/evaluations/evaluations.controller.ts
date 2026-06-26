@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { EvaluationsService } from './evaluations.service';
 import { TemplateCategory } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 
 export class EvaluationsController {
   // Templates
@@ -79,6 +80,33 @@ export class EvaluationsController {
   static async submitBehavioralEvaluation(req: Request, res: Response) {
     try {
       const evaluatorId = (req as any).user.userId;
+      const evaluatorRole = (req as any).user.role;
+      const { employeeId, courseId } = req.body;
+      
+      // 1. If evaluator is SUPERVISOR or DEPARTMENT_HEAD, verify target employee is their direct subordinate
+      if (['SUPERVISOR', 'DEPARTMENT_HEAD'].includes(evaluatorRole)) {
+        const employee = await prisma.user.findUnique({
+          where: { id: employeeId },
+          select: { immediateSuperiorId: true }
+        });
+        if (!employee || employee.immediateSuperiorId !== evaluatorId) {
+          return res.status(403).json({ message: 'Forbidden: You can only submit behavioral evaluations for your direct reports.' });
+        }
+      }
+      
+      // 2. Verify that an enrollment exists, is completed, and has triggered the 180-day evaluation
+      const enrollment = await prisma.enrollment.findFirst({
+        where: {
+          userId: employeeId,
+          courseId: courseId,
+          status: 'COMPLETED',
+          evaluation180DayTriggered: true
+        }
+      });
+      if (!enrollment) {
+        return res.status(400).json({ message: 'Bad Request: The target user has not completed this course, or the 180-day evaluation is not triggered.' });
+      }
+
       const evaluation = await EvaluationsService.submitBehavioralEvaluation({
         ...req.body,
         evaluatorId

@@ -15,11 +15,26 @@ router.put('/templates/:id', authenticate, authorize([Role.ADMINISTRATOR, Role.L
 
 // Evaluation Responses
 router.post('/responses', authenticate, EvaluationsController.submitResponse);
-router.get('/responses/course/:courseId', authenticate, EvaluationsController.getResponsesByCourse);
+router.get(
+  '/responses/course/:courseId',
+  authenticate,
+  authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+  EvaluationsController.getResponsesByCourse
+);
 
 // Behavioral 180-Day Evaluations (Supervisor Only)
-router.get('/pending-team', authenticate, EvaluationsController.getPendingTeam);
-router.post('/behavioral', authenticate, EvaluationsController.submitBehavioralEvaluation);
+router.get(
+  '/pending-team',
+  authenticate,
+  authorize([Role.SUPERVISOR, Role.DEPARTMENT_HEAD, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+  EvaluationsController.getPendingTeam
+);
+router.post(
+  '/behavioral',
+  authenticate,
+  authorize([Role.SUPERVISOR, Role.DEPARTMENT_HEAD, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+  EvaluationsController.submitBehavioralEvaluation
+);
 
 export default router;
 
