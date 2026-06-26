@@ -1,6 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { shuffle } from '../../utils/shuffle';
-import { ModuleType, CourseModule, QuestionType } from '@prisma/client';
+import { ModuleType, CourseModule, QuestionType, Role } from '@prisma/client';
 import { EnrollmentsService } from '../enrollments/enrollments.service';
 
 interface ExtendedCourseModule extends CourseModule {
@@ -296,9 +296,30 @@ export class QuizzesService {
 
   // ─── Essay: list submissions for a module (checker view) ─────────────────
 
-  static async getEssaySubmissions(moduleId: string) {
+  static async getEssaySubmissions(moduleId: string, graderId: string, graderRole: string) {
+    const isAdminOrManager = graderRole === Role.ADMINISTRATOR || graderRole === Role.LEARNING_MANAGER;
+
+    if (isAdminOrManager) {
+      return prisma.essaySubmission.findMany({
+        where: { moduleId },
+        include: {
+          question: { select: { questionText: true, essayPrompt: true, maxScore: true } },
+          user:     { select: { id: true, firstName: true, lastName: true, email: true } },
+        },
+        orderBy: { submittedAt: 'desc' },
+      });
+    }
+
+    // Otherwise, restrict to batches where graderId is a registered checker
     return prisma.essaySubmission.findMany({
-      where: { moduleId },
+      where: { 
+        moduleId,
+        batch: {
+          activityCheckers: {
+            some: { userId: graderId }
+          }
+        }
+      },
       include: {
         question: { select: { questionText: true, essayPrompt: true, maxScore: true } },
         user:     { select: { id: true, firstName: true, lastName: true, email: true } },
@@ -328,6 +349,27 @@ export class QuizzesService {
       },
     });
     if (!submission) throw new Error('Submission not found');
+
+    const checker = await prisma.user.findUnique({
+      where: { id: graderId },
+      select: { role: true }
+    });
+
+    if (!checker) throw new Error('Grader not found');
+
+    const isAdminOrManager = checker.role === Role.ADMINISTRATOR || checker.role === Role.LEARNING_MANAGER;
+
+    if (!isAdminOrManager) {
+      if (!submission.batchId) {
+        throw new Error('Unauthorized: Only administrators and learning managers can grade submissions outside a batch.');
+      }
+      const isChecker = await prisma.batchChecker.findUnique({
+        where: { batchId_userId: { batchId: submission.batchId, userId: graderId } }
+      });
+      if (!isChecker) {
+        throw new Error('Unauthorized: You are not authorized to grade submissions for this batch.');
+      }
+    }
 
     const max = submission.question.maxScore;
     if (max !== null && score > max) {

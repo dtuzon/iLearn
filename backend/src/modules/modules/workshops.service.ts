@@ -15,6 +15,12 @@ export class WorkshopsService {
 
     if (!module) throw new Error('Module not found');
 
+    const enrollment = await prisma.enrollment.findUnique({
+      where: { userId_courseId: { userId, courseId: module.courseId } }
+    });
+
+    if (!enrollment) throw new Error('You are not enrolled in this course.');
+
     // Find existing submission or create new one using the unique constraint [userId, moduleId]
     const submission = await prisma.activitySubmission.upsert({
       where: {
@@ -40,18 +46,12 @@ export class WorkshopsService {
 
     // Mark module as completed in progress so they can move to the next module
     // But the certificate will be gated by the APPROVED status of this submission.
-    const enrollment = await prisma.enrollment.findUnique({
-      where: { userId_courseId: { userId, courseId: module.courseId } }
+    await prisma.moduleProgress.upsert({
+      where: { enrollmentId_moduleId: { enrollmentId: enrollment.id, moduleId } },
+      update: { completed: true, completedAt: new Date(), submittedAt: new Date() },
+      create: { enrollmentId: enrollment.id, moduleId, completed: true, completedAt: new Date(), submittedAt: new Date() }
     });
-
-    if (enrollment) {
-      await prisma.moduleProgress.upsert({
-        where: { enrollmentId_moduleId: { enrollmentId: enrollment.id, moduleId } },
-        update: { completed: true, completedAt: new Date(), submittedAt: new Date() },
-        create: { enrollmentId: enrollment.id, moduleId, completed: true, completedAt: new Date(), submittedAt: new Date() }
-      });
-      await EnrollmentsService.updateEnrollmentCompletionState(prisma, userId, module.courseId);
-    }
+    await EnrollmentsService.updateEnrollmentCompletionState(prisma, userId, module.courseId);
 
     // Notify Checker
     await this.notifyChecker(module, userId);
@@ -199,7 +199,51 @@ export class WorkshopsService {
   }
 
   static async reviewSubmission(submissionId: string, checkerId: string, data: { status: SubmissionStatus; feedback?: string }) {
-    const submission = await prisma.activitySubmission.update({
+    const submission = await prisma.activitySubmission.findUnique({
+      where: { id: submissionId },
+      include: { 
+        module: { include: { course: true } },
+        user: true
+      }
+    });
+
+    if (!submission) throw new Error('Submission not found');
+
+    const checker = await prisma.user.findUnique({
+      where: { id: checkerId },
+      select: { role: true }
+    });
+
+    if (!checker) throw new Error('Checker not found');
+
+    const isAdminOrManager = checker.role === Role.ADMINISTRATOR || checker.role === Role.LEARNING_MANAGER;
+
+    if (!isAdminOrManager) {
+      if (submission.assignedCheckerId) {
+        if (submission.assignedCheckerId !== checkerId) {
+          throw new Error('Unauthorized: You are not the assigned checker for this submission.');
+        }
+      } else {
+        const module = submission.module;
+        if (module.checkerType === CheckerType.SPECIFIC_USER) {
+          if (module.specificCheckerId !== checkerId) {
+            throw new Error('Unauthorized: You are not the specific checker for this module.');
+          }
+        } else if (module.checkerType === CheckerType.COURSE_CREATOR) {
+          if (module.course.lecturerId !== checkerId) {
+            throw new Error('Unauthorized: You are not the lecturer/creator for this course.');
+          }
+        } else if (module.checkerType === CheckerType.IMMEDIATE_SUPERIOR) {
+          if (submission.user.immediateSuperiorId !== checkerId) {
+            throw new Error('Unauthorized: You are not the immediate superior of this student.');
+          }
+        } else {
+          throw new Error('Unauthorized: No checker mapping matches your profile.');
+        }
+      }
+    }
+
+    const updated = await prisma.activitySubmission.update({
       where: { id: submissionId },
       data: {
         status: data.status,
@@ -210,19 +254,19 @@ export class WorkshopsService {
       include: { module: { include: { course: true } } }
     });
     
-    await EnrollmentsService.updateEnrollmentCompletionState(prisma, submission.userId, submission.module.courseId);
+    await EnrollmentsService.updateEnrollmentCompletionState(prisma, updated.userId, updated.module.courseId);
 
     // Notify Student
-    const user = await prisma.user.findUnique({ where: { id: submission.userId } });
+    const user = await prisma.user.findUnique({ where: { id: updated.userId } });
     const isApproved = data.status === SubmissionStatus.APPROVED;
     const title = isApproved ? 'Activity Approved!' : 'Action Required: Activity Rejected';
     const message = isApproved 
-      ? `Your submission for "${submission.module.course.title}" has been approved.` 
-      : `Your submission for "${submission.module.course.title}" requires changes. Feedback: ${data.feedback}`;
-    const actionUrl = `/learning/course/${submission.module.courseId}`;
+      ? `Your submission for "${updated.module.course.title}" has been approved.` 
+      : `Your submission for "${updated.module.course.title}" requires changes. Feedback: ${data.feedback}`;
+    const actionUrl = `/learning/course/${updated.module.courseId}`;
     await NotificationsService.createNotification({
 
-      userId: submission.userId,
+      userId: updated.userId,
       title,
       message,
       link: actionUrl
@@ -234,14 +278,14 @@ export class WorkshopsService {
       await sendActivityUpdateEmail(
         user.email,
         data.status as 'APPROVED' | 'REJECTED',
-        submission.module.course.title,
+        updated.module.course.title,
 
         data.feedback,
         fullActionUrl
       );
     }
 
-    return submission;
+    return updated;
   }
 
 

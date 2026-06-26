@@ -76,10 +76,10 @@ export class QuizzesController {
     }
   }
 
-  static async getEssaySubmissions(req: Request, res: Response) {
+  static async getEssaySubmissions(req: AuthenticatedRequest, res: Response) {
     try {
       const { moduleId } = req.params;
-      const submissions = await QuizzesService.getEssaySubmissions(moduleId as string);
+      const submissions = await QuizzesService.getEssaySubmissions(moduleId as string, req.user!.userId, req.user!.role);
       res.json(submissions);
     } catch (error: any) {
       res.status(400).json({ message: error.message });

@@ -23,4 +23,14 @@ export const settingsApi = {
     const response = await apiClient.put('/settings', data);
     return response.data;
   },
+  sendTestEmail: async (data: {
+    smtpServer?: string;
+    smtpPort?: number;
+    smtpUser?: string;
+    smtpPassword?: string;
+    senderEmail?: string;
+  }) => {
+    const response = await apiClient.post('/settings/test-email', data);
+    return response.data;
+  },
 };

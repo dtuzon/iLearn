@@ -28,6 +28,7 @@ export const SystemSettings: React.FC = () => {
   const { settings, fetchSettings } = useTheme();
   const [activeSection, setActiveSection] = useState<SettingsSection>('theme');
   const [isSaving, setIsSaving] = useState(false);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
 
   // Form States
   const [formData, setFormData] = useState({
@@ -101,12 +102,33 @@ export const SystemSettings: React.FC = () => {
     }
   };
 
+  const handleSendTestEmail = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsTestingEmail(true);
+    try {
+      await settingsApi.sendTestEmail({
+        smtpServer: formData.smtpServer,
+        smtpPort: formData.smtpPort,
+        senderEmail: formData.senderEmail,
+        smtpUser: formData.smtpUser,
+        smtpPassword: formData.smtpPassword,
+      });
+      toast.success('Test email sent successfully.');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to send test email. Please check your SMTP configuration.');
+    } finally {
+      setIsTestingEmail(false);
+    }
+  };
+
   const navItems = [
     { id: 'theme', label: 'Themes & UI', icon: Palette },
     { id: 'portal', label: 'Portal Content', icon: ScrollText },
     { id: 'email', label: 'Email Settings', icon: Mail },
     { id: 'storage', label: 'Storage & Uploads', icon: HardDrive },
     { id: 'security', label: 'Security Policies', icon: ShieldCheck },
+    { id: 'backup', label: 'Database Backup', icon: Database },
+    { id: 'logs', label: 'System Logs', icon: ScrollText },
   ];
 
   const baseUrl = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('/api', '') : '';
@@ -294,7 +316,16 @@ export const SystemSettings: React.FC = () => {
               </div>
             </CardContent>
             <CardFooter className="px-0 border-t pt-6 mt-6">
-               <Button variant="outline" size="sm">Send Test Email</Button>
+               <Button 
+                 type="button"
+                 variant="outline" 
+                 size="sm" 
+                 onClick={handleSendTestEmail} 
+                 disabled={isTestingEmail}
+               >
+                 {isTestingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                 Send Test Email
+               </Button>
             </CardFooter>
           </Card>
         );

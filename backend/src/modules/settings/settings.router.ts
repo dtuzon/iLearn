@@ -23,4 +23,11 @@ router.put(
   SettingsController.updateSettings
 );
 
+router.post(
+  '/test-email',
+  authenticate,
+  authorize([Role.ADMINISTRATOR]),
+  SettingsController.sendTestEmail
+);
+
 export default router;

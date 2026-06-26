@@ -109,7 +109,7 @@ function App() {
 
                 {/* Checker Routes */}
                 <Route path="/checker" element={
-                  <RoleGuard allowedRoles={['COURSE_CREATOR', 'ADMINISTRATOR', 'LEARNING_MANAGER']}>
+                  <RoleGuard allowedRoles={['SUPERVISOR', 'DEPARTMENT_HEAD', 'ADMINISTRATOR', 'LEARNING_MANAGER']}>
                     <Outlet />
                   </RoleGuard>
                 }>

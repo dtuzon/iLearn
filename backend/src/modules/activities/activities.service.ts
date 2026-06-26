@@ -18,7 +18,9 @@ export class ActivitiesService {
       where: { userId_courseId: { userId, courseId: module.courseId } }
     });
 
-    const batchId = enrollment?.batchId || null;
+    if (!enrollment) throw new Error('You are not enrolled in this course.');
+
+    const batchId = enrollment.batchId || null;
 
     const submission = await prisma.activitySubmission.upsert({
       where: {
@@ -85,12 +87,21 @@ export class ActivitiesService {
   }
 
   static async getBatchSubmissions(batchId: string, checkerId: string) {
-    // Security check: Is this user a checker for this batch?
-    const isChecker = await prisma.batchChecker.findUnique({
-      where: { batchId_userId: { batchId, userId: checkerId } }
+    const checker = await prisma.user.findUnique({
+      where: { id: checkerId },
+      select: { role: true }
     });
 
-    if (!isChecker) throw new Error('Unauthorized: You are not a checker for this batch.');
+    if (!checker) throw new Error('Checker not found');
+
+    const isAdminOrManager = checker.role === Role.ADMINISTRATOR || checker.role === Role.LEARNING_MANAGER;
+
+    if (!isAdminOrManager) {
+      const isChecker = await prisma.batchChecker.findUnique({
+        where: { batchId_userId: { batchId, userId: checkerId } }
+      });
+      if (!isChecker) throw new Error('Unauthorized: You are not a checker for this batch.');
+    }
 
     return prisma.activitySubmission.findMany({
       where: { 
@@ -106,10 +117,21 @@ export class ActivitiesService {
   }
 
   static async getBatchEssays(batchId: string, checkerId: string) {
-    const isChecker = await prisma.batchChecker.findUnique({
-      where: { batchId_userId: { batchId, userId: checkerId } }
+    const checker = await prisma.user.findUnique({
+      where: { id: checkerId },
+      select: { role: true }
     });
-    if (!isChecker) throw new Error('Unauthorized');
+
+    if (!checker) throw new Error('Checker not found');
+
+    const isAdminOrManager = checker.role === Role.ADMINISTRATOR || checker.role === Role.LEARNING_MANAGER;
+
+    if (!isAdminOrManager) {
+      const isChecker = await prisma.batchChecker.findUnique({
+        where: { batchId_userId: { batchId, userId: checkerId } }
+      });
+      if (!isChecker) throw new Error('Unauthorized');
+    }
 
     return prisma.essaySubmission.findMany({
       where: { 
@@ -131,6 +153,27 @@ export class ActivitiesService {
     });
 
     if (!submission) throw new Error('Submission not found');
+
+    const checker = await prisma.user.findUnique({
+      where: { id: checkerId },
+      select: { role: true }
+    });
+
+    if (!checker) throw new Error('Checker not found');
+
+    const isAdminOrManager = checker.role === Role.ADMINISTRATOR || checker.role === Role.LEARNING_MANAGER;
+
+    if (!isAdminOrManager) {
+      if (!submission.batchId) {
+        throw new Error('Unauthorized: Only administrators and learning managers can grade submissions outside a batch.');
+      }
+      const isChecker = await prisma.batchChecker.findUnique({
+        where: { batchId_userId: { batchId: submission.batchId, userId: checkerId } }
+      });
+      if (!isChecker) {
+        throw new Error('Unauthorized: You are not authorized to grade submissions for this batch.');
+      }
+    }
 
     const updated = await prisma.$transaction(async (tx) => {
       const result = await tx.activitySubmission.update({

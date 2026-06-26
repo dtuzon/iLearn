@@ -29,6 +29,7 @@ const upload = multer({ storage });
 router.get(
   '/pending',
   authenticate,
+  authorize([Role.SUPERVISOR, Role.DEPARTMENT_HEAD, Role.ADMINISTRATOR, Role.COURSE_CREATOR, Role.LEARNING_MANAGER]),
   WorkshopsController.getPending
 );
 
@@ -60,6 +61,7 @@ router.post(
 router.post(
   '/:submissionId/review',
   authenticate,
+  authorize([Role.SUPERVISOR, Role.DEPARTMENT_HEAD, Role.ADMINISTRATOR, Role.COURSE_CREATOR, Role.LEARNING_MANAGER]),
   auditLog('REVIEW_WORKSHOP'),
   WorkshopsController.review
 );

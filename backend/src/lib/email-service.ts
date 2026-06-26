@@ -222,3 +222,61 @@ export const sendWelcomeEmail = async (
     console.error('CRITICAL: Failed to send Welcome Email:', error);
   }
 };
+
+export const sendTestEmail = async (
+  userEmail: string,
+  config?: {
+    smtpServer?: string;
+    smtpPort?: number;
+    smtpUser?: string;
+    smtpPassword?: string;
+    senderEmail?: string;
+  }
+) => {
+  let transporter;
+
+  if (process.env.MOCK_EMAIL === 'true') {
+    transporter = {
+      sendMail: async (options: any) => {
+        console.log(`[MOCK EMAIL] To: ${options.to}, Subject: ${options.subject}`);
+        return { messageId: 'mock-id' };
+      },
+      close: () => {}
+    } as any;
+  } else if (config && config.smtpServer && config.smtpUser) {
+    transporter = nodemailer.createTransport({
+      host: config.smtpServer,
+      port: config.smtpPort || 587,
+      secure: config.smtpPort === 465,
+      auth: {
+        user: config.smtpUser,
+        pass: config.smtpPassword || '',
+      },
+    } as any);
+  } else {
+    transporter = await getTransporter();
+  }
+
+  const settings = await prisma.systemSettings.findFirst();
+  const sender = config?.senderEmail || 
+    (settings?.senderEmail && settings.senderEmail !== 'no-reply@example.com' && settings.senderEmail !== 'no-reply@standard-insurance.com' ? settings.senderEmail : undefined) || 
+    process.env.SMTP_USER || 
+    'no-reply@company.com';
+
+  await transporter.sendMail({
+    from: `"iLearn LMS Test" <${sender}>`,
+    to: userEmail,
+    subject: `[iLearn] SMTP Test Connection`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
+        <h2 style="color: #4f46e5;">SMTP Connection Successful</h2>
+        <p>Hello,</p>
+        <p>This is a test email sent from the iLearn LMS to verify your SMTP server configuration.</p>
+        <p>If you received this email, your SMTP settings are correct.</p>
+        <p style="margin-top: 40px; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+          This is an automated test notification from the iLearn Learning Management System.
+        </p>
+      </div>
+    `
+  });
+};
