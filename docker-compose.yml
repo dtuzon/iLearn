@@ -13,6 +13,53 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ilearn_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ilearn-backend
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - PORT=3001
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/ilearn_db?schema=public
+      - JWT_SECRET=iLearn_JWT_S3cr3t_St@nd@rdIns2024_ChangeMe!
+      - JWT_EXPIRES_IN=8h
+      - FRONTEND_URL=http://192.168.124.81
+      - SMTP_USER=dtuzon@standard-insurance.com
+      - SMTP_APP_PASSWORD=edqy mlou aubq rwfc
+      - ZOOM_SDK_KEY=p4yCFt3qQgizI3mee3vzzg
+      - ZOOM_SDK_SECRET=uLRlOtBHO99pv0LUAPpT8g2dSz3oM7Cl
+      - ZOOM_S2S_ACCOUNT_ID=ra5uFbcyQ0mTKKjjJdo2TA
+      - ZOOM_S2S_CLIENT_ID=ni_ywzUkQ3CWK4lXiLrIGg
+      - ZOOM_S2S_CLIENT_SECRET=4CE6kam0jOKyJ3qsJIPF5PPP72JlZdY2
+      - MOCK_EMAIL=true
+    ports:
+      - "3001:3001"
+    volumes:
+      - backend_uploads:/app/uploads
+    command: >
+      sh -c "npx prisma migrate deploy && node dist/prisma/seed.js && npm start"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ilearn-frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
 
 volumes:
   postgres_data:
+  backend_uploads:
