@@ -145,7 +145,10 @@ export const TeamManagement: React.FC = () => {
                         <span className="text-xs text-muted-foreground italic">No courses</span>
                       ) : (
                         member.enrollments.slice(0, 2).map((e: any) => {
-                          const isLate = e.dueDate && e.completedAt && new Date(e.completedAt) > new Date(e.dueDate);
+                          const isLate = e.dueDate && (
+                            (e.completedAt && new Date(e.completedAt) > new Date(e.dueDate)) ||
+                            (!e.completedAt && new Date() > new Date(e.dueDate))
+                          );
                           return (
                             <Badge key={e.id} variant="secondary" className={cn(
                               "text-[10px] border-none flex items-center gap-1",
@@ -169,7 +172,10 @@ export const TeamManagement: React.FC = () => {
                         <span className="text-xs text-muted-foreground italic">No paths</span>
                       ) : (
                         member.learningPathEnrollments.map((e: any) => {
-                          const isLate = e.dueDate && e.completedAt && new Date(e.completedAt) > new Date(e.dueDate);
+                          const isLate = e.dueDate && (
+                            (e.completedAt && new Date(e.completedAt) > new Date(e.dueDate)) ||
+                            (!e.completedAt && new Date() > new Date(e.dueDate))
+                          );
                           return (
                             <Badge key={e.id} variant="secondary" className={cn(
                               "text-[10px] border-none flex items-center gap-1",

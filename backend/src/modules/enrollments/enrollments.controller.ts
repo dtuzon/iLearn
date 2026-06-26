@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { EnrollmentsService } from './enrollments.service';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
+import { prisma } from '../../lib/prisma';
 
 export class EnrollmentsController {
   static async getMyEnrollments(req: AuthenticatedRequest, res: Response) {
@@ -20,9 +21,22 @@ export class EnrollmentsController {
       
       let targetUserId = caller.userId;
       
-      // Security Fix: Only allow admins and managers to enroll other users
-      if (userId && ['ADMINISTRATOR', 'LEARNING_MANAGER'].includes(caller.role)) {
-        targetUserId = userId;
+      if (userId && userId !== caller.userId) {
+        if (['ADMINISTRATOR', 'LEARNING_MANAGER'].includes(caller.role)) {
+          targetUserId = userId;
+        } else if (['SUPERVISOR', 'DEPARTMENT_HEAD'].includes(caller.role)) {
+          const targetUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { immediateSuperiorId: true }
+          });
+          if (targetUser && targetUser.immediateSuperiorId === caller.userId) {
+            targetUserId = userId;
+          } else {
+            return res.status(403).json({ message: 'Forbidden: You can only enroll your direct reports' });
+          }
+        } else {
+          return res.status(403).json({ message: 'Forbidden: Insufficient privileges to enroll other users' });
+        }
       }
       
       const enrollment = await EnrollmentsService.enroll(targetUserId, courseId as string, dueDate);

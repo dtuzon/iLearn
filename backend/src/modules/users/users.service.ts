@@ -181,8 +181,17 @@ export class UsersService {
       delete updateData.password;
     }
 
-    if (updateData.dateHire && typeof updateData.dateHire === 'string') {
-      updateData.dateHire = new Date(updateData.dateHire);
+    if (updateData.dateHire !== undefined) {
+      if (updateData.dateHire) {
+        const parsed = new Date(updateData.dateHire);
+        if (isNaN(parsed.getTime())) {
+          updateData.dateHire = null;
+        } else {
+          updateData.dateHire = parsed;
+        }
+      } else {
+        updateData.dateHire = null;
+      }
     }
 
     return prisma.user.update({

@@ -109,6 +109,7 @@ export class EvaluationsService {
       where: {
         userId: { in: subordinateIds },
         status: 'COMPLETED',
+        evaluation180DayTriggered: true,
         OR: [
           { batch: { requires180DayEval: true } },
           { user: { learningPathEnrollments: { some: { batch: { requires180DayEval: true } } } } }

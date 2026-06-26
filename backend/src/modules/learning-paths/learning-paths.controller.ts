@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { LearningPathsService } from './learning-paths.service';
 import { StorageService } from '../../lib/services/storage.service';
+import { prisma } from '../../lib/prisma';
 
 export class LearningPathsController {
   static async getAll(req: any, res: Response) {
@@ -71,9 +72,22 @@ export class LearningPathsController {
       
       let targetUserId = caller.userId;
       
-      // Security Fix: Only allow admins and managers to enroll other users
-      if (userId && ['ADMINISTRATOR', 'LEARNING_MANAGER'].includes(caller.role)) {
-        targetUserId = userId;
+      if (userId && userId !== caller.userId) {
+        if (['ADMINISTRATOR', 'LEARNING_MANAGER'].includes(caller.role)) {
+          targetUserId = userId;
+        } else if (['SUPERVISOR', 'DEPARTMENT_HEAD'].includes(caller.role)) {
+          const targetUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { immediateSuperiorId: true }
+          });
+          if (targetUser && targetUser.immediateSuperiorId === caller.userId) {
+            targetUserId = userId;
+          } else {
+            return res.status(403).json({ message: 'Forbidden: You can only enroll your direct reports' });
+          }
+        } else {
+          return res.status(403).json({ message: 'Forbidden: Insufficient privileges to enroll other users' });
+        }
       }
       
       const enrollment = await LearningPathsService.enroll(targetUserId, id as string, dueDate);
