@@ -44,7 +44,6 @@ import {
 import { toast } from 'sonner';
 import { Textarea } from '../../components/ui/textarea';
 import { MultiSelect } from '../../components/ui/multi-select';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { departmentsApi, type Department } from '../../api/departments.api';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -859,7 +858,7 @@ export const LearningPathBuilder: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="p-title">Path Title</Label>
                   <Input
@@ -876,23 +875,6 @@ export const LearningPathBuilder: React.FC = () => {
                   {path?.parentId && user?.role === 'ADMINISTRATOR' && (
                     <p className="text-xs text-amber-500 font-bold mt-2">ADMIN MODE: You are modifying the canonical name for this version.</p>
                   )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Target Audience</Label>
-                  <Select
-                    value={identityForm.targetAudience}
-                    onValueChange={(val) => setIdentityForm({ ...identityForm, targetAudience: val })}
-                    disabled={isReadonly}
-                  >
-                    <SelectTrigger className="h-11 rounded-xl">
-                      <SelectValue placeholder="Select audience" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="GENERAL">General Audience</SelectItem>
-                      <SelectItem value="PHASE_1_NEW_HIRE">Phase 1: Newly Hired</SelectItem>
-                      <SelectItem value="PHASE_2_REGULARIZED">Phase 2: Newly Regularized</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
 

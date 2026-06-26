@@ -120,5 +120,15 @@ export class UsersController {
       res.status(500).json({ message: error.message });
     }
   }
+
+  static async getProgress(req: AuthenticatedRequest, res: Response) {
+    try {
+      const targetUserId = req.params.id as string;
+      const progressData = await UsersService.getProgress(targetUserId);
+      res.json(progressData);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
 }
 

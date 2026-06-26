@@ -391,6 +391,91 @@ export class UsersService {
     const { passwordHash, ...safeUser } = user as any;
     return safeUser;
   }
+
+  static async getProgress(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        department: true,
+        immediateSuperior: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            position: true
+          }
+        }
+      }
+    });
+    if (!user) throw new Error('User not found');
+    const { passwordHash, ...safeUser } = user as any;
+
+    const learningPathEnrollments = await prisma.learningPathEnrollment.findMany({
+      where: { userId },
+      include: {
+        learningPath: {
+          include: {
+            pathCourses: {
+              include: {
+                course: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const enrollments = await prisma.enrollment.findMany({
+      where: { userId },
+      include: {
+        course: {
+          include: {
+            lecturer: {
+              select: {
+                firstName: true,
+                lastName: true
+              }
+            },
+            _count: {
+              select: { modules: true }
+            }
+          }
+        },
+        moduleProgress: true
+      }
+    });
+
+    const transcripts = await prisma.transcript.findMany({
+      where: { userId },
+      include: {
+        course: {
+          select: {
+            title: true
+          }
+        }
+      }
+    });
+
+    const learningPathCertificates = await prisma.learningPathCertificate.findMany({
+      where: { userId },
+      include: {
+        learningPath: {
+          select: {
+            title: true
+          }
+        }
+      }
+    });
+
+    return {
+      user: safeUser,
+      learningPathEnrollments,
+      enrollments,
+      transcripts,
+      learningPathCertificates
+    };
+  }
 }
 
 

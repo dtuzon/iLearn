@@ -71,11 +71,16 @@ router.get(
 );
 
 router.get(
+  '/:id/progress',
+  authenticate,
+  authorize([Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
+  UsersController.getProgress
+);
+
+router.get(
   '/:userId/learning-paths',
   authenticate,
   LearningPathsController.getUserEnrollments
 );
-
-
 
 export default router;

@@ -323,7 +323,7 @@ export const AppShell: React.FC = () => {
             "animate-in fade-in duration-500",
             location.pathname.startsWith('/learning/course/')
               ? "w-full min-h-full"
-              : "container mx-auto p-6 md:p-8 space-y-8 max-w-7xl"
+              : "w-full p-6 md:p-8 space-y-8 [&>*]:mx-0"
           )}>
             <Outlet />
           </div>

@@ -73,4 +73,8 @@ export const usersApi = {
     });
     return response.data;
   },
+  getProgress: async (id: string) => {
+    const response = await apiClient.get(`/users/${id}/progress`);
+    return response.data;
+  },
 };

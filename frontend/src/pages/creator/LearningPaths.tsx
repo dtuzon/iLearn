@@ -11,7 +11,6 @@ import { Textarea } from '../../components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
 import { 
   Loader2, 
@@ -160,23 +159,6 @@ export const LearningPaths: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Target Audience</Label>
-                  <Select 
-                    value={newPath.targetAudience || 'GENERAL'} 
-                    onValueChange={(val) => setNewPath({...newPath, targetAudience: val})}
-                  >
-                    <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Select Audience" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="GENERAL">General</SelectItem>
-                      <SelectItem value="PHASE_1_NEW_HIRE">Phase 1: Newly Hired</SelectItem>
-                      <SelectItem value="PHASE_2_REGULARIZED">Phase 2: Newly Regularized</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
                   <Label>Target Departments</Label>
                   <MultiSelect 
                     options={departments.map(d => ({ label: d.name, value: d.name }))}
@@ -301,9 +283,12 @@ export const LearningPaths: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          <Badge variant="outline" className="text-[10px] uppercase tracking-wider">{path.targetAudience}</Badge>
-                          {path.targetDepartments.length > 0 && (
-                            <Badge variant="outline" className="text-[10px] uppercase tracking-wider">+{path.targetDepartments.length} Depts</Badge>
+                          {path.targetDepartments.length > 0 ? (
+                            path.targetDepartments.map(dept => (
+                              <Badge key={dept} variant="outline" className="text-[10px] uppercase tracking-wider">{dept}</Badge>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">All Departments</span>
                           )}
                         </div>
                       </TableCell>

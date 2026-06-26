@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { usersApi } from '../../api/users.api';
 import type { UserResponse } from '../../api/users.api';
+import { UserLearningProfileDialog } from '../../components/admin/UserLearningProfileDialog';
+import { User as UserIcon } from 'lucide-react';
 import { departmentsApi } from '../../api/departments.api';
 import type { Department } from '../../api/departments.api';
 import { Button } from '../../components/ui/button';
@@ -335,6 +337,8 @@ export const UserManagement: React.FC = () => {
   // Dialog States
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
   const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null);
@@ -750,6 +754,9 @@ export const UserManagement: React.FC = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                        <DropdownMenuItem onClick={() => { setProfileUserId(user.id); setIsProfileOpen(true); }} className="rounded-lg">
+                          <UserIcon className="mr-2 h-4 w-4" /> View Employee Profile
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openEdit(user)} className="rounded-lg">
                           <Shield className="mr-2 h-4 w-4" /> Edit Profile
                         </DropdownMenuItem>
@@ -763,6 +770,11 @@ export const UserManagement: React.FC = () => {
           </TableBody>
         </Table>
       </div>
+      <UserLearningProfileDialog 
+        userId={profileUserId} 
+        isOpen={isProfileOpen} 
+        onOpenChange={setIsProfileOpen} 
+      />
     </div>
   );
 };
