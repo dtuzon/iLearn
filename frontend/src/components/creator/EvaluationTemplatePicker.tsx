@@ -138,7 +138,7 @@ export const EvaluationTemplatePicker: React.FC<EvaluationTemplatePickerProps> =
                       <SelectItem key={t.id} value={t.id}>
                         <div className="flex flex-col">
                           <span className="font-semibold">{t.name}</span>
-                          <span className="text-[10px] opacity-60">{t.questions.length} Questions</span>
+                          <span className="text-[10px] opacity-60">{(t.questions?.length ?? 0)} Questions</span>
                         </div>
                       </SelectItem>
                     ))

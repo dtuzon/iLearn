@@ -50,7 +50,7 @@ router.post(
 router.post(
   '/upload-template',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
   upload.single('file'),
   (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });

@@ -12,7 +12,7 @@ router.get('/:moduleId', authenticate, QuizzesController.getQuiz);
 router.post(
   '/:moduleId/questions',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
   auditLog('ADD_QUIZ_QUESTIONS'),
   QuizzesController.addQuestions
 );
@@ -27,28 +27,28 @@ router.post(
 router.patch(
   '/questions/:questionId',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
   QuizzesController.updateQuestion
 );
 
 router.delete(
   '/questions/:questionId',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
   QuizzesController.deleteQuestion
 );
 
 router.delete(
   '/:moduleId/questions',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
   QuizzesController.clearQuestions
 );
 
 router.put(
   '/:moduleId/sync',
   authenticate,
-  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR]),
+  authorize([Role.COURSE_CREATOR, Role.ADMINISTRATOR, Role.LEARNING_MANAGER]),
   auditLog('SYNC_QUIZ_QUESTIONS'),
   QuizzesController.syncQuestions
 );
