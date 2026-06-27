@@ -1,5 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { Role, CourseStatus } from '@prisma/client';
+import nodemailer from 'nodemailer';
+import { getS2SToken } from '../../services/zoom.service';
 
 export class DashboardService {
   static async getMetrics(userId: string, role: Role) {
@@ -79,6 +81,50 @@ export class DashboardService {
     };
   }
 
+  private static async verifySmtpConnection(): Promise<boolean> {
+    try {
+      if (process.env.MOCK_EMAIL === 'true') {
+        return true;
+      }
+      const settings = await prisma.systemSettings.findFirst();
+      const isDbConfigured = settings?.smtpServer && settings?.smtpServer !== 'smtp.example.com' && settings?.smtpUser;
+      
+      const transporter = nodemailer.createTransport({
+        host: isDbConfigured ? settings.smtpServer : 'smtp.gmail.com',
+        port: isDbConfigured ? settings.smtpPort : 465,
+        secure: isDbConfigured ? (settings.smtpPort === 465) : true,
+        auth: {
+          user: isDbConfigured ? settings.smtpUser : process.env.SMTP_USER,
+          pass: isDbConfigured ? settings.smtpPassword : process.env.SMTP_APP_PASSWORD,
+        },
+        connectionTimeout: 3000
+      } as any);
+
+      await transporter.verify();
+      return true;
+    } catch (error) {
+      console.error('SMTP Connection Verify Failed:', error);
+      return false;
+    }
+  }
+
+  private static async verifyZoomConnection(): Promise<boolean> {
+    try {
+      const accountId = process.env.ZOOM_S2S_ACCOUNT_ID;
+      const clientId = process.env.ZOOM_S2S_CLIENT_ID;
+      const clientSecret = process.env.ZOOM_S2S_CLIENT_SECRET;
+
+      if (!accountId || !clientId || !clientSecret) {
+        return false;
+      }
+      await getS2SToken();
+      return true;
+    } catch (error) {
+      console.error('Zoom Connection Verify Failed:', error);
+      return false;
+    }
+  }
+
   private static async getAdminMetrics() {
     // Calculate active logins in the last 24 hours
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -116,6 +162,14 @@ export class DashboardService {
       growth = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
     }
 
+    // Failed Logins (24h)
+    const failedLoginsCount = await prisma.auditLog.count({
+      where: {
+        action: 'USER_LOGIN_FAILED',
+        timestamp: { gte: oneDayAgo }
+      }
+    });
+
     // Calculate active and upcoming batches
     const activeBatchesCount = await prisma.batch.count({ where: { status: 'ACTIVE' } });
     const upcomingBatchesCount = await prisma.batch.count({ where: { status: 'UPCOMING' } });
@@ -125,9 +179,58 @@ export class DashboardService {
     const pendingEssays = await prisma.essaySubmission.count({ where: { status: 'PENDING_REVIEW' } });
     const totalPending = pendingSubmissions + pendingEssays;
 
+    // Total Enrollments & Completion Rate
+    const totalEnrollments = await prisma.enrollment.count();
+    const completedCount = await prisma.enrollment.count({ where: { status: 'COMPLETED' } });
+    const completionRate = totalEnrollments > 0 ? (completedCount / totalEnrollments) * 100 : 0;
+    const certsCount = await prisma.transcript.count();
+
+    // Verify SMTP and Zoom Connection status concurrently
+    const [smtpConnected, zoomConnected] = await Promise.all([
+      this.verifySmtpConnection().catch(() => false),
+      this.verifyZoomConnection().catch(() => false)
+    ]);
+
+    // Calculate 7-day system activity chart data
+    const activityChart: any[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
+
+      const logins = await prisma.auditLog.count({
+        where: {
+          action: 'USER_LOGIN',
+          timestamp: { gte: date, lt: nextDate }
+        }
+      });
+
+      const actions = await prisma.auditLog.count({
+        where: {
+          action: { not: 'USER_LOGIN' },
+          timestamp: { gte: date, lt: nextDate }
+        }
+      });
+
+      const dateString = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      activityChart.push({
+        date: dateString,
+        logins,
+        actions
+      });
+    }
+
     return {
       metrics: [
         { label: 'Active Sessions (24h)', value: activeCount.toString(), growth },
+        { 
+          label: 'Failed Logins (24h)', 
+          value: failedLoginsCount.toString(), 
+          growth: failedLoginsCount > 0 ? 'ACTION REQUIRED' : 'GOOD' 
+        },
         { 
           label: 'Active Batches', 
           value: activeBatchesCount.toString(), 
@@ -137,8 +240,16 @@ export class DashboardService {
           label: 'Awaiting Grading', 
           value: totalPending.toString(), 
           growth: totalPending > 0 ? 'ACTION REQUIRED' : 'ON TRACK' 
-        }
-      ]
+        },
+        { label: 'Total Enrollments', value: totalEnrollments.toString(), growth: `+${totalEnrollments} total` },
+        { label: 'Completion Rate', value: `${completionRate.toFixed(1)}%`, growth: `+${certsCount} certs` }
+      ],
+      systemStatus: {
+        smtpConfigured: smtpConnected,
+        zoomConfigured: zoomConnected,
+        databaseConnected: true
+      },
+      activityChart
     };
   }
 

@@ -8,6 +8,16 @@ export interface DashboardMetric {
 
 export interface DashboardData {
   metrics: DashboardMetric[];
+  systemStatus?: {
+    smtpConfigured: boolean;
+    zoomConfigured: boolean;
+    databaseConnected: boolean;
+  };
+  activityChart?: Array<{
+    date: string;
+    logins: number;
+    actions: number;
+  }>;
 }
 
 export const dashboardApi = {

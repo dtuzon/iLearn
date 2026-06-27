@@ -40,6 +40,24 @@ export class AuthController {
       res.json(result);
     } catch (error: any) {
       console.error('Login error:', error.message);
+
+      // Log failed login attempt
+      try {
+        const { username } = req.body;
+        await prisma.auditLog.create({
+          data: {
+            action: 'USER_LOGIN_FAILED',
+            ipAddress: req.ip,
+            metadata: {
+              username: String(username || '').substring(0, 100),
+              error: error.message
+            }
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log failed login action:', logError);
+      }
+
       res.status(401).json({ message: error.message });
     }
   }
