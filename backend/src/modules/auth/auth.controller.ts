@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
+import { prisma } from '../../lib/prisma';
 
 
 export class AuthController {
@@ -11,6 +12,23 @@ export class AuthController {
       const sanitizedUsername = String(username || '').replace(/[\r\n]/g, '');
       console.log('Login attempt for:', sanitizedUsername);
       const result = await AuthService.login(username, password);
+
+      // Create login audit log
+      try {
+        await prisma.auditLog.create({
+          data: {
+            action: 'USER_LOGIN',
+            userId: result.user.id,
+            ipAddress: req.ip,
+            metadata: {
+              username: result.user.username,
+              role: result.user.role
+            }
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log login action:', logError);
+      }
 
       res.cookie('token', result.token, {
         httpOnly: true,

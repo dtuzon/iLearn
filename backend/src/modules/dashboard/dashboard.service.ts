@@ -83,9 +83,45 @@ export class DashboardService {
     const usersCount = await prisma.user.count();
     const coursesCount = await prisma.course.count({ where: { isLatest: true } });
     
+    // Calculate active logins in the last 24 hours
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const activeLogins = await prisma.auditLog.groupBy({
+      by: ['userId'],
+      where: {
+        action: 'USER_LOGIN',
+        timestamp: { gte: oneDayAgo },
+        userId: { not: null }
+      }
+    });
+    const activeCount = activeLogins.length;
+
+    // Calculate active logins in the preceding 24 hours for growth percentage
+    const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const precedingLogins = await prisma.auditLog.groupBy({
+      by: ['userId'],
+      where: {
+        action: 'USER_LOGIN',
+        timestamp: { gte: twoDaysAgo, lt: oneDayAgo },
+        userId: { not: null }
+      }
+    });
+    const precedingCount = precedingLogins.length;
+
+    let growth = '+0%';
+    if (precedingCount === 0) {
+      if (activeCount > 0) {
+        growth = `+${activeCount}`;
+      } else {
+        growth = '0%';
+      }
+    } else {
+      const pct = ((activeCount - precedingCount) / precedingCount) * 100;
+      growth = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+    }
+
     return {
       metrics: [
-        { label: 'Global Platform Health', value: '99.9%', growth: '+0.01%' },
+        { label: 'Active Sessions (24h)', value: activeCount.toString(), growth },
         { label: 'Total Users', value: usersCount.toString(), growth: '+2%' },
         { label: 'Total Content', value: coursesCount.toString(), growth: '+5%' }
       ]
