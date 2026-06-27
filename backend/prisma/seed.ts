@@ -134,6 +134,35 @@ async function main() {
     }
   });
 
+  // Step 3: Seed/Update System Settings Theme Color
+  console.log('⚙️ Syncing System Settings Theme Color...');
+  const currentSettings = await prisma.systemSettings.findFirst();
+  if (currentSettings) {
+    await prisma.systemSettings.update({
+      where: { id: currentSettings.id },
+      data: {
+        primaryColorHex: '#e8aa33',
+        companyName: 'Standard Insurance Co., Inc.'
+      }
+    });
+  } else {
+    await prisma.systemSettings.create({
+      data: {
+        companyName: 'Standard Insurance Co., Inc.',
+        primaryColorHex: '#e8aa33',
+        secondaryColorHex: '#10B981',
+        frontPageWelcomeText: 'Welcome to the iLearn Portal',
+        footerText: '© 2024 Standard Insurance Co., Inc. All Rights Reserved.',
+        dashboardBulletinMessage: 'No active announcements.',
+        smtpServer: 'smtp.gmail.com',
+        smtpPort: 465,
+        senderEmail: 'no-reply@standard-insurance.com',
+        maxUploadSizeMb: 10,
+        allowedFileTypes: '.pdf,.zip,.docx,.mp4'
+      }
+    });
+  }
+
   console.log('\n✨ BASELINE SEEDING COMPLETED SUCCESSFULLY!');
 }
 

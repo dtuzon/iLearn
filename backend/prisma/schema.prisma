@@ -178,7 +178,7 @@ model User {
 model SystemSettings {
   id                    String  @id @default(cuid())
   companyName           String  @default("Standard Insurance Co., Inc.")
-  primaryColorHex       String  @default("#4F46E5")
+  primaryColorHex       String  @default("#e8aa33")
   secondaryColorHex     String  @default("#10B981")
   // Portal Content & Branding
   companyLogoUrl        String?

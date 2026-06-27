@@ -7,7 +7,7 @@ export class SettingsService {
       // Return defaults if not found
       return {
         companyName: 'Standard Insurance Co., Inc.',
-        primaryColorHex: '#4F46E5',
+        primaryColorHex: '#e8aa33',
         secondaryColorHex: '#10B981',
         frontPageWelcomeText: 'Welcome to the iLearn Portal',
         footerText: '© 2024 Standard Insurance Co., Inc. All Rights Reserved.',
