@@ -80,9 +80,6 @@ export class DashboardService {
   }
 
   private static async getAdminMetrics() {
-    const usersCount = await prisma.user.count();
-    const coursesCount = await prisma.course.count({ where: { isLatest: true } });
-    
     // Calculate active logins in the last 24 hours
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const activeLogins = await prisma.auditLog.groupBy({
@@ -119,11 +116,28 @@ export class DashboardService {
       growth = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
     }
 
+    // Calculate active and upcoming batches
+    const activeBatchesCount = await prisma.batch.count({ where: { status: 'ACTIVE' } });
+    const upcomingBatchesCount = await prisma.batch.count({ where: { status: 'UPCOMING' } });
+
+    // Calculate pending reviews (awaiting grading)
+    const pendingSubmissions = await prisma.activitySubmission.count({ where: { status: 'PENDING_REVIEW' } });
+    const pendingEssays = await prisma.essaySubmission.count({ where: { status: 'PENDING_REVIEW' } });
+    const totalPending = pendingSubmissions + pendingEssays;
+
     return {
       metrics: [
         { label: 'Active Sessions (24h)', value: activeCount.toString(), growth },
-        { label: 'Total Users', value: usersCount.toString(), growth: '+2%' },
-        { label: 'Total Content', value: coursesCount.toString(), growth: '+5%' }
+        { 
+          label: 'Active Batches', 
+          value: activeBatchesCount.toString(), 
+          growth: upcomingBatchesCount > 0 ? `+${upcomingBatchesCount} upcoming` : '0 upcoming' 
+        },
+        { 
+          label: 'Awaiting Grading', 
+          value: totalPending.toString(), 
+          growth: totalPending > 0 ? 'ACTION REQUIRED' : 'ON TRACK' 
+        }
       ]
     };
   }

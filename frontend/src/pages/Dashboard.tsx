@@ -61,9 +61,9 @@ export const Dashboard: React.FC = () => {
   const getMetricIcon = (label: string) => {
     if (label.includes('Overdue')) return AlertCircle;
     if (label.includes('Users') || label.includes('Learners')) return Users;
-    if (label.includes('Courses') || label.includes('Content')) return BookOpen;
+    if (label.includes('Courses') || label.includes('Content') || label.includes('Batches')) return BookOpen;
     if (label.includes('Completion') || label.includes('Compliance')) return CheckCircle2;
-    if (label.includes('Approval')) return Clock;
+    if (label.includes('Approval') || label.includes('Grading') || label.includes('Reviews')) return Clock;
     if (label.includes('Health')) return ShieldCheck;
     return Activity;
   };
