@@ -218,8 +218,8 @@ export const AppShell: React.FC = () => {
               <SheetContent side="left" className="w-72 p-4 flex flex-col h-full">
                 <SheetHeader className="pb-4 border-b text-left">
                   <div className="flex items-center gap-3">
-                    <div className="bg-primary text-primary-foreground p-1.5 rounded-xl shadow-lg shadow-primary/20">
-                      <GraduationCap className="h-6 w-6" />
+                    <div className="h-9 w-9 flex items-center justify-center overflow-hidden rounded-xl bg-background shadow-md border border-border/50 p-1">
+                      <img src="/si_logo_only.png" alt="Standard Insurance Logo" className="h-full w-full object-contain" />
                     </div>
                     <SheetTitle className="text-xl font-bold tracking-tight text-foreground">iLearn</SheetTitle>
                   </div>
@@ -231,8 +231,8 @@ export const AppShell: React.FC = () => {
             </Sheet>
 
             <Link to="/dashboard" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
-              <div className="bg-primary text-primary-foreground p-1.5 rounded-xl shadow-lg shadow-primary/20">
-                <GraduationCap className="h-6 w-6" />
+              <div className="h-9 w-9 flex items-center justify-center overflow-hidden rounded-xl bg-background shadow-md border border-border/50 p-1">
+                <img src="/si_logo_only.png" alt="Standard Insurance Logo" className="h-full w-full object-contain" />
               </div>
               <div className="flex items-center gap-2 whitespace-nowrap">
                 <span className="text-xl font-bold tracking-tight text-foreground">iLearn</span>
