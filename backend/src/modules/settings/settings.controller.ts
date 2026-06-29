@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { SettingsService } from './settings.service';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
 import { sendTestEmail } from '../../lib/email-service';
+import { StorageService } from '../../lib/services/storage.service';
 import { prisma } from '../../lib/prisma';
 
 export class SettingsController {
@@ -25,11 +26,27 @@ export class SettingsController {
       const data = { ...req.body };
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-      if (files?.logo) {
-        data.companyLogoUrl = `/uploads/${files.logo[0].filename}`;
+      const current = await prisma.systemSettings.findFirst();
+
+      if (files?.logo && files.logo[0]) {
+        if (current?.companyLogoUrl) {
+          try {
+            await StorageService.deleteFile(current.companyLogoUrl);
+          } catch (e) {
+            console.error('Failed to delete old logo file:', e);
+          }
+        }
+        data.companyLogoUrl = await StorageService.uploadFile(files.logo[0], 'branding');
       }
-      if (files?.loginBackground) {
-        data.loginBackgroundUrl = `/uploads/${files.loginBackground[0].filename}`;
+      if (files?.loginBackground && files.loginBackground[0]) {
+        if (current?.loginBackgroundUrl) {
+          try {
+            await StorageService.deleteFile(current.loginBackgroundUrl);
+          } catch (e) {
+            console.error('Failed to delete old login background file:', e);
+          }
+        }
+        data.loginBackgroundUrl = await StorageService.uploadFile(files.loginBackground[0], 'branding');
       }
 
       // Convert string numbers from FormData back to integers
