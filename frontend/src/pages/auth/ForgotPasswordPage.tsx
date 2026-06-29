@@ -1,31 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Navigate, Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { Link } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import apiClient from '../../api/client';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 
-export const LoginPage: React.FC = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+export const ForgotPasswordPage: React.FC = () => {
+  const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   
-  const { login, isAuthenticated } = useAuth();
   const { settings } = useTheme();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const company = settings?.companyName || 'Standard Insurance Co., Inc.';
-    document.title = `Login | ${company}`;
+    document.title = `Forgot Password | ${company}`;
   }, [settings]);
-
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,28 +27,11 @@ export const LoginPage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await apiClient.post('/auth/login', { username, password });
-      const { user } = response.data;
-      
-      login(user);
-      
-      // Redirect based on password change requirement
-      if (user.requiresPasswordChange) {
-        navigate('/reset-password');
-        return;
-      }
-
-      // Redirect based on role
-      switch(user.role) {
-        case 'ADMINISTRATOR': navigate('/dashboard'); break;
-        case 'HR_MANAGER': navigate('/dashboard'); break;
-        case 'COURSE_CREATOR': navigate('/dashboard'); break;
-        case 'EMPLOYEE': navigate('/dashboard'); break;
-        default: navigate('/dashboard');
-      }
-
+      const response = await apiClient.post('/auth/forgot-password', { email });
+      setSuccessMessage(response.data.message || 'If an account is associated with this email, a reset link has been sent.');
+      setIsSubmitted(true);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      setError(err.response?.data?.message || 'Failed to submit request. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -73,7 +50,7 @@ export const LoginPage: React.FC = () => {
         }}
       />
 
-      {/* Left Side: Login Box */}
+      {/* Left Side: Forgot Password Box */}
       <div 
         className="relative z-10 w-full md:w-[450px] flex flex-col justify-center px-10 shadow-2xl"
         style={{ backgroundColor: 'hsl(var(--primary))' }}
@@ -95,57 +72,71 @@ export const LoginPage: React.FC = () => {
         </div>
 
         <div className="space-y-6 text-white">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight mb-2">Log In to your account</h2>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {error && (
-              <div className="bg-white/10 border border-white/20 text-white text-xs p-3 rounded backdrop-blur-md">
-                {error}
+          {!isSubmitted ? (
+            <>
+              <div>
+                <h2 className="text-3xl font-bold tracking-tight mb-2">Forgot Password?</h2>
+                <p className="text-white/70 text-sm">
+                  Enter your registered email address and we will send you instructions to reset your password.
+                </p>
               </div>
-            )}
-            
-            <div className="space-y-2">
-              <Label className="text-white/80 font-medium">Username</Label>
-              <Input 
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:ring-white/50 h-12"
-                placeholder="Enter your username"
-              />
-            </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label className="text-white/80 font-medium">Password</Label>
-                <Link to="/forgot-password" className="text-xs text-white/60 hover:text-white hover:underline transition-colors">
-                  Forgot Password?
-                </Link>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {error && (
+                  <div className="bg-white/10 border border-white/20 text-white text-xs p-3 rounded backdrop-blur-md">
+                    {error}
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <Label className="text-white/80 font-medium">Email Address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/45" />
+                    <Input 
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:ring-white/50 h-12 pl-10"
+                      placeholder="name@standard-insurance.com"
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="w-full bg-white text-primary hover:bg-white/90 h-12 text-md font-bold shadow-xl transition-all"
+                >
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Send Reset Link
+                </Button>
+              </form>
+            </>
+          ) : (
+            <div className="text-center py-6 space-y-4">
+              <div className="flex justify-center">
+                <div className="h-16 w-16 rounded-full bg-white/10 flex items-center justify-center">
+                  <CheckCircle className="h-10 w-10 text-white" />
+                </div>
               </div>
-              <Input 
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:ring-white/50 h-12"
-                placeholder="••••••••"
-              />
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold">Request Sent</h3>
+                <p className="text-white/80 text-sm leading-relaxed">
+                  {successMessage}
+                </p>
+              </div>
             </div>
+          )}
 
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="w-full bg-white text-primary hover:bg-white/90 h-12 text-md font-bold shadow-xl transition-all"
+          <div className="pt-4 text-center">
+            <Link 
+              to="/login" 
+              className="inline-flex items-center gap-2 text-white/60 hover:text-white hover:underline text-xs transition-colors"
             >
-              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Log In
-            </Button>
-          </form>
-
-          <div className="pt-8 text-center">
-             <p className="text-white/40 text-xs">Trouble logging in? Contact IT Support.</p>
+              <ArrowLeft className="h-3 w-3" />
+              Back to Login
+            </Link>
           </div>
         </div>
       </div>

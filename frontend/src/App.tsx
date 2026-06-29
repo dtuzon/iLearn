@@ -5,6 +5,8 @@ import { AppShell } from './components/layout/AppShell';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { LoginPage } from './pages/auth/LoginPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
+import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
+import { ResetPasswordTokenPage } from './pages/auth/ResetPasswordTokenPage';
 
 import { SystemSettings } from './pages/admin/SystemSettings';
 import { DepartmentManagement } from './pages/admin/DepartmentManagement';
@@ -44,6 +46,8 @@ function App() {
         <ThemeProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password-token" element={<ResetPasswordTokenPage />} />
             
             <Route element={<ProtectedRoute />}>
               <Route path="/reset-password" element={<ResetPasswordPage />} />

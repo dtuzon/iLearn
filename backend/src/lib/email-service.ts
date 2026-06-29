@@ -280,3 +280,64 @@ export const sendTestEmail = async (
     `
   });
 };
+
+export const sendPasswordResetEmail = async (
+  userEmail: string,
+  resetLink: string,
+  userName: string
+) => {
+  const settings = await prisma.systemSettings.findFirst();
+  const companyName = settings?.companyName || 'Standard Insurance Co., Inc.';
+  const color = settings?.primaryColorHex || '#e8aa33';
+
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #ffffff;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h2 style="color: ${color}; margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+          ${companyName}
+        </h2>
+        <p style="margin: 4px 0 0 0; font-size: 14px; color: #6b7280; font-weight: 500;">iLearn LMS Password Reset Request</p>
+      </div>
+
+      <div style="padding: 20px; background-color: #f9fafb; border-radius: 8px; border: 1px solid #f3f4f6;">
+        <p style="margin-top: 0; font-size: 16px; color: #1f2937;">Hello ${userName},</p>
+        <p style="font-size: 14px; color: #4b5563; line-height: 1.5;">
+          We received a request to reset the password for your iLearn account. Click the button below to secure your account and set a new password:
+        </p>
+        
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${resetLink}" style="background-color: ${color}; color: #ffffff; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 15px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            Reset Password
+          </a>
+        </div>
+
+        <p style="font-size: 12px; color: #6b7280; line-height: 1.5; margin-bottom: 0;">
+          <strong>Link Expiration:</strong> This link is valid for 1 hour. If you did not request this password reset, please ignore this email or contact security support.
+        </p>
+      </div>
+
+      <div style="margin-top: 24px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 16px;">
+        <p style="margin: 0;">This is an automated security notification from the iLearn Portal.</p>
+        <p style="margin: 4px 0 0 0;">${settings?.footerText || '© 2024 Standard Insurance Co., Inc. All Rights Reserved.'}</p>
+      </div>
+    </div>
+  `;
+
+  try {
+    const transporter = await getTransporter();
+    const sender = (settings?.senderEmail && settings.senderEmail !== 'no-reply@example.com' && settings.senderEmail !== 'no-reply@standard-insurance.com') 
+      ? settings.senderEmail 
+      : process.env.SMTP_USER;
+
+    await transporter.sendMail({
+      from: `"${companyName} Security" <${sender}>`,
+      to: userEmail,
+      subject: `[iLearn] Password Reset Request`,
+      html
+    });
+    console.log(`Password reset email sent to ${userEmail}`);
+  } catch (error) {
+    console.error('Failed to send password reset email:', error);
+    throw new Error('Failed to send password reset email');
+  }
+};
