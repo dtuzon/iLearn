@@ -42,7 +42,7 @@ services:
       - ZOOM_S2S_CLIENT_ID=ni_ywzUkQ3CWK4lXiLrIGg
       - ZOOM_S2S_CLIENT_SECRET=4CE6kam0jOKyJ3qsJIPF5PPP72JlZdY2
       - COOKIE_SECURE=false
-      - MOCK_EMAIL=true
+      - MOCK_EMAIL=false
     ports:
       - "3001:3001"
     volumes:
