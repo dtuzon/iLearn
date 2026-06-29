@@ -154,11 +154,11 @@ export const SystemSettings: React.FC = () => {
                         <Upload className="h-4 w-4 text-muted-foreground" />
                       </div>
                     )}
-                    <Input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] || null)} className="max-w-[200px]" />
+                    <Input type="file" id="logoUpload" aria-label="Upload Company Logo" title="Upload Company Logo" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] || null)} className="max-w-[200px]" />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Login Background Image</Label>
+                  <Label htmlFor="bgUpload">Login Background Image</Label>
                   <div className="flex items-center gap-4">
                     {settings?.loginBackgroundUrl ? (
                       <div className="h-12 w-12 rounded border overflow-hidden">
@@ -169,17 +169,20 @@ export const SystemSettings: React.FC = () => {
                         <Upload className="h-4 w-4 text-muted-foreground" />
                       </div>
                     )}
-                    <Input type="file" accept="image/*" onChange={(e) => setBgFile(e.target.files?.[0] || null)} className="max-w-[200px]" />
+                    <Input type="file" id="bgUpload" aria-label="Upload Login Background" title="Upload Login Background" accept="image/*" onChange={(e) => setBgFile(e.target.files?.[0] || null)} className="max-w-[200px]" />
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label>Primary Brand Color</Label>
+                  <Label htmlFor="primaryColor">Primary Brand Color</Label>
                   <div className="flex items-center gap-3">
                     <Input 
                       type="color" 
+                      id="primaryColor"
+                      aria-label="Primary Brand Color"
+                      title="Primary Brand Color"
                       className="w-12 h-10 p-1 cursor-pointer"
                       value={formData.primaryColorHex}
                       onChange={(e) => setFormData({...formData, primaryColorHex: e.target.value})}
@@ -188,10 +191,13 @@ export const SystemSettings: React.FC = () => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Secondary Accent Color</Label>
+                  <Label htmlFor="secondaryColor">Secondary Accent Color</Label>
                   <div className="flex items-center gap-3">
                     <Input 
                       type="color" 
+                      id="secondaryColor"
+                      aria-label="Secondary Accent Color"
+                      title="Secondary Accent Color"
                       className="w-12 h-10 p-1 cursor-pointer"
                       value={formData.secondaryColorHex}
                       onChange={(e) => setFormData({...formData, secondaryColorHex: e.target.value})}

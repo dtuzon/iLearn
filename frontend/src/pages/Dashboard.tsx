@@ -243,7 +243,7 @@ export const Dashboard: React.FC = () => {
             </CardHeader>
             <CardContent className="h-[280px]">
               {activityChart && activityChart.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <BarChart data={activityChart} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                     <XAxis 

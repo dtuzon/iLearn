@@ -254,7 +254,7 @@ export const AppShell: React.FC = () => {
           <div className="flex items-center gap-6">
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
+                <Button variant="ghost" size="icon" aria-label="Toggle navigation menu" title="Toggle navigation menu" className="md:hidden">
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>

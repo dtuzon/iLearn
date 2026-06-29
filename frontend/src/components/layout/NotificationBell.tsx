@@ -63,7 +63,13 @@ export const NotificationBell: React.FC = () => {
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative hover:bg-primary/5 transition-colors group">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          aria-label="View notifications"
+          title="Notifications"
+          className="relative hover:bg-primary/5 transition-colors group"
+        >
           <Bell className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
           {unreadCount > 0 && (
             <Badge 

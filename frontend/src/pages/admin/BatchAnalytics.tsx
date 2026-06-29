@@ -407,7 +407,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                       )}
                     </CardHeader>
                     <CardContent className="h-[250px]" id="chart-pre-post">
-                      <ResponsiveContainer width="100%" height="100%">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                         <BarChart data={[
                           { name: 'Pre-Quiz', score: data.knowledgeDelta?.preQuizAvg || 0 },
                           { name: 'Post-Quiz', score: data.knowledgeDelta?.postQuizAvg || 0 }
@@ -431,7 +431,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                   <Card className="rounded-3xl border-none shadow-lg shadow-black/5 lg:col-span-1">
                     <CardHeader><CardTitle className="font-black text-lg tracking-tight">Status Distribution</CardTitle></CardHeader>
                     <CardContent className="h-[250px]" id="chart-status-dist">
-                      <ResponsiveContainer width="100%" height="100%">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                         <PieChart>
                           <Pie
                             data={data.distribution} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value" stroke="none" cornerRadius={10}
@@ -448,7 +448,7 @@ export const BatchAnalytics: React.FC<BatchAnalyticsProps> = ({ batchId, batchNa
                     <CardHeader><CardTitle className="font-black text-lg tracking-tight">Overall K.A.S.H.</CardTitle></CardHeader>
                     <CardContent className="h-[250px]" id="chart-kash">
                       {data.kashMetrics ? (
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                           <RadarChart cx="50%" cy="50%" outerRadius="65%" data={data.kashMetrics}>
                             <PolarGrid strokeOpacity={0.2} />
                             <PolarAngleAxis dataKey="domain" tick={{ fill: '#64748b', fontWeight: 800, fontSize: 10 }} />
