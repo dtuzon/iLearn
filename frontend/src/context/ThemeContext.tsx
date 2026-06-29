@@ -71,9 +71,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const data: SystemSettings = response.data;
       setSettings(data);
 
-      // Update Document Title
-      document.title = data.companyName || 'iLearn LMS';
-
       // Update CSS Variables on :root
       const root = document.documentElement;
       if (data.primaryColorHex) {

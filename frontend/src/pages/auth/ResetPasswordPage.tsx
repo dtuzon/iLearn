@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -19,6 +19,11 @@ export const ResetPasswordPage: React.FC = () => {
 
   const { settings } = useTheme();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const company = settings?.companyName || 'Standard Insurance Co., Inc.';
+    document.title = `Reset Password | ${company}`;
+  }, [settings]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

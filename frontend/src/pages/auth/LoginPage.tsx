@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -17,6 +17,11 @@ export const LoginPage: React.FC = () => {
   const { login, isAuthenticated } = useAuth();
   const { settings } = useTheme();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const company = settings?.companyName || 'Standard Insurance Co., Inc.';
+    document.title = `Login | ${company}`;
+  }, [settings]);
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
