@@ -33,19 +33,27 @@ export const LiveSessionPlayer: React.FC<LiveSessionPlayerProps> = ({
 
   // Fetch session details on mount if batchId is provided
   useEffect(() => {
+    let active = true;
     const fetchSession = async () => {
       if (!batchId) return;
       setIsLoadingSession(true);
       try {
         const liveSession = await zoomApi.getLiveSession(batchId, module.id);
-        setSession(liveSession);
+        if (active) {
+          setSession(liveSession);
+        }
       } catch {
         // Live session details unavailable — UI will show fallback
       } finally {
-        setIsLoadingSession(false);
+        if (active) {
+          setIsLoadingSession(false);
+        }
       }
     };
     fetchSession();
+    return () => {
+      active = false;
+    };
   }, [batchId, module.id]);
 
   // Use the accurate scheduled time from the batch session, falling back to course module scheduled date

@@ -46,6 +46,22 @@ router.get('/session/:batchId/:moduleId', async (req: Request, res: Response) =>
   try {
     const batchId = String(req.params.batchId);
     const moduleId = String(req.params.moduleId);
+    const userId = (req as any).user?.userId;
+    const userRole = (req as any).user?.role;
+
+    // Check enrollment for learners to prevent IDOR
+    if (userRole !== 'ADMIN' && userRole !== 'CREATOR' && userRole !== 'CHECKER') {
+      const enrollment = await prisma.enrollment.findFirst({
+        where: { userId, batchId }
+      });
+      const lpEnrollment = await prisma.learningPathEnrollment.findFirst({
+        where: { userId, batchId }
+      });
+
+      if (!enrollment && !lpEnrollment) {
+        return res.status(403).json({ message: 'Access denied. You are not enrolled in this batch.' });
+      }
+    }
 
     const session = await prisma.batchLiveSession.findUnique({
       where: { batchId_courseModuleId: { batchId, courseModuleId: moduleId } },

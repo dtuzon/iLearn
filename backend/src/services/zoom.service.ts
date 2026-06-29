@@ -23,6 +23,7 @@ interface ZoomMeetingResult {
 // ─────────────────────────────────────────────────────────────────────────────
 
 let tokenCache: ZoomTokenCache | null = null;
+let activeTokenPromise: Promise<string> | null = null;
 const TOKEN_TTL_MS = 55 * 60 * 1000; // 55 minutes (token lives 1 hour)
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -47,7 +48,14 @@ function httpsRequest(
         }
       });
     });
+    
     req.on('error', reject);
+    
+    // Set a 10-second timeout to prevent connection/socket leaks
+    req.setTimeout(10000, () => {
+      req.destroy(new Error('Request timeout exceeded'));
+    });
+
     if (body) req.write(body);
     req.end();
   });
@@ -66,40 +74,52 @@ export async function getS2SToken(): Promise<string> {
     return tokenCache.token;
   }
 
-  const accountId = process.env.ZOOM_S2S_ACCOUNT_ID;
-  const clientId = process.env.ZOOM_S2S_CLIENT_ID;
-  const clientSecret = process.env.ZOOM_S2S_CLIENT_SECRET;
-
-  if (!accountId || !clientId || !clientSecret) {
-    throw new Error('[ZoomService] Missing S2S credentials in environment variables.');
+  if (activeTokenPromise) {
+    return activeTokenPromise;
   }
 
-  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+  activeTokenPromise = (async () => {
+    try {
+      const accountId = process.env.ZOOM_S2S_ACCOUNT_ID;
+      const clientId = process.env.ZOOM_S2S_CLIENT_ID;
+      const clientSecret = process.env.ZOOM_S2S_CLIENT_SECRET;
 
-  const { statusCode, data } = await httpsRequest(
-    {
-      hostname: 'zoom.us',
-      path: `/oauth/token?grant_type=account_credentials&account_id=${accountId}`,
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${credentials}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+      if (!accountId || !clientId || !clientSecret) {
+        throw new Error('[ZoomService] Missing S2S credentials in environment variables.');
+      }
+
+      const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+      const { statusCode, data } = await httpsRequest(
+        {
+          hostname: 'zoom.us',
+          path: `/oauth/token?grant_type=account_credentials&account_id=${accountId}`,
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${credentials}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
+
+      if (statusCode !== 200 || !data.access_token) {
+        console.error('[ZoomService] Token fetch failed:', data);
+        throw new Error(`[ZoomService] Failed to fetch S2S token (HTTP ${statusCode}): ${JSON.stringify(data)}`);
+      }
+
+      tokenCache = {
+        token: data.access_token as string,
+        expiresAt: Date.now() + TOKEN_TTL_MS,
+      };
+
+      console.log('[ZoomService] S2S token refreshed, expires in 55 minutes.');
+      return tokenCache.token;
+    } finally {
+      activeTokenPromise = null;
     }
-  );
+  })();
 
-  if (statusCode !== 200 || !data.access_token) {
-    console.error('[ZoomService] Token fetch failed:', data);
-    throw new Error(`[ZoomService] Failed to fetch S2S token (HTTP ${statusCode}): ${JSON.stringify(data)}`);
-  }
-
-  tokenCache = {
-    token: data.access_token as string,
-    expiresAt: now + TOKEN_TTL_MS,
-  };
-
-  console.log('[ZoomService] S2S token refreshed, expires in 55 minutes.');
-  return tokenCache.token;
+  return activeTokenPromise;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
