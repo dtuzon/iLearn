@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
 import { 
   LogOut, 
@@ -47,10 +48,52 @@ import {
 
 export const AppShell: React.FC = () => {
   const { user, logout } = useAuth();
+  const { settings } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const getPageTitle = (pathname: string): string => {
+    if (pathname === '/dashboard') return 'Dashboard';
+    if (pathname === '/profile-settings') return 'Profile Settings';
+    if (pathname.startsWith('/admin/settings')) return 'System Settings';
+    if (pathname.startsWith('/admin/departments')) return 'Departments';
+    if (pathname.startsWith('/admin/users')) return 'User Management';
+    if (pathname.startsWith('/admin/enrollments')) return 'Manage Enrollments';
+    if (pathname.startsWith('/admin/batches')) return 'Manage Batches';
+    if (pathname.startsWith('/admin/evaluation-templates')) return 'Evaluation Templates';
+    if (pathname.startsWith('/admin/bulletin')) return 'Manage Bulletin';
+    if (pathname.startsWith('/creator/courses')) return 'Course Studio';
+    if (pathname.startsWith('/creator/learning-paths')) return 'Learning Paths';
+    if (pathname.startsWith('/learning/my-courses')) return 'My Learning';
+    if (pathname.startsWith('/learning/course')) return 'Course Player';
+    if (pathname.startsWith('/learning/certificates')) return 'My Certificates';
+    if (pathname.startsWith('/learning/discover')) return 'Discover Catalog';
+    if (pathname.startsWith('/learning/paths')) return 'Learning Path Roadmap';
+    if (pathname.startsWith('/learning/calendar')) return 'Learning Calendar';
+    if (pathname.startsWith('/supervisor/team-evaluations')) return 'Team Evaluations';
+    if (pathname.startsWith('/supervisor/team-management')) return 'Team Management';
+    if (pathname.startsWith('/approvals/activities')) return 'Activity Approvals';
+    if (pathname.startsWith('/checker/portal')) return 'Live Grading Portal';
+    
+    const segment = pathname.split('/').filter(Boolean).pop();
+    if (!segment) return '';
+    return segment
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  useEffect(() => {
+    const pageTitle = getPageTitle(location.pathname);
+    const companyName = settings?.companyName || 'Standard Insurance Co., Inc.';
+    if (pageTitle) {
+      document.title = `${pageTitle} | ${companyName}`;
+    } else {
+      document.title = companyName;
+    }
+  }, [location.pathname, settings]);
 
   const handleLogout = () => {
     logout();
