@@ -53,6 +53,7 @@ export const AppShell: React.FC = () => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const baseUrl = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('/api', '') : '';
 
   const getPageTitle = (pathname: string): string => {
     if (pathname === '/dashboard') return 'Dashboard';
@@ -262,7 +263,11 @@ export const AppShell: React.FC = () => {
                 <SheetHeader className="pb-4 border-b text-left">
                   <div className="flex items-center gap-3">
                     <div className="h-9 w-9 flex items-center justify-center overflow-hidden rounded-xl bg-background shadow-md border border-border/50 p-1">
-                      <img src="/si_logo_only.png" alt="Standard Insurance Logo" className="h-full w-full object-contain" />
+                      <img 
+                        src={settings?.companyLogoUrl ? `${baseUrl}${settings.companyLogoUrl}` : "/si_logo_only.png"} 
+                        alt="Logo" 
+                        className="h-full w-full object-contain" 
+                      />
                     </div>
                     <SheetTitle className="text-xl font-bold tracking-tight text-foreground">iLearn</SheetTitle>
                   </div>
@@ -275,12 +280,18 @@ export const AppShell: React.FC = () => {
 
             <Link to="/dashboard" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
               <div className="h-9 w-9 flex items-center justify-center overflow-hidden rounded-xl bg-background shadow-md border border-border/50 p-1">
-                <img src="/si_logo_only.png" alt="Standard Insurance Logo" className="h-full w-full object-contain" />
+                <img 
+                  src={settings?.companyLogoUrl ? `${baseUrl}${settings.companyLogoUrl}` : "/si_logo_only.png"} 
+                  alt="Logo" 
+                  className="h-full w-full object-contain" 
+                />
               </div>
               <div className="flex items-center gap-2 whitespace-nowrap">
                 <span className="text-xl font-bold tracking-tight text-foreground">iLearn</span>
                 <span className="text-muted-foreground/30 font-light text-xl">|</span>
-                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider hidden lg:block">Standard Insurance</span>
+                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider hidden lg:block">
+                  {settings?.companyName || 'Standard Insurance'}
+                </span>
               </div>
             </Link>
           </div>
