@@ -117,6 +117,9 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Welcome Billboard (Banner) - Full Width for everyone */}
+      <WelcomeBanner announcement={latestBulletin} />
+
       {/* Stats Grid */}
       <div className={cn("grid grid-cols-1 gap-6", metrics.length > 3 ? "md:grid-cols-3 xl:grid-cols-6" : "md:grid-cols-3")}>
         {isLoading ? (
@@ -152,9 +155,6 @@ export const Dashboard: React.FC = () => {
           })
         )}
       </div>
-
-      {/* Welcome Billboard (Banner) - Full Width for everyone */}
-      <WelcomeBanner announcement={latestBulletin} />
 
       {/* Admin Operations Section */}
       {user?.role === 'ADMINISTRATOR' && !isLoading && (
