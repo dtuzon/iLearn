@@ -11,31 +11,6 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log('🌱 Starting iLearn Baseline User Seeding...');
 
-  // Step 1: Clean up existing content
-  console.log('... Cleaning up existing data (courses, enrollments, modules, etc.)...');
-  
-  await prisma.announcement.deleteMany();
-  await prisma.moduleProgress.deleteMany();
-  await prisma.enrollment.deleteMany();
-  await prisma.learningPathEnrollment.deleteMany();
-  await prisma.learningPathCourse.deleteMany();
-  await prisma.learningPathCertificate.deleteMany();
-  await prisma.transcript.deleteMany();
-  await prisma.activitySubmission.deleteMany();
-  await prisma.essaySubmission.deleteMany();
-  await prisma.evaluationResponse.deleteMany();
-  await prisma.quizOption.deleteMany();
-  await prisma.quizQuestion.deleteMany();
-  await prisma.courseModule.deleteMany();
-  await prisma.courseAttachment.deleteMany();
-  await prisma.certificateTemplate.deleteMany();
-  await prisma.behavioralEvaluation.deleteMany();
-  await prisma.onlineEvaluationResult.deleteMany();
-  await prisma.batchCourseSchedule.deleteMany();
-  await prisma.batchChecker.deleteMany();
-  await prisma.batch.deleteMany();
-  await prisma.course.deleteMany();
-  await prisma.learningPath.deleteMany();
 
   // Step 2: Seed Corporate Departments
   console.log('🏢 Syncing Corporate Departments...');
